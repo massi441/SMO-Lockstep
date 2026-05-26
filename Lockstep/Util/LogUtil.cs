@@ -2,7 +2,7 @@
 
 namespace Lockstep.Util;
 
-internal static class LogUitl
+internal static class LogUtil
 {
     public static ILogger CreateLogger(string name)
     {
