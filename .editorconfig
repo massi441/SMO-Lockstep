@@ -1,0 +1,7 @@
+﻿[*.cs]
+
+# IDE0210: Convert to top-level statements
+dotnet_diagnostic.IDE0210.severity = none
+
+# IDE0090: Use 'new(...)'
+dotnet_diagnostic.IDE0090.severity = silent
