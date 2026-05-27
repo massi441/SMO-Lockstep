@@ -13,7 +13,7 @@ internal class PacketDisconnectHandler : IPacketHandler
         _logger = logger;
     }
 
-    public Result<Error> Handle(ReadOnlySpan<byte> payload)
+    public Result<Error> Handle(Payload packetPayload)
     {
         _logger.LogInformation("Disconnect Packet Received");
         return Result<Error>.Success();

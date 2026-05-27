@@ -5,7 +5,7 @@ namespace Lockstep.Net;
 
 internal static class PacketDispatcher
 {
-    public static Result<Error> Dispatch(Packet packet)
+    public static Result<Error> Dispatch(Payload packet, ServiceProvider serviceProvider)
     {
         Result<PacketHeader, Error> headerResult = PacketParser.ParseHeader(packet.Buffer);
 
@@ -17,15 +17,15 @@ internal static class PacketDispatcher
                 return Result<Error>.Failure(Error.EmptyPayload);
             }
 
-            IPacketHandler? packetHandler = PacketHandlerFactory.CreateHandler(header.Type);
+            IPacketHandler? packetHandler = PacketHandlerFactory.CreateHandler(header.Type, serviceProvider);
             if (packetHandler == null)
             {
                 return Result<Error>.Failure(Error.NoPacketHandler);
             }
 
-            ReadOnlySpan<byte> packetPaylod = packet.Buffer[PacketHeader.SizeOf()..];
+            Payload packetPayload = new Payload(packet, PacketHeader.SizeOf());
 
-            return packetHandler.Handle(packetPaylod);
+            return packetHandler.Handle(packetPayload);
         }
         else
         {

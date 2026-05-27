@@ -13,7 +13,7 @@ internal class PacketPlayerInputHandler : IPacketHandler
         _logger = logger;
     }
 
-    public Result<Error> Handle(ReadOnlySpan<byte> payload)
+    public Result<Error> Handle(Payload packetPayload)
     {
         _logger.LogInformation("PlayerInput Packet Received");
         return Result<Error>.Success();

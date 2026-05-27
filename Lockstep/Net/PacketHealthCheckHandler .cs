@@ -13,7 +13,7 @@ internal class PacketHealthCheckHandler : IPacketHandler
         _logger = logger;
     }
 
-    public Result<Error> Handle(ReadOnlySpan<byte> payload)
+    public Result<Error> Handle(Payload packetPayload)
     {
         _logger.LogInformation("HealthCheck Packet Received");
         return Result<Error>.Success();

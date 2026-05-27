@@ -5,5 +5,5 @@ namespace Lockstep.Net;
 
 internal interface IPacketHandler
 {
-    Result<Error> Handle(ReadOnlySpan<byte> payload);
+    Result<Error> Handle(Payload packetPayload);
 }
