@@ -14,7 +14,7 @@ internal class PacketPlayerInputHandler : IPacketHandler
         _logger = logger;
     }
 
-    public Result<Error> Handle(Socket socket, Payload packetPayload)
+    public Result<Error> Handle(Payload packetPayload)
     {
         _logger.LogInformation("PlayerInput Packet Received");
         return Result<Error>.Success();

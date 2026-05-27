@@ -8,13 +8,13 @@ namespace Lockstep.Util;
 internal class ServiceProvider
 {
     public ILogger Logger { get; }
-    public ClientHolder ClientHolder { get; } // TODO: Use interface
+    public IClientHolder ClientHolder { get; } // TODO: Use interface
     public IPacketSender PacketSender { get; }
 
-    public ServiceProvider()
+    public ServiceProvider(ILogger logger, IClientHolder holder, IPacketSender packetSender)
     {
-        Logger = LockstepLogger.Instance();
-        ClientHolder = new ClientHolder();
-        PacketSender = null!;
+        Logger = logger;
+        ClientHolder = holder;
+        PacketSender = packetSender;
     }
 }

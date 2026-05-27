@@ -6,7 +6,7 @@ namespace Lockstep.Net;
 
 internal static class PacketDispatcher
 {
-    public static Result<Error> Dispatch(Socket socket, Payload packet, ServiceProvider serviceProvider)
+    public static Result<Error> Dispatch(Payload packet, ServiceProvider serviceProvider)
     {
         Result<PacketHeader, Error> headerResult = PacketParser.ParseHeader(packet.Buffer);
 
@@ -26,7 +26,7 @@ internal static class PacketDispatcher
 
             Payload packetPayload = new Payload(packet, PacketHeader.SizeOf());
 
-            return packetHandler.Handle(socket, packetPayload);
+            return packetHandler.Handle(packetPayload);
         }
         else
         {

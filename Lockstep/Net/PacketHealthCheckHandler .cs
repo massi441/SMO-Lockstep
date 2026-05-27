@@ -14,7 +14,7 @@ internal class PacketHealthCheckHandler : IPacketHandler
         _logger = logger;
     }
 
-    public Result<Error> Handle(Socket socket, Payload packetPayload)
+    public Result<Error> Handle(Payload packetPayload)
     {
         _logger.LogInformation("HealthCheck Packet Received");
         return Result<Error>.Success();

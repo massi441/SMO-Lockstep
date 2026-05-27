@@ -3,10 +3,10 @@ import struct
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-ptype = 1
+ptype = 2
 version = 1
 
-payload_size = 0
+payload_size = 10
 payload = bytes([0xAB]) * payload_size
 
 header = struct.pack("<BBh", ptype, version, payload_size)

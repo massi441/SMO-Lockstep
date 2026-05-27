@@ -2,6 +2,7 @@
 
 using System.Net;
 using System.Net.Sockets;
+using Lockstep.Client;
 using Lockstep.Protocol;
 using Lockstep.Util;
 using Microsoft.Extensions.Logging;
@@ -9,23 +10,26 @@ using Microsoft.Extensions.Logging;
 internal class UdpServer
 {
     private readonly int _port;
-    private readonly ServiceProvider _serviceProvider;
+    private ServiceProvider _serviceProvider = null!;
+
+    private ServiceProvider Provider => _serviceProvider;
 
     private ILogger Logger => _serviceProvider.Logger;
 
-    public UdpServer(int port, ServiceProvider serviceProvider)
+    public UdpServer(int port)
     {
         _port = port;
-        _serviceProvider = serviceProvider;
     }
 
     public void Run()
     {
         using Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+
         IPEndPoint listenEndpoint = new IPEndPoint(IPAddress.Any, _port);
 
         socket.Bind(listenEndpoint);
 
+        InitProvider(socket);
         RunLoop(socket);
     }
 
@@ -61,7 +65,7 @@ internal class UdpServer
         if (bytesReceived > 0)
         {
             Payload packet = new Payload(buffer.AsSpan(0, bytesReceived), sender);
-            Result<Error> result = PacketDispatcher.Dispatch(socket, packet, _serviceProvider);
+            Result<Error> result = PacketDispatcher.Dispatch(packet, _serviceProvider);
 
             if (result.IsFailed)
             {
@@ -72,5 +76,14 @@ internal class UdpServer
         {
             Logger.LogInformation("Empty packet received from {Address}:{Port}", sender.Address.ToString(), sender.Port);
         }
+    }
+
+    private void InitProvider(Socket socket)
+    {
+        ILogger logger = LockstepLogger.Instance();
+        IClientHolder holder = new ClientHolder();
+        IPacketSender sender = new UdpPacketSender(socket);
+
+        _serviceProvider = new ServiceProvider(logger, holder, sender);
     }
 }
