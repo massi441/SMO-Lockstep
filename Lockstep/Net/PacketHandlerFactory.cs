@@ -5,7 +5,7 @@ namespace Lockstep.Net;
 
 internal static class PacketHandlerFactory
 {
-    public static IPacketHandler CreateHandler(PacketType packetType)
+    public static IPacketHandler? CreateHandler(PacketType packetType)
     {
         return packetType switch
         {
@@ -13,7 +13,7 @@ internal static class PacketHandlerFactory
             PacketType.Disconnect => new PacketDisconnectHandler(Logger.Get()),
             PacketType.PlayerInput => new PacketPlayerInputHandler(Logger.Get()),
             PacketType.HealthCheck => new PacketHealthCheckHandler(Logger.Get()),
-            _ => throw new ArgumentException($"Packet type {packetType} not supported")
+            _ => null
         };
     }
 }

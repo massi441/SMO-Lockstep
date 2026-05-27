@@ -17,7 +17,11 @@ internal static class PacketDispatcher
                 return Result<Error>.Failure(Error.EmptyPayload);
             }
 
-            IPacketHandler packetHandler = PacketHandlerFactory.CreateHandler(header.Type);
+            IPacketHandler? packetHandler = PacketHandlerFactory.CreateHandler(header.Type);
+            if (packetHandler == null)
+            {
+                return Result<Error>.Failure(Error.NoPacketHandler);
+            }
 
             ReadOnlySpan<byte> packetPaylod = packet.Buffer[PacketHeader.SizeOf()..];
 

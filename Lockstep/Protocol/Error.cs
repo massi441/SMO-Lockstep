@@ -8,6 +8,7 @@ internal enum Error
     InvalidVersion,
     InvalidPayloadSize,
 
-    // Packet
-    EmptyPayload
+    // Packet Handling
+    EmptyPayload,
+    NoPacketHandler
 }
