@@ -2,6 +2,7 @@
 
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using Lockstep.Protocol;
 using Lockstep.Util;
 using Microsoft.Extensions.Logging;
@@ -35,25 +36,10 @@ internal class UdpServer
         {
             byte[] buffer = new byte[1024];
             IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-            EndPoint senderRef = sender;
 
             try
             {
-                int bytesReceived = socket.ReceiveFrom(buffer, buffer.Length, SocketFlags.None, ref senderRef);
-                if (bytesReceived > 0)
-                {
-                    Packet packet = new Packet(buffer, bytesReceived, sender);
-                    Result<Error> result = PacketDispatcher.Dispatch(packet);
-
-                    if (result.IsFailed)
-                    {
-                        _logger.LogError("An error occured while processing the pack. Sender: {Address}:{Port}, Error: {Error}", sender.Address, sender.Port, result.Error);
-                    }
-                }
-                else
-                {
-                    _logger.LogInformation("Empty packet received from {Address}:{Port}", sender.Address.ToString(), sender.Port);
-                }
+                ReceiveNext(socket, buffer, sender);
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.MessageSize)
             {
@@ -64,5 +50,27 @@ internal class UdpServer
                 _logger.LogError(ex, "An Unexpected exception occured while receiving packets");
             }
         }
+    }
+
+    private void ReceiveNext(Socket socket, byte[] buffer, IPEndPoint sender)
+    {
+        EndPoint senderRef = sender;
+
+        int bytesReceived = socket.ReceiveFrom(buffer, buffer.Length, SocketFlags.None, ref senderRef);
+        if (bytesReceived > 0)
+        {
+            Packet packet = new Packet(buffer, bytesReceived, sender);
+            Result<Error> result = PacketDispatcher.Dispatch(packet);
+
+            if (result.IsFailed)
+            {
+                _logger.LogError("An error occured while processing the pack. Sender: {Address}:{Port}, Error: {Error}", sender.Address, sender.Port, result.Error);
+            }
+        }
+        else
+        {
+            _logger.LogInformation("Empty packet received from {Address}:{Port}", sender.Address.ToString(), sender.Port);
+        }
+
     }
 }
