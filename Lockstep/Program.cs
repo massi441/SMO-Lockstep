@@ -1,41 +1,24 @@
-﻿using System.Diagnostics;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
+﻿using Lockstep.Net;
+using Lockstep.Util;
+using Microsoft.Extensions.Logging;
 
 namespace Lockstep;
 
 class Program
 {
-    static async Task Main(string[] args)
+    static void Main(string[] args)
     {
-        ThreadPool.GetAvailableThreads(out int workerThreads, out int completionPortThreads);
-        Console.WriteLine($"Worker: {workerThreads}, IO: {completionPortThreads}");
-        Console.WriteLine(Process.GetCurrentProcess().Threads.Count);
-
         int port = 5001;
+        ILogger logger = Logger.Get();
 
-        Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-        IPEndPoint endpoint = new IPEndPoint(IPAddress.Any, port);
-
-        socket.Bind(endpoint);
-        Console.WriteLine($"Main thread: {Thread.CurrentThread.ManagedThreadId}");
-        await Task.Run(() =>
+        try
         {
-            while (true)
-            {
-                Console.WriteLine($"Task thread: {Thread.CurrentThread.ManagedThreadId}");
-                byte[] buffer = new byte[1024];
-                IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-                EndPoint senderEndpoint = sender;
-
-                Console.WriteLine($"Listening on port {port}...");
-
-                int received = socket.ReceiveFrom(buffer, ref senderEndpoint);
-                string message = Encoding.UTF8.GetString(buffer, 0, received);
-
-                Console.WriteLine(message);
-            }
-        });
+            UdpServer server = new UdpServer(port, logger);
+            server.Run();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "An unexpected error occurred while the server was running");
+        }
     }
 }
