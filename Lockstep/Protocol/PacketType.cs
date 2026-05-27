@@ -2,7 +2,7 @@
 
 internal enum PacketType : byte
 {
-    Connect = 0,
+    Connect,
     Disconnect,
     PlayerInput,
     HealthCheck,

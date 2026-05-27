@@ -44,26 +44,31 @@ internal class UdpServer
 
             try
             {
-                ReceiveNext(socket, buffer, sender);
+                ReceiveNext(socket, buffer, ref sender);
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.MessageSize)
             {
                 Logger.LogError("The received packet was too big to fit inside the receive buffer");
             }
-            catch (Exception ex)
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionReset)
+            {
+                Logger.LogWarning("The sender received a message");
+            }
+            catch (SocketException ex)
             {
                 Logger.LogError(ex, "An Unexpected exception occured while receiving packets");
             }
         }
     }
 
-    private void ReceiveNext(Socket socket, byte[] buffer, IPEndPoint sender)
+    private void ReceiveNext(Socket socket, byte[] buffer, ref IPEndPoint sender)
     {
         EndPoint senderRef = sender;
 
         int bytesReceived = socket.ReceiveFrom(buffer, buffer.Length, SocketFlags.None, ref senderRef);
         if (bytesReceived > 0)
         {
+            sender = (IPEndPoint)senderRef;
             Payload packet = new Payload(buffer.AsSpan(0, bytesReceived), sender);
             Result<Error> result = PacketDispatcher.Dispatch(packet, _serviceProvider);
 
