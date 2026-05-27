@@ -2,12 +2,13 @@
 
 namespace Lockstep.Util;
 
-internal static class Logger
+internal static class LockstepLogger
 {
     private static ILogger _logger = null!;
+    private static ILoggerFactory _loggerFactory = null!;
     private static readonly Lock _lock = new Lock();
 
-    public static ILogger Get()
+    public static ILogger Instance()
     {
         if (_logger == null)
         {
@@ -15,7 +16,7 @@ internal static class Logger
             {
                 if (_logger == null)
                 {
-                    using ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+                    _loggerFactory = LoggerFactory.Create(builder =>
                     {
                         builder.AddSimpleConsole(options =>
                         {
@@ -26,7 +27,7 @@ internal static class Logger
                         builder.SetMinimumLevel(LogLevel.Debug);
                     });
 
-                    _logger = loggerFactory.CreateLogger("Server");
+                    _logger = _loggerFactory.CreateLogger("Server");
                 }
             }
         }
