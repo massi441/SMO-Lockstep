@@ -37,21 +37,31 @@ internal class UdpServer
             IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
             EndPoint senderRef = sender;
 
-            int bytesReceived = socket.ReceiveFrom(buffer, 10, SocketFlags.None, ref senderRef);
-
-            if (bytesReceived > 0)
+            try
             {
-                Packet packet = new Packet(buffer, bytesReceived ,sender);
-                Result<Error> result = PacketDispatcher.Dispatch(packet);
-
-                if (result.IsFailed)
+                int bytesReceived = socket.ReceiveFrom(buffer, buffer.Length, SocketFlags.None, ref senderRef);
+                if (bytesReceived > 0)
                 {
-                    _logger.LogError("An error occured while processing the pack. Sender: {Address}:{Port}, Error: {Error}", sender.Address, sender.Port, result.Error);
+                    Packet packet = new Packet(buffer, bytesReceived, sender);
+                    Result<Error> result = PacketDispatcher.Dispatch(packet);
+
+                    if (result.IsFailed)
+                    {
+                        _logger.LogError("An error occured while processing the pack. Sender: {Address}:{Port}, Error: {Error}", sender.Address, sender.Port, result.Error);
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation("Empty packet received from {Address}:{Port}", sender.Address.ToString(), sender.Port);
                 }
             }
-            else
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.MessageSize)
             {
-                _logger.LogInformation("Empty packet received from {Address}:{Port}", sender.Address.ToString(), sender.Port);
+                _logger.LogError("The received packet was too big to fit inside the receive buffer");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An Unexpected exception occured while receiving packets");
             }
         }
     }
