@@ -6,7 +6,7 @@ internal static class PacketParser
 {
     public const byte MaxVersion = 1;
 
-    internal static Result<PacketHeader, Error> ParseHeader(Span<byte> payload)
+    internal static Result<PacketHeader, Error> ParseHeader(ReadOnlySpan<byte> payload)
     {
         if (!IsValidHeaderSize(payload))
         {
@@ -48,12 +48,12 @@ internal static class PacketParser
         return version >= 1 && version <= MaxVersion;
     }
 
-    private static bool IsValidPayloadSize(Span<byte> payload, short payloadSize)
+    private static bool IsValidPayloadSize(ReadOnlySpan<byte> payload, short payloadSize)
     {
         return payloadSize == payload.Length - PacketHeader.SizeOf();
     }
 
-    private static bool IsValidHeaderSize(Span<byte> span)
+    private static bool IsValidHeaderSize(ReadOnlySpan<byte> span)
     {
         return span.Length >= PacketHeader.SizeOf();
     }
