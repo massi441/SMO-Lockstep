@@ -2,8 +2,12 @@
 
 internal enum Error
 {
+    // Packet header
     InvalidHeaderSize,
     InvalidPacketType,
     InvalidVersion,
-    InvalidPayloadSize
+    InvalidPayloadSize,
+
+    // Packet
+    EmptyPayload
 }

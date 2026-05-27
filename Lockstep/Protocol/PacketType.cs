@@ -6,5 +6,9 @@ internal enum PacketType : byte
     Disconnect,
     PlayerInput,
     HealthCheck,
+
+    /// <summary>
+    /// A reserved packet type for server side validation
+    /// </summary>
     Invalid
 }

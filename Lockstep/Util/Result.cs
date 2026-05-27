@@ -1,30 +1,27 @@
 ﻿namespace Lockstep.Util;
 
-internal class Result<T>
+internal class Result<E> where E : struct, Enum
 {
-    private readonly T? _data;
+    private readonly E? _error;
 
-    public bool IsSuccess => _data != null;
-    public bool IsFailed => _data == null;
+    public E? Error => _error;
 
-    private Result(T data)
+    public bool IsSuccess => _error == null;
+    public bool IsFailed => _error != null;
+
+    private Result(E? error)
     {
-        _data = data;
+        _error = error;
     }
 
-    private Result()
+    public static Result<E> Success()
     {
-        _data = default;
+        return new Result<E>(null);
     }
 
-    public static Result<T> Success(T data)
+    public static Result<E> Failure(E error)
     {
-        return new Result<T>(data);
-    }
-
-    public static Result<T> Failure()
-    {
-        return new Result<T>();
+        return new Result<E>(error);
     }
 }
 
