@@ -10,5 +10,8 @@ internal enum Error
 
     // Packet Handling
     EmptyPayload,
-    NoPacketHandler
+    NoPacketHandler,
+
+    // Packet Sending
+    NotSent
 }

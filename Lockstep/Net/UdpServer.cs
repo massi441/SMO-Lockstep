@@ -2,7 +2,6 @@
 
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection;
 using Lockstep.Protocol;
 using Lockstep.Util;
 using Microsoft.Extensions.Logging;
@@ -10,12 +9,14 @@ using Microsoft.Extensions.Logging;
 internal class UdpServer
 {
     private readonly int _port;
-    private readonly ILogger _logger;
+    private readonly ServiceProvider _serviceProvider;
 
-    public UdpServer(int port, ILogger logger)
+    private ILogger Logger => _serviceProvider.Logger;
+
+    public UdpServer(int port, ServiceProvider serviceProvider)
     {
         _port = port;
-        _logger = logger;
+        _serviceProvider = serviceProvider;
     }
 
     public void Run()
@@ -30,7 +31,7 @@ internal class UdpServer
 
     private void RunLoop(Socket socket)
     {
-        _logger.LogInformation("SMO Lockstep server listening on port {Port}...", _port);
+        Logger.LogInformation("SMO Lockstep server listening on port {Port}...", _port);
 
         while (true)
         {
@@ -43,11 +44,11 @@ internal class UdpServer
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.MessageSize)
             {
-                _logger.LogError("The received packet was too big to fit inside the receive buffer");
+                Logger.LogError("The received packet was too big to fit inside the receive buffer");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An Unexpected exception occured while receiving packets");
+                Logger.LogError(ex, "An Unexpected exception occured while receiving packets");
             }
         }
     }
@@ -59,18 +60,17 @@ internal class UdpServer
         int bytesReceived = socket.ReceiveFrom(buffer, buffer.Length, SocketFlags.None, ref senderRef);
         if (bytesReceived > 0)
         {
-            Packet packet = new Packet(buffer, bytesReceived, sender);
-            Result<Error> result = PacketDispatcher.Dispatch(packet);
+            Payload packet = new Payload(buffer.AsSpan(0, bytesReceived), sender);
+            Result<Error> result = PacketDispatcher.Dispatch(socket, packet, _serviceProvider);
 
             if (result.IsFailed)
             {
-                _logger.LogError("An error occured while processing the pack. Sender: {Address}:{Port}, Error: {Error}", sender.Address, sender.Port, result.Error);
+                Logger.LogError("An error occured while processing the pack. Sender: {Address}:{Port}, Error: {Error}", sender.Address, sender.Port, result.Error);
             }
         }
         else
         {
-            _logger.LogInformation("Empty packet received from {Address}:{Port}", sender.Address.ToString(), sender.Port);
+            Logger.LogInformation("Empty packet received from {Address}:{Port}", sender.Address.ToString(), sender.Port);
         }
-
     }
 }

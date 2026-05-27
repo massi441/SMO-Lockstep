@@ -1,4 +1,5 @@
-﻿using Lockstep.Client;
+﻿using System.Net.Sockets;
+using Lockstep.Client;
 using Lockstep.Net;
 using Microsoft.Extensions.Logging;
 

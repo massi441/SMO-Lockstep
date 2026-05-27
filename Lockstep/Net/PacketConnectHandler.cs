@@ -1,4 +1,5 @@
-﻿using Lockstep.Client;
+﻿using System.Net.Sockets;
+using Lockstep.Client;
 using Lockstep.Protocol;
 using Lockstep.Util;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,7 @@ internal class PacketConnectHandler : IPacketHandler
         _logger = logger;
     }
 
-    public Result<Error> Handle(Payload packetPayload)
+    public Result<Error> Handle(Socket socket, Payload packetPayload)
     {
         _logger.LogInformation("Connection Packet Received");
         return Result<Error>.Success();

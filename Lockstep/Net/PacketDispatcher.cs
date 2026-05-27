@@ -1,11 +1,12 @@
-﻿using Lockstep.Protocol;
+﻿using System.Net.Sockets;
+using Lockstep.Protocol;
 using Lockstep.Util;
 
 namespace Lockstep.Net;
 
 internal static class PacketDispatcher
 {
-    public static Result<Error> Dispatch(Payload packet, ServiceProvider serviceProvider)
+    public static Result<Error> Dispatch(Socket socket, Payload packet, ServiceProvider serviceProvider)
     {
         Result<PacketHeader, Error> headerResult = PacketParser.ParseHeader(packet.Buffer);
 
@@ -25,7 +26,7 @@ internal static class PacketDispatcher
 
             Payload packetPayload = new Payload(packet, PacketHeader.SizeOf());
 
-            return packetHandler.Handle(packetPayload);
+            return packetHandler.Handle(socket, packetPayload);
         }
         else
         {

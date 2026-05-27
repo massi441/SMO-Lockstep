@@ -1,4 +1,5 @@
-﻿using Lockstep.Protocol;
+﻿using System.Net.Sockets;
+using Lockstep.Protocol;
 using Lockstep.Util;
 using Microsoft.Extensions.Logging;
 
@@ -13,7 +14,7 @@ internal class PacketPlayerInputHandler : IPacketHandler
         _logger = logger;
     }
 
-    public Result<Error> Handle(Payload packetPayload)
+    public Result<Error> Handle(Socket socket, Payload packetPayload)
     {
         _logger.LogInformation("PlayerInput Packet Received");
         return Result<Error>.Success();
