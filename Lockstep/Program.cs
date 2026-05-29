@@ -1,4 +1,4 @@
-﻿using Lockstep.Net;
+﻿using Lockstep.Server;
 using Lockstep.Util;
 using Microsoft.Extensions.Logging;
 
@@ -6,7 +6,7 @@ namespace Lockstep;
 
 class Program
 {
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
         int port = 5001;
 
@@ -15,7 +15,8 @@ class Program
         try
         {
             UdpServer server = new UdpServer(port);
-            server.Run();
+            CancellationTokenSource ctSource = new CancellationTokenSource();
+            await server.RunAsync(ctSource.Token);
         }
         catch (Exception ex)
         {

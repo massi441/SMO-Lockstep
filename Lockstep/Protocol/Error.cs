@@ -8,6 +8,7 @@ internal enum Error
     InvalidPacketType,
     InvalidVersion,
     InvalidPayloadSize,
+    InvalidRoomId,
 
     // Packet Handling
     EmptyPayload,

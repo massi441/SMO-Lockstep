@@ -27,13 +27,15 @@ internal static class PacketParser
             return Result<PacketHeader, Error>.Failure(Error.InvalidPacketType);
         }
 
+        ushort roomId = reader.ReadUInt16LittleEndian();
+
         byte version = reader.ReadByte();
         if (!IsValidVersion(version))
         {
             return Result<PacketHeader, Error>.Failure(Error.InvalidVersion);
         }
 
-        short payloadSize = reader.ReadInt16LittleEndian();
+        ushort payloadSize = reader.ReadUInt16LittleEndian();
         if (!IsValidPayloadSize(packet, payloadSize))
         {
             return Result<PacketHeader, Error>.Failure(Error.InvalidPayloadSize);
@@ -43,6 +45,7 @@ internal static class PacketParser
         {
             Type = (PacketType)packetType,
             Version = version,
+            RoomId = roomId,
             PayloadSize = payloadSize
         };
 
@@ -54,7 +57,7 @@ internal static class PacketParser
         return version >= 1 && version <= MaxVersion;
     }
 
-    private static bool IsValidPayloadSize(ReadOnlySpan<byte> payload, short payloadSize)
+    private static bool IsValidPayloadSize(ReadOnlySpan<byte> payload, ushort payloadSize)
     {
         return payloadSize == payload.Length - PacketHeader.SizeOfSender();
     }

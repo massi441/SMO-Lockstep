@@ -8,7 +8,8 @@ internal struct PacketHeader
 {
     public PacketType Type;
     public byte Version;
-    public short PayloadSize;
+    public ushort RoomId;
+    public ushort PayloadSize;
 
     public const uint Magic = 0x534D4F4C; // "SMOL"
 

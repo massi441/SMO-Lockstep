@@ -1,6 +1,6 @@
-﻿using System.Net.Sockets;
-using Lockstep.Client;
+﻿using Lockstep.Client;
 using Lockstep.Net;
+using Lockstep.Server;
 using Microsoft.Extensions.Logging;
 
 namespace Lockstep.Util;
@@ -8,13 +8,29 @@ namespace Lockstep.Util;
 internal class ServiceProvider
 {
     public ILogger Logger { get; }
-    public IClientHolder ClientHolder { get; } // TODO: Use interface
     public IPacketSender PacketSender { get; }
+    public Dictionary<uint, Room> Rooms { get; } = [];
 
-    public ServiceProvider(ILogger logger, IClientHolder holder, IPacketSender packetSender)
+    public ServiceProvider(ILogger logger, IPacketSender packetSender)
     {
         Logger = logger;
-        ClientHolder = holder;
         PacketSender = packetSender;
+    }
+
+    public void AddRoom()
+    {
+        if (Rooms.Count > 0)
+        {
+            Rooms.Add(Rooms.Keys.Max() + 1, new Room(null!));
+        }
+        else
+        {
+            Rooms.Add(0, new Room(null!));
+        }
+    }
+
+    public bool RemoveRoom(uint id)
+    {
+        return Rooms.Remove(id);
     }
 }

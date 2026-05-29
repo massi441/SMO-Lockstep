@@ -1,5 +1,4 @@
-﻿using Lockstep.Client;
-using Lockstep.Net;
+﻿using Lockstep.Net;
 using Lockstep.Protocol;
 using Lockstep.Util;
 using Microsoft.Extensions.Logging;
@@ -77,10 +76,9 @@ internal class UdpServer
         {
             try
             {
-                Payload packet = workItem.Packet;
+                ref Payload packet = ref workItem.Packet;
 
                 Result<Error> dispatchResult = PacketDispatcher.Dispatch(packet, _serviceProvider);
-
                 if (dispatchResult.IsSuccess)
                 {
                     Logger.LogInformation("Work uploaded on main Channel");
@@ -122,9 +120,9 @@ internal class UdpServer
     private void InitProvider(Socket socket)
     {
         ILogger logger = LockstepLogger.Instance();
-        IClientHolder holder = new ClientHolder();
         IPacketSender sender = new UdpPacketSender(socket);
 
-        _serviceProvider = new ServiceProvider(logger, holder, sender);
+        _serviceProvider = new ServiceProvider(logger, sender);
+        _serviceProvider.AddRoom();
     }
 }
