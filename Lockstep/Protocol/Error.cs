@@ -3,6 +3,7 @@
 internal enum Error
 {
     // Packet header
+    InvalidMagic,
     InvalidHeaderSize,
     InvalidPacketType,
     InvalidVersion,

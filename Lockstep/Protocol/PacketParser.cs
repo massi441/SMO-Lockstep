@@ -6,14 +6,20 @@ internal static class PacketParser
 {
     public const byte MaxVersion = 1;
 
-    internal static Result<PacketHeader, Error> ParseHeader(ReadOnlySpan<byte> payload)
+    internal static Result<PacketHeader, Error> ParseHeader(ReadOnlySpan<byte> packet)
     {
-        if (!IsValidHeaderSize(payload))
+        if (!IsValidHeaderSize(packet))
         {
             return Result<PacketHeader, Error>.Failure(Error.InvalidHeaderSize);
         }
 
-        SpanReader reader = new SpanReader(payload);
+        SpanReader reader = new SpanReader(packet);
+
+        uint magic = reader.ReadUInt32LittleEndian();
+        if (magic != PacketHeader.Magic)
+        {
+            return Result<PacketHeader, Error>.Failure(Error.InvalidMagic);
+        }
 
         byte packetType = reader.ReadByte();
         if (!IsValidType(packetType))
@@ -28,7 +34,7 @@ internal static class PacketParser
         }
 
         short payloadSize = reader.ReadInt16LittleEndian();
-        if (!IsValidPayloadSize(payload, payloadSize))
+        if (!IsValidPayloadSize(packet, payloadSize))
         {
             return Result<PacketHeader, Error>.Failure(Error.InvalidPayloadSize);
         }
@@ -55,7 +61,7 @@ internal static class PacketParser
 
     private static bool IsValidHeaderSize(ReadOnlySpan<byte> span)
     {
-        return span.Length >= PacketHeader.SizeOf();
+        return span.Length >= PacketHeader.SizeOf() + PacketHeader.SizeOfMagic();
     }
 
     private static bool IsValidType(byte packetType)
