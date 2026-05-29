@@ -1,5 +1,6 @@
 ﻿using System.Net.Sockets;
 using Lockstep.Protocol;
+using Lockstep.Server;
 using Lockstep.Util;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +15,7 @@ internal class PacketHealthCheckHandler : IPacketHandler
         _logger = logger;
     }
 
-    public Result<Error> Handle(Payload packetPayload)
+    public Result<Error> Handle(Room room, Payload packetPayload)
     {
         _logger.LogInformation("HealthCheck Packet Received");
         return Result<Error>.Success();

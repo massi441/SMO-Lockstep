@@ -9,7 +9,7 @@ internal static class PacketHandlerFactory
     {
         return packetType switch
         {
-            PacketType.Connect => new PacketConnectHandler(serviceProvider.ClientHolder, serviceProvider.PacketSender, serviceProvider.Logger),
+            PacketType.Connect => new PacketConnectHandler(serviceProvider.PacketSender, serviceProvider.Logger),
             PacketType.Disconnect => new PacketDisconnectHandler(serviceProvider.Logger),
             PacketType.PlayerInput => new PacketPlayerInputHandler(serviceProvider.Logger),
             PacketType.HealthCheck => new PacketHealthCheckHandler(serviceProvider.Logger),
