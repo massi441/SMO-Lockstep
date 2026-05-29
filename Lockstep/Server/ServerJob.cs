@@ -2,7 +2,7 @@
 
 namespace Lockstep.Server;
 
-internal class WorkItem
+internal class ServerJob
 {
     public required byte[] RentedBuffer;
     public required Payload Packet;

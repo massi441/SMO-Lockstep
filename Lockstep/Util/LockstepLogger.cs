@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Lockstep.Protocol;
+using Microsoft.Extensions.Logging;
 
 namespace Lockstep.Util;
 
@@ -24,7 +25,7 @@ internal static class LockstepLogger
                             options.TimestampFormat = "HH:mm:ss ";
                         });
 
-                        builder.SetMinimumLevel(LogLevel.Debug);
+                        builder.SetMinimumLevel(LogLevel.Trace);
                     });
 
                     _logger = _loggerFactory.CreateLogger("Server");

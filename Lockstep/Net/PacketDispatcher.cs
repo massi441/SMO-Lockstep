@@ -1,12 +1,13 @@
 ﻿using Lockstep.Protocol;
 using Lockstep.Server;
 using Lockstep.Util;
+using Microsoft.Extensions.Logging;
 
 namespace Lockstep.Net;
 
 internal static class PacketDispatcher
 {
-    public static Result<Error> Dispatch(Payload packet, ServiceProvider serviceProvider)
+    public static Result<Error> Dispatch(Payload packet, ServerContext context)
     {
         Result<PacketHeader, Error> headerResult = PacketParser.ParseHeader(packet.Buffer.Span);
 
@@ -18,20 +19,28 @@ internal static class PacketDispatcher
                 return Result<Error>.Failure(Error.EmptyPayload);
             }
 
-            if (!serviceProvider.Rooms.TryGetValue(header.RoomId, out Room? room))
+            Room? room = context.RoomHolder.GetRoom(header.RoomId);
+
+            if (room == null)
             {
                 return Result<Error>.Failure(Error.InvalidRoomId);
             }
 
-            IPacketHandler? packetHandler = PacketHandlerFactory.CreateHandler(header.Type, serviceProvider);
-            if (packetHandler == null)
+            Packet roomPacket = new Packet()
             {
-                return Result<Error>.Failure(Error.NoPacketHandler);
+                Header = header,
+                Payload = new Payload(packet, PacketHeader.SizeOf()),
+            };
+
+            if (!room.Packets.Writer.TryWrite(roomPacket))
+            {
+                return Result<Error>.Failure(Error.JobWriteFailed);
             }
 
-            Payload packetPayload = new Payload(packet, PacketHeader.SizeOfSender());
+            context.Logger.LogTrace("Uploaded work to room {RoomId}", header.RoomId);
 
-            return packetHandler.Handle(room, packetPayload);
+            return Result<Error>.Success();
+
         }
         else
         {

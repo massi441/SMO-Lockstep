@@ -15,8 +15,20 @@ class Program
         try
         {
             UdpServer server = new UdpServer(port);
-            CancellationTokenSource ctSource = new CancellationTokenSource();
-            await server.RunAsync(ctSource.Token);
+            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+
+            Console.CancelKeyPress += (_, e) =>
+            {
+                e.Cancel = true;
+                cancellationTokenSource.Cancel();
+            };
+
+            AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+            {
+                cancellationTokenSource.Cancel();
+            };
+
+            await server.RunAsync(cancellationTokenSource.Token);
         }
         catch (Exception ex)
         {

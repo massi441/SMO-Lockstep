@@ -11,21 +11,21 @@ namespace Lockstep.Server;
 
 internal class UdpServer
 {
-    private readonly int _port;
-    private readonly Channel<WorkItem> _packetChannel;
-    private ServiceProvider _serviceProvider = null!;
-
     private const int BufferSize = 1024;
 
-    private ILogger Logger => _serviceProvider.Logger;
+    private readonly int _port;
+    private readonly Channel<ServerJob> _jobs;
+
+    private ILogger Logger => Context.Logger;
+    public ServerContext Context { get; private set; } = null!;
 
     public UdpServer(int port)
     {
         _port = port;
-        _packetChannel = Channel.CreateUnbounded<WorkItem>();
+        _jobs = Channel.CreateUnbounded<ServerJob>();
     }
 
-    public async Task RunAsync(CancellationToken ct)
+    public async Task RunAsync(CancellationToken cancellationTokenSource)
     {
         using Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
@@ -33,24 +33,40 @@ internal class UdpServer
 
         socket.Bind(listenEndpoint);
 
-        InitProvider(socket);
+        InitContext(socket);
 
-        await Task.WhenAll(
-            ReceiveLoop(socket, ct),
-            ProcessLoop(socket, ct)
-        );
+        Logger.LogInformation("Server listening on port {Port}...", _port);
+
+        try
+        {
+            await Task.WhenAll(
+                ReceiveLoop(socket, cancellationTokenSource),
+                ProcessLoop(socket, cancellationTokenSource)
+            );
+        }
+        catch (OperationCanceledException)
+        {
+            Logger.LogWarning("Operations canceled.");
+        }
+
+        Logger.LogInformation("Shutting down server...");
+
+        await Context.RoomHolder.ShutdownRooms();
     }
 
-    private async Task ReceiveLoop(Socket socket, CancellationToken ct)
+    private async Task ReceiveLoop(Socket socket, CancellationToken cancellationTokenSource)
     {
-        Logger.LogInformation("SMO Lockstep server listening on port {Port}...", _port);
-
-        while (!ct.IsCancellationRequested)
+        while (!cancellationTokenSource.IsCancellationRequested)
         {
             byte[] buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
             try
             {
-                await ReceiveNext(socket, buffer, ct);
+                await ReceiveNext(socket, buffer, cancellationTokenSource);
+            }
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
+            {
+                Logger.LogWarning("Operation aborted");
+                break;
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.MessageSize)
             {
@@ -58,11 +74,7 @@ internal class UdpServer
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionReset)
             {
-                Logger.LogWarning("The sender received an empty message");
-            }
-            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
-            {
-                Logger.LogWarning("Cancel Requested, shutting down server");
+                Logger.LogWarning("An error occured while trying to send a packet");
             }
             catch (SocketException ex)
             {
@@ -70,22 +82,18 @@ internal class UdpServer
             }
         }
     }
-    private async Task ProcessLoop(Socket socket, CancellationToken ct)
+    private async Task ProcessLoop(Socket socket, CancellationToken cancellationTokenSource)
     {
-        await foreach (WorkItem workItem in _packetChannel.Reader.ReadAllAsync(ct))
+        await foreach (ServerJob workItem in _jobs.Reader.ReadAllAsync(cancellationTokenSource))
         {
             try
             {
                 ref Payload packet = ref workItem.Packet;
 
-                Result<Error> dispatchResult = PacketDispatcher.Dispatch(packet, _serviceProvider);
-                if (dispatchResult.IsSuccess)
+                Result<Error> dispatchResult = PacketDispatcher.Dispatch(packet, Context);
+                if (dispatchResult.IsFailed)
                 {
-                    Logger.LogInformation("Work uploaded on main Channel");
-                }
-                else
-                {
-                    Logger.LogError("An error occured while processing the pack. Sender: {Address}:{Port}, Error: {Error}", packet.Sender.Address, packet.Sender.Port, dispatchResult.Error);
+                    Logger.LogError("An error occured while dispatching the pack. Sender: {Address}:{Port}, Error: {Error}", packet.Sender.Address, packet.Sender.Port, dispatchResult.Error);
                 }
             }
             finally
@@ -95,21 +103,20 @@ internal class UdpServer
         }
     }
 
-    private async Task ReceiveNext(Socket socket, byte[] buffer, CancellationToken ct)
+    private async Task ReceiveNext(Socket socket, byte[] buffer, CancellationToken cancellationTokenSource)
     {
         IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
 
-        SocketReceiveFromResult receiveResult = await socket.ReceiveFromAsync(buffer, SocketFlags.None, sender, ct);
-
+        SocketReceiveFromResult receiveResult = await socket.ReceiveFromAsync(buffer, SocketFlags.None, sender, cancellationTokenSource);
         if (receiveResult.ReceivedBytes > 0)
         {
-            WorkItem workItem = new WorkItem()
+            ServerJob workItem = new ServerJob()
             {
                 Packet = new Payload(buffer.AsMemory()[..receiveResult.ReceivedBytes], (IPEndPoint)receiveResult.RemoteEndPoint),
                 RentedBuffer = buffer
             };
 
-            _packetChannel.Writer.TryWrite(workItem);
+            _jobs.Writer.TryWrite(workItem);
         }
         else
         {
@@ -117,12 +124,12 @@ internal class UdpServer
         }
     }
 
-    private void InitProvider(Socket socket)
+    private void InitContext(Socket socket)
     {
         ILogger logger = LockstepLogger.Instance();
+        IRoomHolder roomHolder = new RoomHolder();
         IPacketSender sender = new UdpPacketSender(socket);
 
-        _serviceProvider = new ServiceProvider(logger, sender);
-        _serviceProvider.AddRoom();
+        Context = new ServerContext(logger, roomHolder, sender);
     }
 }

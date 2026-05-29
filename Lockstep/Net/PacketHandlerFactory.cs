@@ -5,14 +5,11 @@ namespace Lockstep.Net;
 
 internal static class PacketHandlerFactory
 {
-    public static IPacketHandler? CreateHandler(PacketType packetType, ServiceProvider serviceProvider)
+    public static IPacketHandler? CreateHandler(PacketType packetType, ServerContext context)
     {
         return packetType switch
         {
-            PacketType.Connect => new PacketConnectHandler(serviceProvider.PacketSender, serviceProvider.Logger),
-            PacketType.Disconnect => new PacketDisconnectHandler(serviceProvider.Logger),
-            PacketType.PlayerInput => new PacketPlayerInputHandler(serviceProvider.Logger),
-            PacketType.HealthCheck => new PacketHealthCheckHandler(serviceProvider.Logger),
+            PacketType.Connect => new PacketConnectHandler(context),
             _ => null
         };
     }

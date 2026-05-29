@@ -15,5 +15,8 @@ internal enum Error
     NoPacketHandler,
 
     // Packet Sending
-    NotSent
+    NotSent,
+
+    // Generic
+    JobWriteFailed
 }

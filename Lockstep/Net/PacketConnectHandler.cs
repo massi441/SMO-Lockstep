@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using Lockstep.Client;
 using Lockstep.Protocol;
 using Lockstep.Server;
 using Lockstep.Util;
@@ -9,22 +8,23 @@ namespace Lockstep.Net;
 
 internal class PacketConnectHandler : IPacketHandler
 {
-    private readonly IPacketSender _packetSender;
-    private readonly ILogger _logger;
+    private readonly ServerContext _context;
 
-    public PacketConnectHandler(IPacketSender packetSender, ILogger logger)
+    private ILogger Logger => _context.Logger;
+    private IPacketSender PacketSender => _context.PacketSender;
+
+    public PacketConnectHandler(ServerContext context)
     {
-        _packetSender = packetSender;
-        _logger = logger;
+        _context = context;
     }
 
-    public Result<Error> Handle(Room room, Payload packetPayload)
+    public Result<Error> Handle(Room room, Packet packet)
     {
-        _logger.LogInformation("Connection Packet Received");
+        Logger.LogInformation("Connection Packet Received");
         string message = "Successfully Connected miller maggot";
         Span<byte> bytes = stackalloc byte[Encoding.UTF8.GetByteCount(message)];
         Encoding.UTF8.GetBytes(message, bytes);
-        _packetSender.Send(bytes, packetPayload.Sender);
+        PacketSender.Send(bytes, packet.Payload.Sender);
         return Result<Error>.Success();
     }
 }
