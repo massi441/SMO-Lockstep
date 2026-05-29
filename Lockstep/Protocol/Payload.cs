@@ -2,12 +2,12 @@
 
 namespace Lockstep.Protocol;
 
-internal readonly ref struct Payload
+internal readonly struct Payload
 {
-    public readonly ReadOnlySpan<byte> Buffer;
-    public readonly EndPoint Sender;
+    public readonly Memory<byte> Buffer;
+    public readonly IPEndPoint Sender;
 
-    public Payload(ReadOnlySpan<byte> payload, EndPoint sender)
+    public Payload(Memory<byte> payload, IPEndPoint sender)
     {
         Buffer = payload;
         Sender = sender;

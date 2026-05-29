@@ -1,19 +1,22 @@
 import socket
 import struct
 
+MAGIC = 0x534D4F4C  # "SMOL"
+VERSION = 1
+
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(("0.0.0.0", 0))
 
-ptype = 0
-version = 1
+ptype = 0  # Connect
+payload = bytes([0xAB]) * 10
+payload_size = len(payload)
 
-payload_size = 10
-payload = bytes([0xAB]) * payload_size
+# [Magic: 4 LE][Type: 1][Version: 1][PayloadSize: 2 LE][Payload]
+header = struct.pack("<IBBh", MAGIC, ptype, VERSION, payload_size)
+packet = header + payload
 
-header = struct.pack("<BBh", ptype, version, payload_size)
-
-sock.sendto(header + payload, ("127.0.0.1", 5001))
-print("sent", len(header + payload), "bytes")
+sock.sendto(packet, ("127.0.0.1", 5001))
+print("sent", len(packet), "bytes")
 
 sock.settimeout(2.0)
 try:

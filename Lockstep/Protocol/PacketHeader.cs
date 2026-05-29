@@ -12,13 +12,8 @@ internal struct PacketHeader
 
     public const uint Magic = 0x534D4F4C; // "SMOL"
 
-    public static int SizeOf()
+    public static int SizeOfSender()
     {
-        return Unsafe.SizeOf<PacketHeader>();
-    }
-
-    public static int SizeOfMagic()
-    {
-        return sizeof(uint);
+        return sizeof(uint) + Unsafe.SizeOf<PacketHeader>();
     }
 }

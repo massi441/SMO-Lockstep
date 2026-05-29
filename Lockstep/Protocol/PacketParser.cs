@@ -56,12 +56,12 @@ internal static class PacketParser
 
     private static bool IsValidPayloadSize(ReadOnlySpan<byte> payload, short payloadSize)
     {
-        return payloadSize == payload.Length - PacketHeader.SizeOf();
+        return payloadSize == payload.Length - PacketHeader.SizeOfSender();
     }
 
     private static bool IsValidHeaderSize(ReadOnlySpan<byte> span)
     {
-        return span.Length >= PacketHeader.SizeOf() + PacketHeader.SizeOfMagic();
+        return span.Length >= PacketHeader.SizeOfSender();
     }
 
     private static bool IsValidType(byte packetType)
