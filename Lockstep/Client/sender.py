@@ -1,17 +1,18 @@
 import socket
 import struct
+import sys
 
 MAGIC = 0x534D4F4C  # "SMOL"
 VERSION = 1
-SERVER = ("127.0.0.1", 5001)
+PORT = 5001
 
 # [Magic: 4 LE][Type: 1][RoomId: 2 LE][Version: 1][PayloadSize: 2 LE][Payload]
 def build_packet(ptype, room_id, payload=b""):
     header = struct.pack("<IBHBH", MAGIC, ptype, room_id, VERSION, len(payload))
     return header + payload
 
-def send(sock, packet):
-    sock.sendto(packet, SERVER)
+def send(sock, packet, server):
+    sock.sendto(packet, server)
     print(f"sent {len(packet)} bytes")
     try:
         data, sender = sock.recvfrom(1024)
@@ -31,14 +32,23 @@ def packet_join_room():
     payload = bytes([len(name)]) + name
     return build_packet(ptype=2, room_id=room_id, payload=payload)
 
+def packet_player_input():
+    room_id = int(input("room id: "))
+    return build_packet(ptype=3, room_id=room_id)
+
 # --- menu ---
 
 PACKETS = [
-    ("connect",   packet_connect),
-    ("join room", packet_join_room),
+    ("connect",      packet_connect),
+    ("join room",    packet_join_room),
+    ("player input", packet_player_input),
 ]
 
 def main():
+    host = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
+    server = (host, PORT)
+    print(f"connecting to {host}:{PORT}")
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", 0))
     sock.settimeout(2.0)
@@ -56,7 +66,7 @@ def main():
             print(f"enter a number between 1 and {len(PACKETS)}")
             continue
         _, builder = PACKETS[int(choice) - 1]
-        send(sock, builder())
+        send(sock, builder(), server)
 
 if __name__ == "__main__":
     main()

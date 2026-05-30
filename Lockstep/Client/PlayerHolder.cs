@@ -1,4 +1,5 @@
-﻿using Lockstep.Protocol;
+﻿using System.Net;
+using Lockstep.Protocol;
 using Lockstep.Util;
 
 namespace Lockstep.Client;
@@ -32,6 +33,24 @@ internal class PlayerHolder : IPlayerHolder
 
         _players[index] = player;
         return Result<Player, Error>.Success(player);
+    }
+
+    public Player? FindPlayerByHost(IPEndPoint endpoint)
+    {
+        foreach (Player p in _players)
+        {
+            if (p == null)
+            {
+                continue;
+            }
+
+            if (p.Info.Endpoint.Equals(endpoint))
+            {
+                return p;
+            }
+        }
+
+        return null;
     }
 
     public ReadOnlySpan<Player> GetPlayers()
@@ -83,20 +102,7 @@ internal class PlayerHolder : IPlayerHolder
 
     private bool ContainsPlayer(PlayerInfo playerInfo)
     {
-        foreach (Player p in _players)
-        {
-            if (p == null)
-            {
-                continue;
-            }
-
-            if (p.Info.Endpoint.Equals(playerInfo.Endpoint))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return FindPlayerByHost(playerInfo.Endpoint) != null;
     }
 
     private static bool IsReservedPort(int port)

@@ -12,6 +12,8 @@ internal class PacketConnectHandler : IPacketHandler
     private ILogger Logger => _context.Logger;
     private IPacketSender PacketSender => _context.PacketSender;
 
+    public uint MinPayloadSize => 0;
+
     public PacketConnectHandler(ServerContext context)
     {
         _context = context;

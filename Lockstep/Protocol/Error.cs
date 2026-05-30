@@ -20,6 +20,7 @@ internal enum Error
 
     // Room
     PlayerAlreadyInRoom,
+    IllegalRoomAccess,
     RoomFull,
 
     // Generic

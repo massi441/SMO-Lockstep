@@ -1,4 +1,6 @@
-﻿using Lockstep.Protocol;
+﻿using System.Net;
+using System.Net.Sockets;
+using Lockstep.Protocol;
 using Lockstep.Server;
 using Lockstep.Util;
 using Microsoft.Extensions.Logging;
@@ -14,15 +16,16 @@ internal static class PacketDispatcher
         if (headerResult.IsSuccess)
         {
             PacketHeader header = headerResult.Data;
-            if (header.PayloadSize == 0)
-            {
-                return Result<Error>.Failure(Error.EmptyPayload);
-            }
 
             Room? room = context.RoomHolder.GetRoom(header.RoomId);
             if (room == null)
             {
                 return Result<Error>.Failure(Error.InvalidRoomId);
+            }
+
+            if (!IsAllowedInRoom(packet.Sender, room, ref header))
+            {
+                return Result<Error>.Failure(Error.IllegalRoomAccess);
             }
 
             Packet roomPacket = new Packet()
@@ -44,5 +47,10 @@ internal static class PacketDispatcher
         {
             return Result<Error>.Failure(headerResult.Error!.Value);
         }
+    }
+
+    private static bool IsAllowedInRoom(IPEndPoint sender, Room room, ref PacketHeader header)
+    {
+        return header.Type == PacketType.JoinRoom || room.PlayerHolder.FindPlayerByHost(sender) != null;
     }
 }

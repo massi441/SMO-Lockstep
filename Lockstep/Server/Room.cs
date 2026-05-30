@@ -9,19 +9,19 @@ namespace Lockstep.Server;
 
 internal class Room
 {
-    private readonly uint _roomId;
     private readonly ServerContext _context;
 
+    public uint Id { get; }
     public Task Task { get; private set; } = null!;
     public Channel<Packet> Packets { get; }
     public IPlayerHolder PlayerHolder { get; }
 
     public Room(uint roomId, ServerContext conxtext, IPlayerHolder playerHolder)
     {
-        _roomId = roomId;
         _context = conxtext;
-        PlayerHolder = playerHolder;
 
+        Id = roomId;
+        PlayerHolder = playerHolder;
         Packets = Channel.CreateUnbounded<Packet>();
     }
 
@@ -52,6 +52,12 @@ internal class Room
             IPacketHandler? packetHandler = PacketHandlerFactory.CreateHandler(packet.Header.Type, _context);
             if (packetHandler != null)
             {
+                if (packet.Payload.Buffer.Length < packetHandler.MinPayloadSize)
+                {
+                    _context.Logger.LogError("A {PacketType} packet of invalid size ({PacketSize}) was requested", packet.Header.Type, packet.Payload.Length);
+                    continue;
+                }
+
                 Result<Error> handlerResult = packetHandler.Handle(packet, this);
                 if (handlerResult.IsSuccess)
                 {

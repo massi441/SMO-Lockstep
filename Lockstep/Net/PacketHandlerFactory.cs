@@ -11,6 +11,7 @@ internal static class PacketHandlerFactory
         {
             PacketType.Connect => new PacketConnectHandler(context),
             PacketType.JoinRoom => new PacketJoinRoomHandler(context),
+            PacketType.PlayerInput => new PacketPlayerInputHandler(context),
             _ => null
         };
     }

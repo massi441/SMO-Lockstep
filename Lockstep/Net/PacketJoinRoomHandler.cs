@@ -11,6 +11,8 @@ internal class PacketJoinRoomHandler : IPacketHandler
 {
     private readonly ServerContext _context;
 
+    public uint MinPayloadSize => 2;
+
     public PacketJoinRoomHandler(ServerContext context)
     {
         _context = context;
