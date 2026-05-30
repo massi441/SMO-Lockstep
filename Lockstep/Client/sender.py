@@ -1,6 +1,7 @@
 import socket
 import struct
 import sys
+import threading
 
 MAGIC = 0x534D4F4C  # "SMOL"
 VERSION = 1
@@ -13,13 +14,16 @@ def build_packet(ptype, room_id, payload=b""):
 
 def send(sock, packet, server):
     sock.sendto(packet, server)
-    print(f"sent {len(packet)} bytes")
-    try:
-        data, sender = sock.recvfrom(1024)
-        print(f"received {len(data)} bytes from {sender}")
-        print(f"data: {data}")
-    except socket.timeout:
-        print("no reply within timeout")
+    print(f"  >> sent {len(packet)} bytes")
+
+def receive_loop(sock):
+    while True:
+        try:
+            data, sender = sock.recvfrom(1024)
+            print(f"\n  << received {len(data)} bytes from {sender}: {data}")
+            print("\n> ", end="", flush=True)
+        except OSError:
+            break
 
 # --- packet builders ---
 
@@ -51,7 +55,9 @@ def main():
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", 0))
-    sock.settimeout(2.0)
+
+    receiver = threading.Thread(target=receive_loop, args=(sock,), daemon=True)
+    receiver.start()
 
     while True:
         print()
@@ -67,6 +73,8 @@ def main():
             continue
         _, builder = PACKETS[int(choice) - 1]
         send(sock, builder(), server)
+
+    sock.close()
 
 if __name__ == "__main__":
     main()
