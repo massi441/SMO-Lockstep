@@ -4,9 +4,10 @@ using System.Runtime.InteropServices;
 namespace Lockstep.Protocol;
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-internal struct PacketHeader
+internal record struct PacketHeader
 {
     public PacketType Type;
+    public byte Flags;
     public byte Version;
     public ushort RoomId;
     public ushort PayloadSize;

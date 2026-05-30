@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Text;
 using Lockstep.Client;
 using Lockstep.Protocol;
 using Lockstep.Server;
@@ -21,9 +20,9 @@ internal class PacketJoinRoomHandler : IPacketHandler
 
     public Result<Error> Handle(Packet packet, Room room)
     {
-        if (IsInOtherRoom(packet.Sender, out Player player, out Room takenRoom))
+        if (IsInOtherRoom(packet.Sender, out Player takenRoomPlayer, out Room takenRoom))
         {
-            PlayerInfo info = player.Info;
+            PlayerInfo info = takenRoomPlayer.Info;
             _context.Logger.LogWarning("Player {Name} ({Address}:{Port}) is already in room {RoomId}", info.Name, info.Endpoint.Address, info.Endpoint.Port, takenRoom.Id);
             return Result<Error>.Failure(Error.PlayerAlreadyInRoom);
         }
@@ -50,9 +49,21 @@ internal class PacketJoinRoomHandler : IPacketHandler
             return Result<Error>.Failure(addResult.Error!.Value);
         }
 
-        _context.Logger.LogTrace("Player {Name} joined room #{RoomId} with port #{Port}", name, packet.Header.RoomId, addResult.Data!.PortNumber);
+        Span<byte> broadcastBuffer = stackalloc byte[PacketHeader.SizeOf()];
+        WriteBroadcast(broadcastBuffer, packet);
 
-        return Result<Error>.Success();
+        Span<byte> senderBuffer = stackalloc byte[PacketHeader.SizeOf()];
+        WriteSender(senderBuffer, packet);
+
+        Player newPlayer = addResult.Data!;
+
+        Result<Error> notifyResult = room.Notifier.NotifyOthers(broadcastBuffer, newPlayer, senderBuffer);
+        if (notifyResult.IsSuccess)
+        {
+            _context.Logger.LogTrace("Player {Name} joined room #{RoomId} with port #{Port}", name, packet.Header.RoomId, newPlayer.PortNumber);
+        }
+
+        return notifyResult;
     }
 
     private bool IsInOtherRoom(IPEndPoint sender, out Player player, out Room takenRoom)
@@ -70,7 +81,6 @@ internal class PacketJoinRoomHandler : IPacketHandler
 
         player = null!;
         takenRoom = null!;
-
         return false;
     }
 
@@ -79,4 +89,19 @@ internal class PacketJoinRoomHandler : IPacketHandler
         return nameLength > 0 && nameLength <= Packet.Payload.Buffer.Length - sizeof(byte);
     }
 
+    private static void WriteSender(Span<byte> buffer, Packet packet)
+    {
+        SpanWriter writer = new SpanWriter(buffer);
+
+        writer.Write(PacketHeader.Magic);
+        writer.Write(packet.Header with { Type = PacketType.Ack });
+    }
+
+    private static void WriteBroadcast(Span<byte> buffer, Packet packet)
+    {
+        SpanWriter writer = new SpanWriter(buffer);
+
+        writer.Write(PacketHeader.Magic);
+        writer.Write(packet.Header with { Type = PacketType.LeaveRoom });
+    }
 }

@@ -56,7 +56,7 @@ internal class Room
             {
                 if (packet.Payload.Buffer.Length < packetHandler.MinPayloadSize)
                 {
-                    _context.Logger.LogWarning("A {PacketType} packet of invalid size ({PacketSize}) was requested", packet.Header.Type, packet.Payload.Length);
+                    _context.Logger.LogWarning("A {PacketType} packet of invalid size ({PacketSize}) was requested. Minimum required: {Minimum}", packet.Header.Type, packet.Payload.Length, packetHandler.MinPayloadSize);
                     continue;
                 }
 

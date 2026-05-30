@@ -1,5 +1,4 @@
-﻿using Lockstep.Protocol;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 
 namespace Lockstep.Util;
 

@@ -1,5 +1,4 @@
-﻿using System.Net;
-using Lockstep.Client;
+﻿using Lockstep.Client;
 using Lockstep.Protocol;
 using Lockstep.Util;
 

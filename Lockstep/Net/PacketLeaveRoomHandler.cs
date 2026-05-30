@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using Lockstep.Client;
+﻿using Lockstep.Client;
 using Lockstep.Protocol;
 using Lockstep.Server;
 using Lockstep.Util;
@@ -19,40 +18,32 @@ internal class PacketLeaveRoomHandler : IPacketHandler
 
     public Result<Error> Handle(Packet packet, Room room)
     {
-        PacketHeader header = new PacketHeader
+        Player player = room.PlayerHolder.FindPlayerByHost(packet.Sender)!;
+
+        Result<Error> unregisterResult = room.PlayerHolder.UnregisterPlayer(player);
+        if (unregisterResult.IsFailed)
         {
-            Version = packet.Header.Version,
-            RoomId = room.Id
-        };
-
-        SpanWriter writer = new SpanWriter(stackalloc byte[PacketHeader.SizeOf()]);
-
-        writer.Write(PacketHeader.Magic);
-
-        foreach (Player player in room.PlayerHolder.GetPlayers())
-        {
-            if (player.Info.Endpoint.Equals(packet.Sender))
-            {
-                Result<Error> result = room.PlayerHolder.UnregisterPlayer(player);
-                if (result.IsFailed)
-                {
-                    return Result<Error>.Failure(result.Error!.Value);
-                }
-
-                _context.Logger.LogWarning("Player {PlayerName} left room {Roomid}", player.Info.Name, room.Id);
-
-                header.Type = PacketType.Ack;
-            }
-            else
-            {
-                header.Type = PacketType.LeaveRoom;
-            }
-
-            writer.Write(header);
-
-            _context.PacketSender.Send(writer.Span, player.Info.Endpoint);
+            _context.Logger.LogError("An error occured while trying to unregister player {Name} from room #{RoomId}", player.Info.Name, room.Id);
+            return unregisterResult;
         }
 
-        return Result<Error>.Success();
+        Span<byte> broadcastBuffer = stackalloc byte[PacketHeader.SizeOf()];
+        WriteBroadcast(broadcastBuffer, packet);
+
+        Result<Error> notifyResult = room.Notifier.NotifyOthers(broadcastBuffer, player);
+        if (notifyResult.IsSuccess)
+        {
+            _context.Logger.LogWarning("Player {Name} left room {RoomId}", player.Info.Name, room.Id);
+        }
+
+        return notifyResult;
+    }
+
+    private static void WriteBroadcast(Span<byte> buffer, Packet packet)
+    {
+        SpanWriter writer = new SpanWriter(buffer);
+
+        writer.Write(PacketHeader.Magic);
+        writer.Write(packet.Header with { Type = PacketType.LeaveRoom });
     }
 }

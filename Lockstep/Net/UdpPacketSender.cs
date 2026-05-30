@@ -17,7 +17,6 @@ internal class UdpPacketSender : IPacketSender
     public Result<Error> Send(ReadOnlySpan<byte> data, EndPoint destination)
     {
         int bytesSent = _socket.SendTo(data, destination);
-
         if (bytesSent != data.Length)
         {
             return Result<Error>.Failure(Error.NotSent);
