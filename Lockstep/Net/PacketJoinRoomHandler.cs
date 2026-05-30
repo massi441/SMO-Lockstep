@@ -25,7 +25,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
     private struct PlayerBroadcastJoinPacket
     {
         public uint Magic;
-        public PacketHeader header;
+        public PacketHeader Header;
         public byte PlayerPort;
 
         public static int SizeOf()
@@ -74,10 +74,19 @@ internal class PacketJoinRoomHandler : IPacketHandler
         Result<Player, Error> addResult = room.PlayerHolder.RegisterPlayer(playerInfo);
         if (addResult.IsFailed)
         {
+            _context.Logger.LogError("Failed to register {PlayerName} in Room #{RoomId}", playerInfo.Name, room.Id);
             return Result<Error>.Failure(addResult.Error!.Value);
         }
 
-        return NotifyRoom(packet, room, addResult.Data!);
+        Player newPlayer = addResult.Data!;
+        
+        Result<Error> notifyResult = NotifyRoom(packet, room, newPlayer);
+        if (notifyResult.IsSuccess)
+        {
+            _context.Logger.LogTrace("Player {Name} joined room #{RoomId} with port #{Port}", newPlayer.Info.Name, packet.Header.RoomId, newPlayer.PortNumber);
+        }
+
+        return notifyResult;
     }
 
     private Result<Error> NotifyRoom(Packet packet, Room room, Player newPlayer)
@@ -91,13 +100,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
 
         WriteAck(ackBuffer, packet, room, newPlayer, otherPlayersCount);
 
-        Result<Error> notifyResult = room.Notifier.NotifyOthers(broadcastBuffer, newPlayer, ackBuffer);
-        if (notifyResult.IsSuccess)
-        {
-            _context.Logger.LogTrace("Player {Name} joined room #{RoomId} with port #{Port}", newPlayer.Info.Name, packet.Header.RoomId, newPlayer.PortNumber);
-        }
-
-        return notifyResult;
+        return room.Notifier.NotifyOthers(broadcastBuffer, newPlayer, ackBuffer);
     }
 
     private static void WriteBroadcast(Span<byte> buffer, Packet packet, Player newPlayer)
@@ -106,7 +109,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
         {
             Magic = PacketHeader.Magic,
             PlayerPort = newPlayer.PortNumber,
-            header = packet.Header
+            Header = packet.Header
         };
 
         MemoryMarshal.Write(buffer, broadcastPacket);

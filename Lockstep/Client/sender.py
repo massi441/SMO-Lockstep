@@ -41,7 +41,7 @@ def parse_header(data):
 
 def decode_payload(ptype, data):
     payload = data[HEADER_SIZE:]
-    if ptype == PTYPE_JOIN_ROOM and len(payload) >= 1:
+    if ptype in (PTYPE_JOIN_ROOM, PTYPE_LEAVE_ROOM) and len(payload) >= 1:
         port = struct.unpack_from("B", payload, 0)[0]
         return f"PlayerPort={port}"
     elif ptype == PTYPE_ACK and len(payload) >= 2:
