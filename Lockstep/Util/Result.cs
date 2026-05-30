@@ -1,10 +1,10 @@
 ﻿namespace Lockstep.Util;
 
-internal class Result<E> where E : struct, Enum
+internal readonly struct Result<E> where E : struct, Enum
 {
     private readonly E? _error;
 
-    public E? Error => _error;
+    public readonly E? Error => _error;
 
     public bool IsSuccess => _error == null;
     public bool IsFailed => _error != null;
@@ -25,7 +25,7 @@ internal class Result<E> where E : struct, Enum
     }
 }
 
-internal class Result<T, E> where E : struct, Enum
+internal readonly struct Result<T, E> where E : struct, Enum
 {
     private readonly T? _data;
     private readonly E? _error;
