@@ -4,6 +4,7 @@ internal enum PacketType : byte
 {
     Connect,
     Disconnect,
+    JoinRoom,
     PlayerInput,
     HealthCheck,
 

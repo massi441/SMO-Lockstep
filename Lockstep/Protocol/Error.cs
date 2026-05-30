@@ -13,10 +13,15 @@ internal enum Error
     // Packet Handling
     EmptyPayload,
     NoPacketHandler,
+    InvalidNameLength,
 
     // Packet Sending
     NotSent,
 
+    // Room
+    PlayerAlreadyInRoom,
+    RoomFull,
+
     // Generic
-    JobWriteFailed
+    JobWriteFailed,
 }

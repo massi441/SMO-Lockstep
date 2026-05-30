@@ -20,7 +20,6 @@ internal static class PacketDispatcher
             }
 
             Room? room = context.RoomHolder.GetRoom(header.RoomId);
-
             if (room == null)
             {
                 return Result<Error>.Failure(Error.InvalidRoomId);
@@ -40,7 +39,6 @@ internal static class PacketDispatcher
             context.Logger.LogTrace("Uploaded work to room {RoomId}", header.RoomId);
 
             return Result<Error>.Success();
-
         }
         else
         {

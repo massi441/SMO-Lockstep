@@ -1,5 +1,5 @@
 ﻿using Lockstep.Protocol;
-using Lockstep.Util;
+using Lockstep.Server;
 
 namespace Lockstep.Net;
 
@@ -10,6 +10,7 @@ internal static class PacketHandlerFactory
         return packetType switch
         {
             PacketType.Connect => new PacketConnectHandler(context),
+            PacketType.JoinRoom => new PacketJoinRoomHandler(context),
             _ => null
         };
     }
