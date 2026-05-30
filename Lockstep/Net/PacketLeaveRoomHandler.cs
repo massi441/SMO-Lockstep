@@ -25,9 +25,9 @@ internal class PacketLeaveRoomHandler : IPacketHandler
             RoomId = room.Id
         };
 
-        Span<byte> buffer = stackalloc byte[PacketHeader.SizeOf()];
+        SpanWriter writer = new SpanWriter(stackalloc byte[PacketHeader.SizeOf()]);
 
-        MemoryMarshal.Write(buffer, PacketHeader.Magic);
+        writer.Write(PacketHeader.Magic);
 
         foreach (Player player in room.PlayerHolder.GetPlayers())
         {
@@ -48,9 +48,9 @@ internal class PacketLeaveRoomHandler : IPacketHandler
                 header.Type = PacketType.LeaveRoom;
             }
 
-            MemoryMarshal.Write(buffer[PacketHeader.SizeOfMagic()..], header);
+            writer.Write(header);
 
-            _context.PacketSender.Send(buffer, player.Info.Endpoint);
+            _context.PacketSender.Send(writer.Span, player.Info.Endpoint);
         }
 
         return Result<Error>.Success();
