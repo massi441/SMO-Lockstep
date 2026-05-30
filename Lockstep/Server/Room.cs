@@ -54,7 +54,7 @@ internal class Room
             {
                 if (packet.Payload.Buffer.Length < packetHandler.MinPayloadSize)
                 {
-                    _context.Logger.LogError("A {PacketType} packet of invalid size ({PacketSize}) was requested", packet.Header.Type, packet.Payload.Length);
+                    _context.Logger.LogWarning("A {PacketType} packet of invalid size ({PacketSize}) was requested", packet.Header.Type, packet.Payload.Length);
                     continue;
                 }
 
@@ -70,7 +70,7 @@ internal class Room
             }
             else
             {
-                _context.Logger.LogError("No handler found for packet type");
+                _context.Logger.LogWarning("No handler found for packet type {PacketType}", (int)packet.Header.Type);
             }
         }
     }

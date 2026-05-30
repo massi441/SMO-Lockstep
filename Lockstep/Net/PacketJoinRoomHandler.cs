@@ -24,7 +24,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
         if (IsInOtherRoom(packet.Sender, out Player player, out Room takenRoom))
         {
             PlayerInfo info = player.Info;
-            _context.Logger.LogInformation("Player {Name} ({Address}:{Port}) is already in room {RoomId}", info.Name, info.Endpoint.Address, info.Endpoint.Port, takenRoom.Id);
+            _context.Logger.LogWarning("Player {Name} ({Address}:{Port}) is already in room {RoomId}", info.Name, info.Endpoint.Address, info.Endpoint.Port, takenRoom.Id);
             return Result<Error>.Failure(Error.PlayerAlreadyInRoom);
         }
 
