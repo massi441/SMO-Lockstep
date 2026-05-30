@@ -1,0 +1,107 @@
+﻿using Lockstep.Protocol;
+using Lockstep.Util;
+
+namespace Lockstep.Client;
+
+internal class PlayerHolder : IPlayerHolder
+{
+    private readonly Player[] _players;
+
+    public PlayerHolder(int size = 4)
+    {
+        _players = new Player[size];
+    }
+
+    public Result<Player, Error> AddPlayer(PlayerInfo playerInfo)
+    {
+        if (ContainsPlayer(playerInfo))
+        {
+            return Result<Player, Error>.Failure(Error.PlayerAlreadyInRoom);
+        }
+
+        if (!TryFindSlot(out int index, out int playerPort))
+        {
+            return Result<Player, Error>.Failure(Error.RoomFull);
+        }
+
+        Player player = new Player()
+        {
+            Info = playerInfo,
+            PortNumber = playerPort
+        };
+
+        _players[index] = player;
+        return Result<Player, Error>.Success(player);
+    }
+
+    public ReadOnlySpan<Player> GetPlayers()
+    {
+        return _players.Where(p => p != null).ToArray().AsSpan();
+    }
+
+    public void RemovePlayer(Player player)
+    {
+        for (int i = 0; i < _players.Length; i++)
+        {
+            Player p = _players[i];
+            if (p == null)
+            {
+                continue;
+            }
+
+            if (p.Info.Endpoint.Equals(player.Info.Endpoint))
+            {
+                _players[i] = null!;
+            }
+        }
+    }
+
+    private bool TryFindSlot(out int index, out int playerPort)
+    {
+        index = 0;
+        playerPort = 0;
+
+        while (index < _players.Length)
+        {
+            if (IsReservedPort(playerPort))
+            {
+                playerPort++;
+                continue;
+            }
+
+            if (_players[index] == null)
+            {
+                return true;
+            }
+
+            index++;
+            playerPort++;
+        }
+
+        return false;
+    }
+
+    private bool ContainsPlayer(PlayerInfo playerInfo)
+    {
+        foreach (Player p in _players)
+        {
+            if (p == null)
+            {
+                continue;
+            }
+
+            if (p.Info.Endpoint.Equals(playerInfo.Endpoint))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsReservedPort(int port)
+    {
+        // 0 is for the debug controller, 2 is for cappy
+        return port == 0 || port == 2;
+    }
+}

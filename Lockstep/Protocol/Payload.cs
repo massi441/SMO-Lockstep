@@ -1,0 +1,21 @@
+﻿using System.Net;
+
+namespace Lockstep.Protocol;
+
+internal readonly struct Payload
+{
+    public readonly Memory<byte> Buffer;
+    public readonly IPEndPoint Sender;
+
+    public Payload(Memory<byte> payload, IPEndPoint sender)
+    {
+        Buffer = payload;
+        Sender = sender;
+    }
+
+    public Payload(Payload other, int startOffset)
+    {
+        Buffer = other.Buffer[startOffset..];
+        Sender = other.Sender;
+    }
+}

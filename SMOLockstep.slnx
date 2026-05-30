@@ -2,5 +2,6 @@
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
   </Folder>
+  <Project Path="Lockstep.Test/Lockstep.Test.csproj" Id="911db49f-b3a1-4997-9e9f-3bd31de7b44f" />
   <Project Path="Lockstep/Lockstep.csproj" Id="de86b91d-be52-4e9e-96c8-e11a6e4e171f" />
 </Solution>
