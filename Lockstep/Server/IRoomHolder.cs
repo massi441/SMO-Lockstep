@@ -2,9 +2,9 @@
 
 internal interface IRoomHolder
 {
-    uint AddRoom(ServerContext context);
-    bool RemoveRoom(uint id);
-    Room? GetRoom(uint id);
+    ushort AddRoom(ServerContext context);
+    bool RemoveRoom(ushort id);
+    Room? GetRoom(ushort id);
     Task ShutdownRooms();
     IEnumerable<Room> GetRooms();
 }

@@ -25,4 +25,5 @@ internal enum Error
 
     // Generic
     JobWriteFailed,
+    OperationFailed,
 }

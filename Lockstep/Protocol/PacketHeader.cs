@@ -20,6 +20,11 @@ internal struct PacketHeader
     /// <returns>The number of bytes of the size of a packet header sent by clients</returns>
     public static int SizeOf()
     {
-        return sizeof(uint) + Unsafe.SizeOf<PacketHeader>();
+        return SizeOfMagic() + Unsafe.SizeOf<PacketHeader>();
+    }
+
+    public static int SizeOfMagic()
+    {
+        return sizeof(uint);
     }
 }

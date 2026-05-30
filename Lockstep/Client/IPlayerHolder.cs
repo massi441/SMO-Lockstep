@@ -6,7 +6,8 @@ namespace Lockstep.Client;
 
 internal interface IPlayerHolder
 {
-    Result<Player, Error> AddPlayer(PlayerInfo playerInfo);
+    Result<Player, Error> RegisterPlayer(PlayerInfo playerInfo);
+    Result<Error> UnregisterPlayer(Player player);
     Player? FindPlayerByHost(IPEndPoint endpoint);
     IEnumerable<Player> GetPlayers();
 }

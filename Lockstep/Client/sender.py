@@ -7,6 +7,13 @@ MAGIC = 0x534D4F4C  # "SMOL"
 VERSION = 1
 PORT = 5001
 
+# PacketType enum order
+PTYPE_JOIN_ROOM    = 0
+PTYPE_LEAVE_ROOM   = 1
+PTYPE_PLAYER_INPUT = 2
+PTYPE_HEALTH_CHECK = 3
+PTYPE_ACK          = 4
+
 # [Magic: 4 LE][Type: 1][RoomId: 2 LE][Version: 1][PayloadSize: 2 LE][Payload]
 def build_packet(ptype, room_id, payload=b""):
     header = struct.pack("<IBHBH", MAGIC, ptype, room_id, VERSION, len(payload))
@@ -27,24 +34,25 @@ def receive_loop(sock):
 
 # --- packet builders ---
 
-def packet_connect():
-    return build_packet(ptype=0, room_id=0)
-
 def packet_join_room():
     room_id = int(input("room id: "))
     name = input("player name: ").encode("utf-8")
     payload = bytes([len(name)]) + name
-    return build_packet(ptype=2, room_id=room_id, payload=payload)
+    return build_packet(ptype=PTYPE_JOIN_ROOM, room_id=room_id, payload=payload)
+
+def packet_leave_room():
+    room_id = int(input("room id: "))
+    return build_packet(ptype=PTYPE_LEAVE_ROOM, room_id=room_id)
 
 def packet_player_input():
     room_id = int(input("room id: "))
-    return build_packet(ptype=3, room_id=room_id)
+    return build_packet(ptype=PTYPE_PLAYER_INPUT, room_id=room_id)
 
 # --- menu ---
 
 PACKETS = [
-    ("connect",      packet_connect),
     ("join room",    packet_join_room),
+    ("leave room",   packet_leave_room),
     ("player input", packet_player_input),
 ]
 

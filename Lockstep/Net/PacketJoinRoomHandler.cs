@@ -44,7 +44,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
             Name = name
         };
 
-        Result<Player, Error> addResult = room.PlayerHolder.AddPlayer(playerInfo);
+        Result<Player, Error> addResult = room.PlayerHolder.RegisterPlayer(playerInfo);
         if (addResult.IsFailed)
         {
             return Result<Error>.Failure(addResult.Error!.Value);

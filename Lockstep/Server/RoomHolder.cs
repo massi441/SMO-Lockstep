@@ -4,15 +4,15 @@ namespace Lockstep.Server;
 
 internal class RoomHolder : IRoomHolder
 {
-    private readonly Dictionary<uint, Room> _rooms = [];
+    private readonly Dictionary<ushort, Room> _rooms = [];
 
-    public uint AddRoom(ServerContext context)
+    public ushort AddRoom(ServerContext context)
     {
-        uint nextId = 0;
+        ushort nextId = 0;
 
         if (_rooms.Count > 0)
         {
-            nextId = _rooms.Keys.Max() + 1; 
+            nextId = (ushort)(_rooms.Keys.Max() + 1); 
         }
 
         Room room = new Room(nextId, context, new PlayerHolder());
@@ -21,7 +21,7 @@ internal class RoomHolder : IRoomHolder
         return nextId;
     }
 
-    public bool RemoveRoom(uint id)
+    public bool RemoveRoom(ushort id)
     {
         if (_rooms.TryGetValue(id, out Room? room))
         {
@@ -35,7 +35,7 @@ internal class RoomHolder : IRoomHolder
         return false;
     }
 
-    public Room? GetRoom(uint id)
+    public Room? GetRoom(ushort id)
     {
         if (_rooms.TryGetValue(id, out Room? room))
         {

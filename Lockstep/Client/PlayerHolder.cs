@@ -13,7 +13,7 @@ internal class PlayerHolder : IPlayerHolder
         _players = new Player[size];
     }
 
-    public Result<Player, Error> AddPlayer(PlayerInfo playerInfo)
+    public Result<Player, Error> RegisterPlayer(PlayerInfo playerInfo)
     {
         if (ContainsPlayer(playerInfo))
         {
@@ -34,6 +34,20 @@ internal class PlayerHolder : IPlayerHolder
         _players[index] = player;
         player.LastSeen = DateTime.UtcNow;
         return Result<Player, Error>.Success(player);
+    }
+
+    public Result<Error> UnregisterPlayer(Player player)
+    {
+        for (int i = 0; i < _players.Length; i++)
+        {
+            if (_players[i] == player)
+            {
+                _players[i] = null!;
+                return Result<Error>.Success();
+            }
+        }
+
+        return Result<Error>.Failure(Error.OperationFailed);
     }
 
     public Player? FindPlayerByHost(IPEndPoint endpoint)

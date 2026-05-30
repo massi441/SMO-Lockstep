@@ -11,12 +11,12 @@ internal class Room
 {
     private readonly ServerContext _context;
 
-    public uint Id { get; }
+    public ushort Id { get; }
     public Task Task { get; private set; } = null!;
     public Channel<Packet> Packets { get; }
     public IPlayerHolder PlayerHolder { get; }
 
-    public Room(uint roomId, ServerContext conxtext, IPlayerHolder playerHolder)
+    public Room(ushort roomId, ServerContext conxtext, IPlayerHolder playerHolder)
     {
         _context = conxtext;
 

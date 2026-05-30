@@ -6,6 +6,7 @@ internal enum PacketType : byte
     LeaveRoom,
     PlayerInput,
     HealthCheck,
+    Ack,
 
     /// <summary>
     /// A reserved packet type for server side validation
