@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using System.Net.Sockets;
+using Lockstep.Client;
 using Lockstep.Protocol;
 using Lockstep.Server;
 using Lockstep.Util;
@@ -23,10 +23,12 @@ internal static class PacketDispatcher
                 return Result<Error>.Failure(Error.InvalidRoomId);
             }
 
-            if (!IsAllowedInRoom(packet.Sender, room, ref header))
+            if (!IsAllowedInRoom(packet.Sender, room, ref header, out Player? player))
             {
                 return Result<Error>.Failure(Error.IllegalRoomAccess);
             }
+
+            player?.LastSeen = DateTime.UtcNow;
 
             Packet roomPacket = new Packet()
             {
@@ -49,8 +51,15 @@ internal static class PacketDispatcher
         }
     }
 
-    private static bool IsAllowedInRoom(IPEndPoint sender, Room room, ref PacketHeader header)
+    private static bool IsAllowedInRoom(IPEndPoint sender, Room room, ref PacketHeader header, out Player? player)
     {
-        return header.Type == PacketType.JoinRoom || room.PlayerHolder.FindPlayerByHost(sender) != null;
+        if (header.Type == PacketType.JoinRoom)
+        {
+            player = null;
+            return true;
+        }
+
+        player = room.PlayerHolder.FindPlayerByHost(sender);
+        return player != null;
     }
 }

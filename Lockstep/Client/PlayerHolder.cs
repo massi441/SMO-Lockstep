@@ -32,6 +32,7 @@ internal class PlayerHolder : IPlayerHolder
         };
 
         _players[index] = player;
+        player.LastSeen = DateTime.UtcNow;
         return Result<Player, Error>.Success(player);
     }
 
