@@ -3,26 +3,60 @@ import struct
 
 MAGIC = 0x534D4F4C  # "SMOL"
 VERSION = 1
-
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind(("0.0.0.0", 0))
-
-ptype = 0    # Connect
-room_id = 0
-payload = bytes([0xAB]) * 10
-payload_size = len(payload)
+SERVER = ("127.0.0.1", 5001)
 
 # [Magic: 4 LE][Type: 1][RoomId: 2 LE][Version: 1][PayloadSize: 2 LE][Payload]
-header = struct.pack("<IBHBH", MAGIC, ptype, room_id, VERSION, payload_size)
-packet = header + payload
+def build_packet(ptype, room_id, payload=b""):
+    header = struct.pack("<IBHBH", MAGIC, ptype, room_id, VERSION, len(payload))
+    return header + payload
 
-sock.sendto(packet, ("127.0.0.1", 5001))
-print("sent", len(packet), "bytes")
+def send(sock, packet):
+    sock.sendto(packet, SERVER)
+    print(f"sent {len(packet)} bytes")
+    try:
+        data, sender = sock.recvfrom(1024)
+        print(f"received {len(data)} bytes from {sender}")
+        print(f"data: {data}")
+    except socket.timeout:
+        print("no reply within timeout")
 
-sock.settimeout(2.0)
-try:
-    data, sender = sock.recvfrom(1024)
-    print("received", len(data), "bytes from", sender)
-    print("data:", data)
-except socket.timeout:
-    print("no reply within timeout")
+# --- packet builders ---
+
+def packet_connect():
+    return build_packet(ptype=0, room_id=0)
+
+def packet_join_room():
+    room_id = int(input("room id: "))
+    name = input("player name: ").encode("utf-8")
+    payload = bytes([len(name)]) + name
+    return build_packet(ptype=2, room_id=room_id, payload=payload)
+
+# --- menu ---
+
+PACKETS = [
+    ("connect",   packet_connect),
+    ("join room", packet_join_room),
+]
+
+def main():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(("0.0.0.0", 0))
+    sock.settimeout(2.0)
+
+    while True:
+        print()
+        for i, (name, _) in enumerate(PACKETS):
+            print(f"  {i + 1}. {name}")
+        print("  q. quit")
+
+        choice = input("\n> ").strip().lower()
+        if choice in ("q", "quit", "exit"):
+            break
+        if not choice.isdigit() or not (1 <= int(choice) <= len(PACKETS)):
+            print(f"enter a number between 1 and {len(PACKETS)}")
+            continue
+        _, builder = PACKETS[int(choice) - 1]
+        send(sock, builder())
+
+if __name__ == "__main__":
+    main()
