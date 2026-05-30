@@ -1,5 +1,5 @@
-﻿using Lockstep.Client;
-using Lockstep.Net;
+﻿using Lockstep.Net;
+using Lockstep.Client;
 using Lockstep.Protocol;
 using Lockstep.Util;
 using Microsoft.Extensions.Logging;
@@ -9,43 +9,62 @@ namespace Lockstep.Server;
 
 internal class Room
 {
+    private readonly uint _roomId;
     private readonly ServerContext _context;
-    private readonly IClientHolder _clientHolder;
 
-    private ILogger Logger => _context.Logger;
-
-    public Task Task { get; }
+    public Task Task { get; private set; } = null!;
     public Channel<Packet> Packets { get; }
+    public IPlayerHolder PlayerHolder { get; }
 
-    public Room(ServerContext conxtext, IClientHolder clientHolder)
+    public Room(uint roomId, ServerContext conxtext, IPlayerHolder playerHolder)
     {
+        _roomId = roomId;
         _context = conxtext;
-        _clientHolder = clientHolder;
+        PlayerHolder = playerHolder;
 
         Packets = Channel.CreateUnbounded<Packet>();
-        Task = Task.Run(() => ProcessAsync());
     }
 
-    public async Task ProcessAsync()
+    public void Start()
+    {
+        if (Task != null)
+        {
+            return;
+        }
+
+        Task = Task.Run(async () =>
+        {
+            try
+            {
+                await ProcessAsync();
+            }
+            catch (Exception ex)
+            {
+                _context.Logger.LogError(ex, "An Error Occured while processing the room");
+            }
+        });
+    }
+
+    private async Task ProcessAsync()
     {
         await foreach (Packet packet in Packets.Reader.ReadAllAsync())
         {
             IPacketHandler? packetHandler = PacketHandlerFactory.CreateHandler(packet.Header.Type, _context);
             if (packetHandler != null)
             {
-                Result<Error> handlerResult = packetHandler.Handle(this, packet);
+                Result<Error> handlerResult = packetHandler.Handle(packet, this);
                 if (handlerResult.IsSuccess)
                 {
-                    Logger.LogTrace("Successfully handled packet {PacketType}", packet.Header.Type);
+                    _context.Logger.LogTrace("Successfully handled packet {PacketType}", packet.Header.Type);
                 }
                 else
                 {
-                    Logger.LogTrace("Failed to handle packet, Error: {Error}", handlerResult.Error);
+                    _context.Logger.LogTrace("Failed to handle packet, Error: {Error}", handlerResult.Error);
                 }
             }
             else
             {
-                Logger.LogError("No handler found for packet type");
+                _context.Logger.LogError("No handler found for packet type");
             }
         }
     }

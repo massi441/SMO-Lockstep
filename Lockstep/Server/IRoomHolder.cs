@@ -1,6 +1,4 @@
-﻿using Lockstep.Util;
-
-namespace Lockstep.Server;
+﻿namespace Lockstep.Server;
 
 internal interface IRoomHolder
 {

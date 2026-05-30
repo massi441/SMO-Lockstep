@@ -1,5 +1,4 @@
 ﻿using Lockstep.Client;
-using Lockstep.Util;
 
 namespace Lockstep.Server;
 
@@ -9,15 +8,17 @@ internal class RoomHolder : IRoomHolder
 
     public uint AddRoom(ServerContext context)
     {
-        uint nextKey = 0;
+        uint nextId = 0;
 
         if (_rooms.Count > 0)
         {
-            nextKey = _rooms.Keys.Max() + 1; 
+            nextId = _rooms.Keys.Max() + 1; 
         }
 
-        _rooms.Add(nextKey, new Room(context, new ClientHolder()));
-        return nextKey;
+        Room room = new Room(nextId, context, new PlayerHolder());
+        room.Start();
+        _rooms.Add(nextId, room);
+        return nextId;
     }
 
     public bool RemoveRoom(uint id)
@@ -46,7 +47,7 @@ internal class RoomHolder : IRoomHolder
 
     public Task ShutdownRooms()
     {
-        return Task.WhenAll(_rooms.Values.Select(async room =>
+        return Task.WhenAll(_rooms.Values.Select(room =>
         {
             room.Shutdown();
             return room.Task;
