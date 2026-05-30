@@ -6,4 +6,5 @@ internal interface IRoomHolder
     bool RemoveRoom(uint id);
     Room? GetRoom(uint id);
     Task ShutdownRooms();
+    IEnumerable<Room> GetRooms();
 }

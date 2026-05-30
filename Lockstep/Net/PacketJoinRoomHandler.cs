@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Net;
+using System.Text;
 using Lockstep.Client;
 using Lockstep.Protocol;
 using Lockstep.Server;
@@ -20,6 +21,13 @@ internal class PacketJoinRoomHandler : IPacketHandler
 
     public Result<Error> Handle(Packet packet, Room room)
     {
+        if (IsInOtherRoom(packet.Sender, out Player player, out Room takenRoom))
+        {
+            PlayerInfo info = player.Info;
+            _context.Logger.LogInformation("Player {Name} ({Address}:{Port}) is already in room {RoomId}", info.Name, info.Endpoint.Address, info.Endpoint.Port, takenRoom.Id);
+            return Result<Error>.Failure(Error.PlayerAlreadyInRoom);
+        }
+
         SpanReader reader = new SpanReader(packet.Payload.Buffer);
 
         byte nameLength = reader.ReadByte();
@@ -32,7 +40,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
 
         PlayerInfo playerInfo = new PlayerInfo()
         {
-            Endpoint = packet.Payload.Sender,
+            Endpoint = packet.Sender,
             Name = name
         };
 
@@ -47,8 +55,28 @@ internal class PacketJoinRoomHandler : IPacketHandler
         return Result<Error>.Success();
     }
 
+    private bool IsInOtherRoom(IPEndPoint sender, out Player player, out Room takenRoom)
+    {
+        foreach (Room room in _context.RoomHolder.GetRooms())
+        {
+            Player? p = room.PlayerHolder.FindPlayerByHost(sender);
+            if (p != null)
+            {
+                player = p;
+                takenRoom = room;
+                return true;
+            }
+        }
+
+        player = null!;
+        takenRoom = null!;
+
+        return false;
+    }
+
     private static bool IsValidNameLength(int nameLength, Packet Packet)
     {
         return nameLength > 0 && nameLength <= Packet.Payload.Buffer.Length - sizeof(byte);
     }
+
 }

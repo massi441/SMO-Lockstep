@@ -1,4 +1,6 @@
-﻿namespace Lockstep.Protocol;
+﻿using System.Net;
+
+namespace Lockstep.Protocol;
 
 /// <summary>
 /// Represents a network packet containing a fully parsed header,
@@ -8,4 +10,6 @@ internal class Packet
 {
     public PacketHeader Header { get; init; }
     public Payload Payload { get; init; }
+
+    public IPEndPoint Sender => Payload.Sender;
 }

@@ -8,5 +8,5 @@ internal interface IPlayerHolder
 {
     Result<Player, Error> AddPlayer(PlayerInfo playerInfo);
     Player? FindPlayerByHost(IPEndPoint endpoint);
-    ReadOnlySpan<Player> GetPlayers();
+    IEnumerable<Player> GetPlayers();
 }

@@ -53,4 +53,9 @@ internal class RoomHolder : IRoomHolder
             return room.Task;
         }));
     }
+
+    public IEnumerable<Room> GetRooms()
+    {
+        return _rooms.Values;
+    }
 }

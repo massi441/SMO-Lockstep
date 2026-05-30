@@ -53,9 +53,9 @@ internal class PlayerHolder : IPlayerHolder
         return null;
     }
 
-    public ReadOnlySpan<Player> GetPlayers()
+    public IEnumerable<Player> GetPlayers()
     {
-        return _players.Where(p => p != null).ToArray().AsSpan();
+        return _players.Where(p => p != null);
     }
 
     public void RemovePlayer(Player player)
