@@ -1,4 +1,5 @@
 ﻿using System.Buffers.Binary;
+using System.Text;
 
 namespace Lockstep.Util;
 
@@ -13,7 +14,13 @@ internal ref struct SpanReader
 
     public SpanReader(ReadOnlySpan<byte> span)
     {
+        _offset = 0;
         _span = span;
+    }
+
+    public SpanReader(Memory<byte> memory) : this(memory.Span)
+    {
+
     }
 
     public byte ReadByte()
@@ -91,5 +98,10 @@ internal ref struct SpanReader
         ReadOnlySpan<byte> result = _span.Slice(_offset, count);
         _offset += count;
         return result;
+    }
+
+    public string ReadStringUTF8(int length)
+    {
+        return Encoding.UTF8.GetString(ReadBytes(length));
     }
 }
