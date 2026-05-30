@@ -1,4 +1,6 @@
 ﻿using System.Net;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Lockstep.Client;
 using Lockstep.Protocol;
 using Lockstep.Server;
@@ -11,11 +13,39 @@ internal class PacketJoinRoomHandler : IPacketHandler
 {
     private readonly ServerContext _context;
 
+    // Must provide size of the player's name
     public uint MinPayloadSize => 2;
 
     public PacketJoinRoomHandler(ServerContext context)
     {
         _context = context;
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    private struct PlayerBroadcastJoinPacket
+    {
+        public uint Magic;
+        public PacketHeader header;
+        public byte PlayerPort;
+
+        public static int SizeOf()
+        {
+            return Unsafe.SizeOf<PlayerBroadcastJoinPacket>();
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    private struct PlayerAckJoinPacket
+    {
+        public uint Magic;
+        public PacketHeader header;
+        public byte SelfPort;
+        public byte OtherPlayersCount;
+
+        public static int SizeOf(byte otherPlayersCount)
+        {
+            return Unsafe.SizeOf<PlayerAckJoinPacket>() + sizeof(byte) * otherPlayersCount;
+        }
     }
 
     public Result<Error> Handle(Packet packet, Room room)
@@ -35,12 +65,10 @@ internal class PacketJoinRoomHandler : IPacketHandler
             return Result<Error>.Failure(Error.InvalidNameLength);
         }
 
-        string name = reader.ReadStringUTF8(nameLength);
-
         PlayerInfo playerInfo = new PlayerInfo()
         {
             Endpoint = packet.Sender,
-            Name = name
+            Name = reader.ReadStringUTF8(nameLength)
         };
 
         Result<Player, Error> addResult = room.PlayerHolder.RegisterPlayer(playerInfo);
@@ -49,21 +77,62 @@ internal class PacketJoinRoomHandler : IPacketHandler
             return Result<Error>.Failure(addResult.Error!.Value);
         }
 
-        Span<byte> broadcastBuffer = stackalloc byte[PacketHeader.SizeOf()];
-        WriteBroadcast(broadcastBuffer, packet);
+        return NotifyRoom(packet, room, addResult.Data!);
+    }
 
-        Span<byte> senderBuffer = stackalloc byte[PacketHeader.SizeOf()];
-        WriteSender(senderBuffer, packet);
+    private Result<Error> NotifyRoom(Packet packet, Room room, Player newPlayer)
+    {
+        Span<byte> broadcastBuffer = stackalloc byte[PlayerBroadcastJoinPacket.SizeOf()];
 
-        Player newPlayer = addResult.Data!;
+        WriteBroadcast(broadcastBuffer, packet, newPlayer);
 
-        Result<Error> notifyResult = room.Notifier.NotifyOthers(broadcastBuffer, newPlayer, senderBuffer);
+        byte otherPlayersCount = room.PlayerHolder.OtherPlayerCount;
+        Span<byte> ackBuffer = stackalloc byte[PlayerAckJoinPacket.SizeOf(otherPlayersCount)];
+
+        WriteAck(ackBuffer, packet, room, newPlayer, otherPlayersCount);
+
+        Result<Error> notifyResult = room.Notifier.NotifyOthers(broadcastBuffer, newPlayer, ackBuffer);
         if (notifyResult.IsSuccess)
         {
-            _context.Logger.LogTrace("Player {Name} joined room #{RoomId} with port #{Port}", name, packet.Header.RoomId, newPlayer.PortNumber);
+            _context.Logger.LogTrace("Player {Name} joined room #{RoomId} with port #{Port}", newPlayer.Info.Name, packet.Header.RoomId, newPlayer.PortNumber);
         }
 
         return notifyResult;
+    }
+
+    private static void WriteBroadcast(Span<byte> buffer, Packet packet, Player newPlayer)
+    {
+        PlayerBroadcastJoinPacket broadcastPacket = new PlayerBroadcastJoinPacket
+        {
+            Magic = PacketHeader.Magic,
+            PlayerPort = newPlayer.PortNumber,
+            header = packet.Header
+        };
+
+        MemoryMarshal.Write(buffer, broadcastPacket);
+    }
+
+    private static void WriteAck(Span<byte> buffer, Packet packet, Room room, Player newPlayer, byte otherPlayersCount)
+    {
+        PlayerAckJoinPacket ackPacket = new PlayerAckJoinPacket
+        {
+            Magic = PacketHeader.Magic,
+            header = packet.Header.WithType(PacketType.Ack),
+            SelfPort = newPlayer.PortNumber,
+            OtherPlayersCount = otherPlayersCount
+        };
+
+        SpanWriter writer = new SpanWriter(buffer);
+
+        writer.Write(ackPacket);
+
+        foreach (Player player in room.PlayerHolder.Players)
+        {
+            if (player != newPlayer)
+            {
+                writer.Write(player.PortNumber);
+            }
+        }
     }
 
     private bool IsInOtherRoom(IPEndPoint sender, out Player player, out Room takenRoom)
@@ -87,21 +156,5 @@ internal class PacketJoinRoomHandler : IPacketHandler
     private static bool IsValidNameLength(int nameLength, Packet Packet)
     {
         return nameLength > 0 && nameLength <= Packet.Payload.Buffer.Length - sizeof(byte);
-    }
-
-    private static void WriteSender(Span<byte> buffer, Packet packet)
-    {
-        SpanWriter writer = new SpanWriter(buffer);
-
-        writer.Write(PacketHeader.Magic);
-        writer.Write(packet.Header with { Type = PacketType.Ack });
-    }
-
-    private static void WriteBroadcast(Span<byte> buffer, Packet packet)
-    {
-        SpanWriter writer = new SpanWriter(buffer);
-
-        writer.Write(PacketHeader.Magic);
-        writer.Write(packet.Header with { Type = PacketType.LeaveRoom });
     }
 }

@@ -19,7 +19,7 @@ internal class PacketPlayerInputHandler : IPacketHandler
 
     public Result<Error> Handle(Packet packet, Room room)
     {
-        foreach (Player player in room.PlayerHolder.GetPlayers())
+        foreach (Player player in room.PlayerHolder.Players)
         {
             string message = "Relayed Player inputs!";
             _context.PacketSender.Send(Encoding.UTF8.GetBytes(message), player.Info.Endpoint);

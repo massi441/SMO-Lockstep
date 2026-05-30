@@ -8,7 +8,10 @@ internal class PlayerHolder : IPlayerHolder
 {
     private readonly Player[] _players;
 
-    public PlayerHolder(int size = 4)
+    public IEnumerable<Player> Players => _players.Where(p => p != null);
+    public byte PlayerCount => (byte)Players.Count();
+
+    public PlayerHolder(byte size = 4)
     {
         _players = new Player[size];
     }
@@ -20,7 +23,7 @@ internal class PlayerHolder : IPlayerHolder
             return Result<Player, Error>.Failure(Error.PlayerAlreadyInRoom);
         }
 
-        if (!TryFindSlot(out int index, out int playerPort))
+        if (!TryFindSlot(out int index, out byte playerPort))
         {
             return Result<Player, Error>.Failure(Error.RoomFull);
         }
@@ -68,11 +71,6 @@ internal class PlayerHolder : IPlayerHolder
         return null;
     }
 
-    public IEnumerable<Player> GetPlayers()
-    {
-        return _players.Where(p => p != null);
-    }
-
     public void RemovePlayer(Player player)
     {
         for (int i = 0; i < _players.Length; i++)
@@ -90,7 +88,7 @@ internal class PlayerHolder : IPlayerHolder
         }
     }
 
-    private bool TryFindSlot(out int index, out int playerPort)
+    private bool TryFindSlot(out int index, out byte playerPort)
     {
         index = 0;
         playerPort = 0;

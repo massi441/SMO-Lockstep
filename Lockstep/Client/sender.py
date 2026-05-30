@@ -39,9 +39,25 @@ def parse_header(data):
         return None
     return {"type": ptype, "flags": flags, "version": version, "room_id": room_id, "payload_size": payload_size}
 
+def decode_payload(ptype, data):
+    payload = data[HEADER_SIZE:]
+    if ptype == PTYPE_JOIN_ROOM and len(payload) >= 1:
+        port = struct.unpack_from("B", payload, 0)[0]
+        return f"PlayerPort={port}"
+    elif ptype == PTYPE_ACK and len(payload) >= 2:
+        self_port, other_count = struct.unpack_from("BB", payload, 0)
+        ports = [struct.unpack_from("B", payload, 2 + i)[0] for i in range(other_count) if 2 + i < len(payload)]
+        return f"SelfPort={self_port}, OtherPlayers={other_count}, Ports={ports}"
+    return f"({len(payload)} payload bytes)"
+
 def send(sock, packet, server):
     sock.sendto(packet, server)
-    print(f"  >> sent {len(packet)} bytes")
+    header = parse_header(packet)
+    if header:
+        ptype_name = PTYPE_NAMES.get(header["type"], f"Unknown({header['type']})")
+        print(f"  >> {ptype_name} to {server} | {packet.hex(' ')}")
+    else:
+        print(f"  >> {len(packet)} bytes to {server}")
 
 def receive_loop(sock):
     while True:
@@ -50,9 +66,10 @@ def receive_loop(sock):
             header = parse_header(data)
             if header:
                 ptype_name = PTYPE_NAMES.get(header["type"], f"Unknown({header['type']})")
-                print(f"\n  << {ptype_name} from {sender} (room={header['room_id']}, v={header['version']}, flags={header['flags']:#04x})")
+                payload_str = decode_payload(header["type"], data)
+                print(f"\n  << {ptype_name} from {sender} | room={header['room_id']} flags={header['flags']:#04x} | {payload_str}")
             else:
-                print(f"\n  << {len(data)} bytes from {sender} (unrecognised)")
+                print(f"\n  << {len(data)} bytes from {sender} (unrecognised) | {data.hex(' ')}")
             print("> ", end="", flush=True)
         except OSError:
             break

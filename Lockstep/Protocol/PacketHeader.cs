@@ -14,6 +14,11 @@ internal record struct PacketHeader
 
     public const uint Magic = 0x534D4F4C; // "SMOL"
 
+    public PacketHeader WithType(PacketType type)
+    {
+        return this with { Type = type };
+    }
+
     /// <summary>
     /// Returns the size of a packet header from incoming clients.
     /// Note: The size returned by this function includes the magic number as part of the total size

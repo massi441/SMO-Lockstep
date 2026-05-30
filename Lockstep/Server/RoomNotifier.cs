@@ -17,7 +17,7 @@ internal class RoomNotifier : IRoomNotifier
 
     public Result<Error> NotifyAll(ReadOnlySpan<byte> payload)
     {
-        foreach (Player player in _playerHolder.GetPlayers())
+        foreach (Player player in _playerHolder.Players)
         {
             _context.PacketSender.Send(payload, player.Info.Endpoint);
         }
@@ -27,7 +27,7 @@ internal class RoomNotifier : IRoomNotifier
 
     public Result<Error> NotifyOthers(ReadOnlySpan<byte> payload, Player sender)
     {
-        foreach (Player player in _playerHolder.GetPlayers())
+        foreach (Player player in _playerHolder.Players)
         {
             if (player == sender)
             {
@@ -42,7 +42,7 @@ internal class RoomNotifier : IRoomNotifier
 
     public Result<Error> NotifyOthers(ReadOnlySpan<byte> payload, Player sender, ReadOnlySpan<byte> senderPayload)
     {
-        foreach (Player player in _playerHolder.GetPlayers())
+        foreach (Player player in _playerHolder.Players)
         {
             if (player == sender)
             {
