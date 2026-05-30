@@ -6,5 +6,5 @@ namespace Lockstep.Net;
 
 internal interface IPacketHandler
 {
-    Result<Error> Handle(Room room, Packet packet);
+    Result<Error> Handle(Packet packet, Room room);
 }
