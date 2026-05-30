@@ -15,14 +15,16 @@ internal class Room
     public Task Task { get; private set; } = null!;
     public Channel<Packet> Packets { get; }
     public IPlayerHolder PlayerHolder { get; }
+    public IRoomNotifier Notifier { get; }
 
-    public Room(ushort roomId, ServerContext conxtext, IPlayerHolder playerHolder)
+    public Room(ushort roomId, ServerContext conxtext, IPlayerHolder playerHolder, IRoomNotifier notifier)
     {
         _context = conxtext;
 
         Id = roomId;
         PlayerHolder = playerHolder;
         Packets = Channel.CreateUnbounded<Packet>();
+        Notifier = notifier;
     }
 
     public void Start()

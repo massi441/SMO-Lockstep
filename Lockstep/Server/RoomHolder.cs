@@ -15,8 +15,13 @@ internal class RoomHolder : IRoomHolder
             nextId = (ushort)(_rooms.Keys.Max() + 1); 
         }
 
-        Room room = new Room(nextId, context, new PlayerHolder());
+        IPlayerHolder playerHolder = new PlayerHolder();
+        IRoomNotifier roomNotifier = new RoomNotifier(context, playerHolder);
+
+        Room room = new Room(nextId, context, playerHolder, roomNotifier);
+
         room.Start();
+
         _rooms.Add(nextId, room);
         return nextId;
     }
