@@ -20,13 +20,6 @@ internal class PacketLeaveRoomHandler : IPacketHandler
     {
         Player? player = room.PlayerHolder.FindPlayerByHost(packet.Sender)!;
 
-        Result<Error> unregisterResult = room.PlayerHolder.UnregisterPlayer(player);
-        if (unregisterResult.IsFailed)
-        {
-            _context.Logger.LogError("An error occured while trying to unregister player {Name} from room #{RoomId}", player.Name, room.Id);
-            return;
-        }
-
         Result<Error> disconnectResult = _context.PlayerDisconnector.Disconnect(player);
         if (disconnectResult.IsSuccess)
         {

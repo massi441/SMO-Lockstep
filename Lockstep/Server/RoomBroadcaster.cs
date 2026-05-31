@@ -13,7 +13,6 @@ internal class RoomBroadcaster : IRoomBroadcaster
     private readonly CancellationTokenSource _resendToken;
     private readonly Task _resendTask;
 
-
     public IPacketPendingStore AckPacketStore => _resendStore;
 
     public RoomBroadcaster(ServerContext context, IPacketPendingStore resendStore)
