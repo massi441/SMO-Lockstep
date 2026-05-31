@@ -8,33 +8,25 @@ internal class ServerContext
     /// <summary>
     /// The logger used across the server
     /// </summary>
-    public ILogger Logger { get; }
+    public required ILogger Logger { get; init; }
 
     /// <summary>
     /// The room holder used across the server
     /// </summary>
-    public IRoomHolder RoomHolder { get; }
+    public required IRoomHolder RoomHolder { get; init; }
 
     /// <summary>
     /// The packet sender used across the server
     /// </summary>
-    public IPacketSender PacketSender { get; }
+    public required IPacketSender PacketSender { get; init; }
+
+    /// <summary>
+    /// The player disconnector used across the server
+    /// </summary>
+    public required IPlayerDisconnector PlayerDisconnector { get; init; }
 
     /// <summary>
     /// The cancellation used to signal a server shutdown
     /// </summary>
-    public CancellationToken CancellationToken { get; }
-
-    public ServerContext(ILogger logger, IRoomHolder roomHolder, IPacketSender packetSender, CancellationToken cancellationToken, bool addDefaultRoom = true)
-    {
-        Logger = logger;
-        RoomHolder = roomHolder;
-        PacketSender = packetSender;
-        CancellationToken = cancellationToken;
-
-        if (addDefaultRoom)
-        {
-            RoomHolder.AddRoom(this);
-        }
-    }
+    public required CancellationToken CancellationToken { get; init; }
 }

@@ -126,10 +126,15 @@ internal class UdpServer
 
     private void InitContext(Socket socket, CancellationToken cancellationToken)
     {
-        ILogger logger = LockstepLogger.Instance();
-        IRoomHolder roomHolder = new RoomHolder();
-        IPacketSender sender = new UdpPacketSender(socket);
+        Context = new ServerContext()
+        {
+            Logger = LockstepLogger.Instance(),
+            RoomHolder = new RoomHolder(),
+            PacketSender = new UdpPacketSender(socket),
+            PlayerDisconnector = new PlayerDisconnector(),
+            CancellationToken = cancellationToken
+        };
 
-        Context = new ServerContext(logger, roomHolder, sender, cancellationToken);
+        Context.RoomHolder.AddRoom(Context);
     }
 }

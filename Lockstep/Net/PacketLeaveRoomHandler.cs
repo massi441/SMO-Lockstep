@@ -19,24 +19,6 @@ internal class PacketLeaveRoomHandler : IPacketHandler
         _context = context;
     }
 
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct PacketPlayerLeaveRoom
-    {
-        public uint Magic;
-        public PacketHeader Header;
-        public byte PlayerPort;
-
-        public static int SizeOf()
-        {
-            return Unsafe.SizeOf<PacketPlayerLeaveRoom>();
-        }
-
-        public static ushort SizeOfPayload()
-        {
-            return sizeof(byte);
-        }
-    }
-
     public Result<Error> Handle(Packet packet, Room room)
     {
         Player player = room.PlayerHolder.FindPlayerByHost(packet.Sender)!;
@@ -48,27 +30,12 @@ internal class PacketLeaveRoomHandler : IPacketHandler
             return unregisterResult;
         }
 
-        Span<byte> broadcastBuffer = ArrayPool<byte>.Shared.Rent(PacketPlayerLeaveRoom.SizeOf());
-        WriteBroadcast(broadcastBuffer, packet, player);
-
-        Result<Error> notifyResult = room.Notifier.NotifyOthers(broadcastBuffer, player);
-        if (notifyResult.IsSuccess)
+        Result<Error> disconnectResult = _context.PlayerDisconnector.Disconnect(player, packet, room);
+        if (disconnectResult.IsSuccess)
         {
             _context.Logger.LogWarning("Player {Name} left room {RoomId}", player.Info.Name, room.Id);
         }
 
-        return notifyResult;
-    }
-
-    private static void WriteBroadcast(Span<byte> buffer, Packet packet, Player player)
-    {
-        PacketPlayerLeaveRoom leavePacket = new PacketPlayerLeaveRoom()
-        {
-            Magic = PacketHeader.Magic,
-            Header = packet.Header.WithSizeType(PacketPlayerLeaveRoom.SizeOfPayload(), PacketType.LeaveRoom),
-            PlayerPort = player.PortNumber
-        };
-
-        MemoryMarshal.Write(buffer, leavePacket);
+        return disconnectResult;
     }
 }
