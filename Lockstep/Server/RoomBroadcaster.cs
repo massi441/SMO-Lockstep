@@ -6,11 +6,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Lockstep.Server;
 
-internal class RoomNotifier : IRoomNotifier
+internal class RoomBroadcaster : IRoomBroadcaster
 {
     private readonly ServerContext _context;
     private readonly IPlayerHolder _playerHolder;
     private readonly IPacketPendingStore _resendStore;
+    private readonly Queue<Action> _commands = [];
     private readonly CancellationTokenSource _resendToken;
     private readonly Task _resendTask;
 
@@ -18,7 +19,7 @@ internal class RoomNotifier : IRoomNotifier
 
     public IPacketPendingStore AckPacketStore => _resendStore;
 
-    public RoomNotifier(ServerContext context, IPlayerHolder playerHolder, IPacketPendingStore resendStore)
+    public RoomBroadcaster(ServerContext context, IPlayerHolder playerHolder, IPacketPendingStore resendStore)
     {
         _context = context;
         _playerHolder = playerHolder;
@@ -39,13 +40,14 @@ internal class RoomNotifier : IRoomNotifier
             await Task.Delay(ResendTick);
         }
 
-        _context.Logger.LogInformation("Room Notifier was shutdown successfully");
+        _context.Logger.LogInformation("Room Broadcaster was shutdown successfully");
     }
 
     private void ProcessPacket(PacketPending packet)
     {
         if (packet.IsAlive)
         {
+            // TODO: add time checking
             Result<Error> sendResult = _context.PacketSender.Send(packet.Payload, packet.Receiver);
             if (sendResult.IsSuccess)
             {
@@ -53,17 +55,18 @@ internal class RoomNotifier : IRoomNotifier
             }
             else
             {
-                _context.Logger.LogError("An error occured while trying to resend packet ");
+                _context.Logger.LogError("An error occured while trying to resend the packet");
             }
         }
         else
         {
             _resendStore.RemovePacket(packet.SequenceNumber);
+
             packet.OnDropped?.Invoke(packet.Receiver);
         }
     }
 
-    public Result<Error> NotifyAll(ReadOnlySpan<byte> payload)
+    public Result<Error> Broadcast(ReadOnlySpan<byte> payload)
     {
         foreach (Player player in _playerHolder.Players)
         {
@@ -73,7 +76,7 @@ internal class RoomNotifier : IRoomNotifier
         return Result<Error>.Success();
     }
 
-    public Result<Error> NotifyOthers(ReadOnlySpan<byte> payload, Player sender)
+    public Result<Error> BroadcastExcept(ReadOnlySpan<byte> payload, Player sender)
     {
         foreach (Player player in _playerHolder.Players)
         {
@@ -88,7 +91,7 @@ internal class RoomNotifier : IRoomNotifier
         return Result<Error>.Success();
     }
 
-    public Result<Error> NotifyOthers(ReadOnlySpan<byte> payload, Player sender, ReadOnlySpan<byte> senderPayload)
+    public Result<Error> BroadcastExceptWith(ReadOnlySpan<byte> payload, Player sender, ReadOnlySpan<byte> senderPayload)
     {
         foreach (Player player in _playerHolder.Players)
         {
@@ -108,5 +111,10 @@ internal class RoomNotifier : IRoomNotifier
     {
         _resendToken.Cancel();
         return _resendTask;
+    }
+
+    public bool TryGetPendingCommand(out Action? command)
+    {
+        return _commands.TryDequeue(out command);
     }
 }

@@ -103,7 +103,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
         return notifyResult;
     }
 
-    private Result<Error> NotifyRoom(Packet packet, Room room, Player newPlayer)
+    private static Result<Error> NotifyRoom(Packet packet, Room room, Player newPlayer)
     {
         byte otherPlayersCount = room.PlayerHolder.OtherPlayerCount;
         Span<byte> ackBuffer = ArrayPool<byte>.Shared.Rent(PacketPlayerAckJoin.SizeOf(otherPlayersCount));;
@@ -114,7 +114,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
 
         WriteBroadcast(broadcastBuffer, packet, newPlayer);
 
-        return room.Notifier.NotifyOthers(broadcastBuffer, newPlayer, ackBuffer);
+        return room.Broadcaster.BroadcastExceptWith(broadcastBuffer, newPlayer, ackBuffer);
     }
 
     private static void WriteAck(Span<byte> buffer, Packet packet, Room room, Player newPlayer, byte otherPlayersCount)

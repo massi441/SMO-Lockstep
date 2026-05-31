@@ -1,7 +1,5 @@
-﻿using System.Threading.Channels;
-using Lockstep.Client;
+﻿using Lockstep.Client;
 using Lockstep.Net;
-using Lockstep.Protocol;
 
 namespace Lockstep.Server;
 
@@ -19,9 +17,9 @@ internal class RoomHolder : IRoomHolder
         }
 
         IPlayerHolder playerHolder = new PlayerHolder();
-        IRoomNotifier roomNotifier = new RoomNotifier(context, playerHolder, new PacketPendingStore());
+        IRoomBroadcaster roomBroadcaster = new RoomBroadcaster(context, playerHolder, new PacketPendingStore());
 
-        _rooms.Add(nextId, new Room(nextId, context, playerHolder, roomNotifier));
+        _rooms.Add(nextId, new Room(nextId, context, playerHolder, roomBroadcaster));
 
         return nextId;
     }

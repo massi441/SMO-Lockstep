@@ -10,7 +10,7 @@ namespace Lockstep.Server;
 internal class PlayerDisconnector : IPlayerDisconnector
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct PacketPlayerLeaveRoom
+    private struct PacketPlayerLeaveRoom
     {
         public uint Magic;
         public PacketHeader Header;
@@ -39,6 +39,6 @@ internal class PlayerDisconnector : IPlayerDisconnector
 
         MemoryMarshal.Write(broadcastBuffer, leavePacket);
 
-        return room.Notifier.NotifyOthers(broadcastBuffer, player);
+        return room.Broadcaster.BroadcastExcept(broadcastBuffer, player);
     }
 }

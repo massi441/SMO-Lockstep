@@ -15,29 +15,30 @@ internal class Room
     public ushort Id { get; }
     public Channel<Packet> Packets { get; }
     public IPlayerHolder PlayerHolder { get; }
-    public IRoomNotifier Notifier { get; }
+    public IRoomBroadcaster Broadcaster { get; }
 
-    public Room(ushort roomId, ServerContext conxtext, IPlayerHolder playerHolder, IRoomNotifier notifier)
+    public Room(ushort roomId, ServerContext conxtext, IPlayerHolder playerHolder, IRoomBroadcaster broadcaster)
     {
         _context = conxtext;
 
         Id = roomId;
         PlayerHolder = playerHolder;
         Packets = Channel.CreateUnbounded<Packet>();
-        Notifier = notifier;
+        Broadcaster = broadcaster;
 
         _processTask = Task.Run(StartWork, _context.CancellationToken);
     }
 
-    private async Task StartWork()
+    private Task StartWork()
     {
         try
         {
-            await ProcessAsync();
+            return ProcessAsync();
         }
         catch (Exception ex)
         {
             _context.Logger.LogError(ex, "An Error Occured while processing the room");
+            return Task.CompletedTask;
         }
     }
 
@@ -45,6 +46,8 @@ internal class Room
     {
         await foreach (Packet packet in Packets.Reader.ReadAllAsync())
         {
+            ProcessCommands();
+
             IPacketHandler? packetHandler = PacketHandlerFactory.CreateHandler(packet.Header.Type, _context);
             if (packetHandler != null)
             {
@@ -72,9 +75,19 @@ internal class Room
 
         _context.Logger.LogInformation("Room #{RoomId} was shutdown sucessfully", Id);
     }
+
+    private void ProcessCommands()
+    {
+        while (Broadcaster.TryGetPendingCommand(out Action? command))
+        {
+            _context.Logger.LogTrace("Processing command in room #{RoomId}", Id);
+            command!.Invoke();
+        }
+    }
+
     public Task Shutdown()
     {
         Packets.Writer.Complete();
-        return Task.WhenAll(_processTask, Notifier.Shutdown());
+        return Task.WhenAll(_processTask, Broadcaster.Shutdown());
     }
 }
