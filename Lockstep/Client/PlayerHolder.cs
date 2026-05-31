@@ -1,4 +1,5 @@
-﻿using Lockstep.Protocol;
+﻿using System.Net;
+using Lockstep.Protocol;
 using Lockstep.Util;
 
 namespace Lockstep.Client;
@@ -7,36 +8,69 @@ internal class PlayerHolder : IPlayerHolder
 {
     private readonly Player[] _players;
 
-    public PlayerHolder(int size = 4)
+    public IEnumerable<Player> Players => _players.Where(p => p != null);
+    public byte PlayerCount => (byte)Players.Count();
+
+    public PlayerHolder(byte size = 4)
     {
         _players = new Player[size];
     }
 
-    public Result<Player, Error> AddPlayer(PlayerInfo playerInfo)
+    public Result<Player, Error> RegisterPlayer(PlayerInfo playerInfo)
     {
         if (ContainsPlayer(playerInfo))
         {
             return Result<Player, Error>.Failure(Error.PlayerAlreadyInRoom);
         }
 
-        if (!TryFindSlot(out int index, out int playerPort))
+        if (!TryFindSlot(out int index, out byte playerPort))
         {
             return Result<Player, Error>.Failure(Error.RoomFull);
         }
 
         Player player = new Player()
         {
-            Info = playerInfo,
-            PortNumber = playerPort
+            Endpoint = playerInfo.Endpoint,
+            Name = playerInfo.Name,
+            PortNumber = playerPort,
+            Room = playerInfo.Room,
         };
 
         _players[index] = player;
+
         return Result<Player, Error>.Success(player);
     }
 
-    public ReadOnlySpan<Player> GetPlayers()
+    public Result<Error> UnregisterPlayer(Player player)
     {
-        return _players.Where(p => p != null).ToArray().AsSpan();
+        for (int i = 0; i < _players.Length; i++)
+        {
+            if (_players[i] == player)
+            {
+                _players[i] = null!;
+                return Result<Error>.Success();
+            }
+        }
+
+        return Result<Error>.Failure(Error.OperationFailed);
+    }
+
+    public Player? FindPlayerByHost(IPEndPoint endpoint)
+    {
+        foreach (Player p in _players)
+        {
+            if (p == null)
+            {
+                continue;
+            }
+
+            if (p.Endpoint.Equals(endpoint))
+            {
+                return p;
+            }
+        }
+
+        return null;
     }
 
     public void RemovePlayer(Player player)
@@ -49,14 +83,14 @@ internal class PlayerHolder : IPlayerHolder
                 continue;
             }
 
-            if (p.Info.Endpoint.Equals(player.Info.Endpoint))
+            if (p.Endpoint.Equals(player.Endpoint))
             {
                 _players[i] = null!;
             }
         }
     }
 
-    private bool TryFindSlot(out int index, out int playerPort)
+    private bool TryFindSlot(out int index, out byte playerPort)
     {
         index = 0;
         playerPort = 0;
@@ -83,20 +117,7 @@ internal class PlayerHolder : IPlayerHolder
 
     private bool ContainsPlayer(PlayerInfo playerInfo)
     {
-        foreach (Player p in _players)
-        {
-            if (p == null)
-            {
-                continue;
-            }
-
-            if (p.Info.Endpoint.Equals(playerInfo.Endpoint))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return FindPlayerByHost(playerInfo.Endpoint) != null;
     }
 
     private static bool IsReservedPort(int port)

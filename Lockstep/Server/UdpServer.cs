@@ -25,7 +25,7 @@ internal class UdpServer
         _jobs = Channel.CreateUnbounded<ServerJob>();
     }
 
-    public async Task RunAsync(CancellationToken cancellationTokenSource)
+    public async Task RunAsync(CancellationToken cancellationToken)
     {
         using Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
@@ -33,15 +33,15 @@ internal class UdpServer
 
         socket.Bind(listenEndpoint);
 
-        InitContext(socket);
+        InitContext(socket, cancellationToken);
 
         Logger.LogInformation("Server listening on port {Port}...", _port);
 
         try
         {
             await Task.WhenAll(
-                ReceiveLoop(socket, cancellationTokenSource),
-                ProcessLoop(socket, cancellationTokenSource)
+                ReceiveLoop(socket, cancellationToken),
+                ProcessLoop(socket, cancellationToken)
             );
         }
         catch (OperationCanceledException)
@@ -93,7 +93,7 @@ internal class UdpServer
                 Result<Error> dispatchResult = PacketDispatcher.Dispatch(packet, Context);
                 if (dispatchResult.IsFailed)
                 {
-                    Logger.LogError("An error occured while dispatching the pack. Sender: {Address}:{Port}, Error: {Error}", packet.Sender.Address, packet.Sender.Port, dispatchResult.Error);
+                    Logger.LogWarning("Packet rejected. Sender: {Address}:{Port}, Error: {Error}", packet.Sender.Address, packet.Sender.Port, dispatchResult.Error);
                 }
             }
             finally
@@ -124,12 +124,17 @@ internal class UdpServer
         }
     }
 
-    private void InitContext(Socket socket)
+    private void InitContext(Socket socket, CancellationToken cancellationToken)
     {
-        ILogger logger = LockstepLogger.Instance();
-        IRoomHolder roomHolder = new RoomHolder();
-        IPacketSender sender = new UdpPacketSender(socket);
+        Context = new ServerContext()
+        {
+            Logger = LockstepLogger.Instance(),
+            RoomHolder = new RoomHolder(),
+            PacketSender = new UdpPacketSender(socket),
+            PlayerDisconnector = new PlayerDisconnector(),
+            CancellationToken = cancellationToken
+        };
 
-        Context = new ServerContext(logger, roomHolder, sender);
+        Context.RoomHolder.AddRoom(Context);
     }
 }

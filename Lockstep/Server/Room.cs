@@ -1,76 +1,99 @@
-﻿using Lockstep.Net;
-using Lockstep.Client;
-using Lockstep.Protocol;
-using Lockstep.Util;
-using Microsoft.Extensions.Logging;
+﻿using System.Collections.Concurrent;
+using System.Net;
 using System.Threading.Channels;
+using Lockstep.Client;
+using Lockstep.Net;
+using Lockstep.Protocol;
+using Microsoft.Extensions.Logging;
 
 namespace Lockstep.Server;
 
 internal class Room
 {
-    private readonly uint _roomId;
     private readonly ServerContext _context;
+    private readonly Task _processTask;
+    private readonly ConcurrentQueue<Action> _commands = [];
 
-    public Task Task { get; private set; } = null!;
+    public ushort Id { get; }
     public Channel<Packet> Packets { get; }
     public IPlayerHolder PlayerHolder { get; }
+    public IRoomBroadcaster Broadcaster { get; }
 
-    public Room(uint roomId, ServerContext conxtext, IPlayerHolder playerHolder)
+    public Room(ushort roomId, ServerContext conxtext, IPlayerHolder playerHolder, IRoomBroadcaster broadcaster)
     {
-        _roomId = roomId;
         _context = conxtext;
-        PlayerHolder = playerHolder;
 
+        Id = roomId;
+        PlayerHolder = playerHolder;
         Packets = Channel.CreateUnbounded<Packet>();
+        Broadcaster = broadcaster;
+
+        _processTask = Task.Run(ProcessAsync, _context.CancellationToken);
     }
 
-    public void Start()
+    public Task Shutdown()
     {
-        if (Task != null)
-        {
-            return;
-        }
+        Packets.Writer.Complete();
+        return Task.WhenAll(_processTask, Broadcaster.Shutdown());
+    }
 
-        Task = Task.Run(async () =>
-        {
-            try
-            {
-                await ProcessAsync();
-            }
-            catch (Exception ex)
-            {
-                _context.Logger.LogError(ex, "An Error Occured while processing the room");
-            }
-        });
+    public void UploadCommand(Action action)
+    {
+        _commands.Enqueue(action);
     }
 
     private async Task ProcessAsync()
     {
         await foreach (Packet packet in Packets.Reader.ReadAllAsync())
         {
+            ProcessCommands();
+
+            if (!IsAllowedInRoom(packet.Sender, packet.Header, out Player? player))
+            {
+                _context.Logger.LogWarning("{Address}:{Port} illegally tried to access room #{RoomId}", packet.Sender.Address, packet.Sender.Port, Id);
+                continue;
+            }
+
+            player?.RefreshLastSeen();
+
             IPacketHandler? packetHandler = PacketHandlerFactory.CreateHandler(packet.Header.Type, _context);
-            if (packetHandler != null)
+            if (packetHandler == null)
             {
-                Result<Error> handlerResult = packetHandler.Handle(packet, this);
-                if (handlerResult.IsSuccess)
-                {
-                    _context.Logger.LogTrace("Successfully handled packet {PacketType}", packet.Header.Type);
-                }
-                else
-                {
-                    _context.Logger.LogTrace("Failed to handle packet, Error: {Error}", handlerResult.Error);
-                }
+                _context.Logger.LogWarning("No handler found for packet type {PacketType}", (int)packet.Header.Type);
+                continue;
             }
-            else
+
+            if (packet.Payload.Buffer.Length < packetHandler.MinPayloadSize)
             {
-                _context.Logger.LogError("No handler found for packet type");
+                _context.Logger.LogWarning("A {PacketType} packet of invalid size ({PacketSize}) was requested. Minimum required: {Minimum}", packet.Header.Type, packet.Payload.Length, packetHandler.MinPayloadSize);
+                continue;
             }
+
+            packetHandler.Handle(packet, this);
+        }
+
+        _context.Logger.LogInformation("Room #{RoomId} was shutdown sucessfully", Id);
+    }
+
+    private void ProcessCommands()
+    {
+        while (_commands.TryDequeue(out Action? command))
+        {
+            _context.Logger.LogTrace("Processing command in room #{RoomId}", Id);
+            command!.Invoke();
         }
     }
 
-    public void Shutdown()
+    private bool IsAllowedInRoom(IPEndPoint sender, PacketHeader header, out Player? player)
     {
-        Packets.Writer.Complete();
+        if (header.Type == PacketType.JoinRoom)
+        {
+            player = null;
+            return true;
+        }
+
+        player = PlayerHolder.FindPlayerByHost(sender)!;
+
+        return player != null;
     }
 }

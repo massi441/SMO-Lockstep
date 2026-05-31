@@ -5,19 +5,28 @@ namespace Lockstep.Server;
 
 internal class ServerContext
 {
-    public ILogger Logger { get; }
-    public IRoomHolder RoomHolder { get; }
-    public IPacketSender PacketSender { get; }
+    /// <summary>
+    /// The logger used across the server
+    /// </summary>
+    public required ILogger Logger { get; init; }
 
-    public ServerContext(ILogger logger, IRoomHolder roomHolder, IPacketSender packetSender, bool addDefaultRoom = true)
-    {
-        Logger = logger;
-        RoomHolder = roomHolder;
-        PacketSender = packetSender;
+    /// <summary>
+    /// The room holder used across the server
+    /// </summary>
+    public required IRoomHolder RoomHolder { get; init; }
 
-        if (addDefaultRoom)
-        {
-            RoomHolder.AddRoom(this);
-        }
-    }
+    /// <summary>
+    /// The packet sender used across the server
+    /// </summary>
+    public required IPacketSender PacketSender { get; init; }
+
+    /// <summary>
+    /// The player disconnector used across the server
+    /// </summary>
+    public required IPlayerDisconnector PlayerDisconnector { get; init; }
+
+    /// <summary>
+    /// The cancellation used to signal a server shutdown
+    /// </summary>
+    public required CancellationToken CancellationToken { get; init; }
 }

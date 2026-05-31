@@ -4,8 +4,6 @@ namespace Lockstep.Protocol;
 
 internal static class PacketParser
 {
-    public const byte MaxVersion = 1;
-
     internal static Result<PacketHeader, Error> ParseHeader(ReadOnlySpan<byte> packet)
     {
         if (!IsValidHeaderSize(packet))
@@ -27,13 +25,15 @@ internal static class PacketParser
             return Result<PacketHeader, Error>.Failure(Error.InvalidPacketType);
         }
 
-        ushort roomId = reader.ReadUInt16LittleEndian();
+        byte flags = reader.ReadByte();
 
         byte version = reader.ReadByte();
         if (!IsValidVersion(version))
         {
             return Result<PacketHeader, Error>.Failure(Error.InvalidVersion);
         }
+
+        ushort roomId = reader.ReadUInt16LittleEndian();
 
         ushort payloadSize = reader.ReadUInt16LittleEndian();
         if (!IsValidPayloadSize(packet, payloadSize))
@@ -44,6 +44,7 @@ internal static class PacketParser
         PacketHeader header = new PacketHeader
         {
             Type = (PacketType)packetType,
+            Flags = flags,
             Version = version,
             RoomId = roomId,
             PayloadSize = payloadSize
@@ -54,7 +55,7 @@ internal static class PacketParser
 
     private static bool IsValidVersion(byte version)
     {
-        return version >= 1 && version <= MaxVersion;
+        return version == Config.Version;
     }
 
     private static bool IsValidPayloadSize(ReadOnlySpan<byte> payload, ushort payloadSize)
