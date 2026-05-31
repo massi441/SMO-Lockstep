@@ -6,5 +6,5 @@ namespace Lockstep.Server;
 
 internal interface IPlayerDisconnector
 {
-    Result<Error> Disconnect(Player player, Packet originalPacket, Room room);
+    Result<Error> Disconnect(Player player);
 }

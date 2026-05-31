@@ -27,18 +27,28 @@ internal class PlayerDisconnector : IPlayerDisconnector
         }
     }
 
-    public Result<Error> Disconnect(Player player, Packet originalPacket, Room room)
+    public Result<Error> Disconnect(Player player)
     {
         Span<byte> broadcastBuffer = ArrayPool<byte>.Shared.Rent(PacketPlayerLeaveRoom.SizeOf());
+
+        PacketHeader header = new PacketHeader()
+        {
+            Type = PacketType.LeaveRoom,
+            Flags = (byte)PacketFlags.None,
+            Version = Config.Version,
+            RoomId = player.Room.Id,
+            PayloadSize = PacketPlayerLeaveRoom.SizeOfPayload()
+        };
+
         PacketPlayerLeaveRoom leavePacket = new PacketPlayerLeaveRoom()
         {
             Magic = PacketHeader.Magic,
-            Header = originalPacket.Header.WithSizeType(PacketPlayerLeaveRoom.SizeOfPayload(), PacketType.LeaveRoom),
+            Header = header,
             PlayerPort = player.PortNumber
         };
 
         MemoryMarshal.Write(broadcastBuffer, leavePacket);
 
-        return room.Broadcaster.BroadcastExcept(broadcastBuffer, player);
+        return player.Room.Broadcaster.BroadcastExcept(player.Room, player, broadcastBuffer);
     }
 }

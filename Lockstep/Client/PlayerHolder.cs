@@ -30,12 +30,14 @@ internal class PlayerHolder : IPlayerHolder
 
         Player player = new Player()
         {
-            Info = playerInfo,
-            PortNumber = playerPort
+            Endpoint = playerInfo.Endpoint,
+            Name = playerInfo.Name,
+            PortNumber = playerPort,
+            Room = playerInfo.Room,
         };
 
         _players[index] = player;
-        player.LastSeen = DateTime.UtcNow;
+
         return Result<Player, Error>.Success(player);
     }
 
@@ -62,7 +64,7 @@ internal class PlayerHolder : IPlayerHolder
                 continue;
             }
 
-            if (p.Info.Endpoint.Equals(endpoint))
+            if (p.Endpoint.Equals(endpoint))
             {
                 return p;
             }
@@ -81,7 +83,7 @@ internal class PlayerHolder : IPlayerHolder
                 continue;
             }
 
-            if (p.Info.Endpoint.Equals(player.Info.Endpoint))
+            if (p.Endpoint.Equals(player.Endpoint))
             {
                 _players[i] = null!;
             }

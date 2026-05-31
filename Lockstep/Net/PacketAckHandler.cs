@@ -35,6 +35,8 @@ internal class PacketAckHandler : IPacketHandler
 
         ArrayPool<byte>.Shared.Return(pendingPacket.Payload);
 
+        _context.Logger.LogTrace("Successfully Acked packet #{PacketNumber} in Room #{RoomId}", pendingPacket.SequenceNumber, room.Id);
+
         return Result<Error>.Success();
     }
 }

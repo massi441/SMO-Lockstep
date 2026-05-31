@@ -1,25 +1,23 @@
-﻿using System.Net;
-using Lockstep.Util;
+﻿using Lockstep.Client;
 
 namespace Lockstep.Protocol;
 
 internal class PacketPending
 {
-    private byte _triesLeft;
+    private byte _tries;
     public required ushort SequenceNumber { get; init; }
     public required byte[] Payload { get; init; }
-    public required IPEndPoint Receiver { get; init; }
+    public required Player Receiver { get; init; }
     public DateTime LastSent { get; private set; } = DateTime.UtcNow;
-    public Func<IPEndPoint, Result<Error>>? OnDropped { get; init; } = null;
 
-    public byte TriesLeft => _triesLeft;
-    public bool IsAlive => _triesLeft > 0;
-    public bool IsDead => _triesLeft <= 0;
-
-    public PacketPending(byte maxTries = 3)
-    {
-        _triesLeft = maxTries;
+    public byte Tries
+    { 
+        get => _tries;
+        init => _tries = value;
     }
+
+    public bool IsAlive => _tries > 0;
+    public bool IsDead => _tries <= 0;
 
     public void UpdateTime()
     {
@@ -28,9 +26,9 @@ internal class PacketPending
 
     public void DecrementTries()
     {
-        if (_triesLeft > 0)
+        if (_tries > 0)
         {
-            _triesLeft--;
+            _tries--;
         }
     }
 }

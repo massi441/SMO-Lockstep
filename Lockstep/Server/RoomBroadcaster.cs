@@ -9,20 +9,18 @@ namespace Lockstep.Server;
 internal class RoomBroadcaster : IRoomBroadcaster
 {
     private readonly ServerContext _context;
-    private readonly IPlayerHolder _playerHolder;
     private readonly IPacketPendingStore _resendStore;
     private readonly Queue<Action> _commands = [];
     private readonly CancellationTokenSource _resendToken;
     private readonly Task _resendTask;
 
-    private const int ResendTick = 20;
+    private const int ResendTick = 50;
 
     public IPacketPendingStore AckPacketStore => _resendStore;
 
-    public RoomBroadcaster(ServerContext context, IPlayerHolder playerHolder, IPacketPendingStore resendStore)
+    public RoomBroadcaster(ServerContext context, IPacketPendingStore resendStore)
     {
         _context = context;
-        _playerHolder = playerHolder;
         _resendStore = resendStore;
         _resendToken = CancellationTokenSource.CreateLinkedTokenSource(_context.CancellationToken);
         _resendTask = Task.Run(ResendLoop);
@@ -43,15 +41,15 @@ internal class RoomBroadcaster : IRoomBroadcaster
         _context.Logger.LogInformation("Room Broadcaster was shutdown successfully");
     }
 
-    private void ProcessPacket(PacketPending packet)
+    private void ProcessPacket(PacketPending pendingPacket)
     {
-        if (packet.IsAlive)
+        if (pendingPacket.IsAlive)
         {
             // TODO: add time checking
-            Result<Error> sendResult = _context.PacketSender.Send(packet.Payload, packet.Receiver);
+            Result<Error> sendResult = _context.PacketSender.Send(pendingPacket.Receiver.Endpoint, pendingPacket.Payload);
             if (sendResult.IsSuccess)
             {
-                packet.DecrementTries();
+                pendingPacket.DecrementTries();
             }
             else
             {
@@ -60,51 +58,111 @@ internal class RoomBroadcaster : IRoomBroadcaster
         }
         else
         {
-            _resendStore.RemovePacket(packet.SequenceNumber);
-
-            packet.OnDropped?.Invoke(packet.Receiver);
+            _resendStore.RemovePacket(pendingPacket.SequenceNumber);
+            _commands.Enqueue(() =>
+            {
+                _context.Logger.LogInformation("Dropping packet #{Number}", pendingPacket.SequenceNumber);
+                _context.PlayerDisconnector.Disconnect(pendingPacket.Receiver);
+            });
         }
     }
 
-    public Result<Error> Broadcast(ReadOnlySpan<byte> payload)
+    public Result<Error> Broadcast(Room room, ReadOnlySpan<byte> payload)
     {
-        foreach (Player player in _playerHolder.Players)
+        foreach (Player player in room.PlayerHolder.Players)
         {
-            _context.PacketSender.Send(payload, player.Info.Endpoint);
+            _context.PacketSender.Send(player.Endpoint, payload);
         }
 
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastExcept(ReadOnlySpan<byte> payload, Player sender)
+    public Result<Error> BroadcastAck(Room room, in PacketAckBroadcastRequest request)
     {
-        foreach (Player player in _playerHolder.Players)
+        foreach (Player player in room.PlayerHolder.Players)
+        {
+            _context.PacketSender.Send(player.Endpoint, request.Payload);
+            UploadPlayerAckPacket(player, in request);
+        }
+
+        return Result<Error>.Success();
+    }
+
+    public Result<Error> BroadcastExcept(Room room, Player sender, ReadOnlySpan<byte> payload)
+    {
+        foreach (Player player in room.PlayerHolder.Players)
         {
             if (player == sender)
             {
                 continue;
             }
 
-            _context.PacketSender.Send(payload, player.Info.Endpoint);
+            _context.PacketSender.Send(player.Endpoint, payload);
         }
 
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastExceptWith(ReadOnlySpan<byte> payload, Player sender, ReadOnlySpan<byte> senderPayload)
+    public Result<Error> BroadcastAckExcept(Room room, Player sender, in PacketAckBroadcastRequest request)
     {
-        foreach (Player player in _playerHolder.Players)
+        foreach (Player player in room.PlayerHolder.Players)
         {
             if (player == sender)
             {
-                _context.PacketSender.Send(senderPayload, player.Info.Endpoint);
                 continue;
             }
 
-            _context.PacketSender.Send(payload, player.Info.Endpoint);
+            _context.PacketSender.Send(player.Endpoint, request.Payload);
+            UploadPlayerAckPacket(player, in request);
         }
 
         return Result<Error>.Success();
+    }
+
+    public Result<Error> BroadcastExceptWith(Room room, Player sender, ReadOnlySpan<byte> senderPayload, ReadOnlySpan<byte> payload)
+    {
+        foreach (Player player in room.PlayerHolder.Players)
+        {
+            if (player == sender)
+            {
+                _context.PacketSender.Send(player.Endpoint, senderPayload);
+                continue;
+            }
+
+            _context.PacketSender.Send(player.Endpoint, payload);
+        }
+
+        return Result<Error>.Success();
+    }
+
+    public Result<Error> BroadcastAckExceptWith(Room room, Player sender, in PacketAckBroadcastRequest playerRequest, in PacketAckBroadcastRequest request)
+    {
+        foreach (Player player in room.PlayerHolder.Players)
+        {
+            if (player == sender)
+            {
+                _context.PacketSender.Send(player.Endpoint, playerRequest.Payload);
+                UploadPlayerAckPacket(sender, in playerRequest);
+                continue;
+            }
+
+            _context.PacketSender.Send(player.Endpoint, request.Payload);
+            UploadPlayerAckPacket(player, in request);
+        }
+
+        return Result<Error>.Success();
+    }
+
+    private bool UploadPlayerAckPacket(Player player, in PacketAckBroadcastRequest ackRequest)
+    {
+        PacketPendingRequest request = new PacketPendingRequest()
+        {
+            Receiver = player,
+            Payload = ackRequest.Payload,
+            MaxRetries = ackRequest.MaxRetries
+        };
+
+        return _resendStore.UploadPacket(in request).IsSuccess;
     }
 
     public Task Shutdown()

@@ -6,11 +6,11 @@ namespace Lockstep.Protocol;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 internal record struct PacketHeader
 {
-    public PacketType Type;
-    public byte Flags;
-    public byte Version;
-    public ushort RoomId;
-    public ushort PayloadSize;
+    public required PacketType Type;
+    public required byte Flags;
+    public required byte Version;
+    public required ushort RoomId;
+    public required ushort PayloadSize;
 
     public const uint Magic = 0x534D4F4C; // "SMOL"
 

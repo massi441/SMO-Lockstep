@@ -25,24 +25,6 @@ internal class PacketJoinRoomHandler : IPacketHandler
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct PacketPlayerBroadcastJoin
-    {
-        public uint Magic;
-        public PacketHeader Header;
-        public byte PlayerPort;
-
-        public static ushort SizeOf()
-        {
-            return (ushort)Unsafe.SizeOf<PacketPlayerBroadcastJoin>();
-        }
-
-        public static ushort SizeOfPayload()
-        {
-            return sizeof(byte);
-        }
-    }
-
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct PacketPlayerAckJoin
     {
         public uint Magic;
@@ -62,12 +44,29 @@ internal class PacketJoinRoomHandler : IPacketHandler
         }
     }
 
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    private struct PacketPlayerBroadcastJoin
+    {
+        public uint Magic;
+        public PacketHeader Header;
+        public byte PlayerPort;
+
+        public static ushort SizeOf()
+        {
+            return (ushort)Unsafe.SizeOf<PacketPlayerBroadcastJoin>();
+        }
+
+        public static ushort SizeOfPayload()
+        {
+            return sizeof(byte);
+        }
+    }
+
     public Result<Error> Handle(Packet packet, Room room)
     {
         if (IsInOtherRoom(packet.Sender, out Player takenRoomPlayer, out Room takenRoom))
         {
-            PlayerInfo info = takenRoomPlayer.Info;
-            _context.Logger.LogWarning("Player {Name} ({Address}:{Port}) is already in room {RoomId}", info.Name, info.Endpoint.Address, info.Endpoint.Port, takenRoom.Id);
+            _context.Logger.LogWarning("Player {Name} ({Address}:{Port}) is already in room {RoomId}", takenRoomPlayer.Name, takenRoomPlayer.Endpoint.Address, takenRoomPlayer.Endpoint.Port, takenRoom.Id);
             return Result<Error>.Failure(Error.PlayerAlreadyInRoom);
         }
 
@@ -82,7 +81,8 @@ internal class PacketJoinRoomHandler : IPacketHandler
         PlayerInfo playerInfo = new PlayerInfo()
         {
             Endpoint = packet.Sender,
-            Name = reader.ReadStringUTF8(nameLength)
+            Name = reader.ReadStringUTF8(nameLength),
+            Room = room,
         };
 
         Result<Player, Error> addResult = room.PlayerHolder.RegisterPlayer(playerInfo);
@@ -97,7 +97,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
         Result<Error> notifyResult = NotifyRoom(packet, room, newPlayer);
         if (notifyResult.IsSuccess)
         {
-            _context.Logger.LogTrace("Player {Name} joined room #{RoomId} with port #{Port}", newPlayer.Info.Name, packet.Header.RoomId, newPlayer.PortNumber);
+            _context.Logger.LogTrace("Player {Name} joined room #{RoomId} with port #{Port}", newPlayer.Name, packet.Header.RoomId, newPlayer.PortNumber);
         }
 
         return notifyResult;
@@ -106,15 +106,26 @@ internal class PacketJoinRoomHandler : IPacketHandler
     private static Result<Error> NotifyRoom(Packet packet, Room room, Player newPlayer)
     {
         byte otherPlayersCount = room.PlayerHolder.OtherPlayerCount;
-        Span<byte> ackBuffer = ArrayPool<byte>.Shared.Rent(PacketPlayerAckJoin.SizeOf(otherPlayersCount));;
+        byte[] ackBuffer = ArrayPool<byte>.Shared.Rent(PacketPlayerAckJoin.SizeOf(otherPlayersCount)); ;
 
         WriteAck(ackBuffer, packet, room, newPlayer, otherPlayersCount);
 
-        Span<byte> broadcastBuffer = ArrayPool<byte>.Shared.Rent(PacketPlayerBroadcastJoin.SizeOf());
+        PacketAckBroadcastRequest newPlayerAckRequest = new PacketAckBroadcastRequest()
+        {
+            MaxRetries = Config.MaxRetries,
+            Payload = ackBuffer
+        };
+
+        byte[] broadcastBuffer = ArrayPool<byte>.Shared.Rent(PacketPlayerBroadcastJoin.SizeOf());
 
         WriteBroadcast(broadcastBuffer, packet, newPlayer);
+        PacketAckBroadcastRequest broadcastRequest = new PacketAckBroadcastRequest()
+        {
+            MaxRetries = Config.MaxRetries,
+            Payload = broadcastBuffer
+        };
 
-        return room.Broadcaster.BroadcastExceptWith(broadcastBuffer, newPlayer, ackBuffer);
+        return room.Broadcaster.BroadcastAckExceptWith(room, newPlayer, in newPlayerAckRequest, in broadcastRequest);
     }
 
     private static void WriteAck(Span<byte> buffer, Packet packet, Room room, Player newPlayer, byte otherPlayersCount)

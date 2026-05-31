@@ -66,7 +66,6 @@ def receive_loop(sock):
             header = parse_header(data)
             if header:
                 ptype_name = PTYPE_NAMES.get(header["type"], f"Unknown({header['type']})")
-                print(f"\n  [debug] raw header: {header}")
                 payload_str = decode_payload(header["type"], data)
                 print(f"\n  << {ptype_name} from {sender} | room={header['room_id']} flags={header['flags']:#04x} | {payload_str}")
             else:

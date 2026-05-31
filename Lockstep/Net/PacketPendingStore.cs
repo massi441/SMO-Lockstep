@@ -18,12 +18,12 @@ internal class PacketPendingStore : IPacketPendingStore
             return Result<Error>.Failure(Error.PendingPacketStoreFull);
         }
 
-        PacketPending pendingPacket = new PacketPending(request.MaxRetries)
+        PacketPending pendingPacket = new PacketPending()
         {
             Receiver = request.Receiver,
             Payload = request.Payload,
-            SequenceNumber = _nextSequenceNumber,
-            OnDropped = request.OnDropped
+            Tries = request.MaxRetries,
+            SequenceNumber = _nextSequenceNumber
         };
 
         _pendingPackets[_nextSequenceNumber] = pendingPacket;

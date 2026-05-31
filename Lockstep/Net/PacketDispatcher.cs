@@ -28,7 +28,7 @@ internal static class PacketDispatcher
                 return Result<Error>.Failure(Error.IllegalRoomAccess);
             }
 
-            player?.LastSeen = DateTime.UtcNow;
+            player?.RefreshLastSeen();
 
             Packet roomPacket = new Packet()
             {
