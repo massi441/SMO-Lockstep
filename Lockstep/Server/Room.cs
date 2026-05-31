@@ -49,28 +49,19 @@ internal class Room
             ProcessCommands();
 
             IPacketHandler? packetHandler = PacketHandlerFactory.CreateHandler(packet.Header.Type, _context);
-            if (packetHandler != null)
-            {
-                if (packet.Payload.Buffer.Length < packetHandler.MinPayloadSize)
-                {
-                    _context.Logger.LogWarning("A {PacketType} packet of invalid size ({PacketSize}) was requested. Minimum required: {Minimum}", packet.Header.Type, packet.Payload.Length, packetHandler.MinPayloadSize);
-                    continue;
-                }
-
-                Result<Error> handlerResult = packetHandler.Handle(packet, this);
-                if (handlerResult.IsSuccess)
-                {
-                    _context.Logger.LogTrace("Successfully handled packet {PacketType}", packet.Header.Type);
-                }
-                else
-                {
-                    _context.Logger.LogTrace("Failed to handle packet, Error: {Error}", handlerResult.Error);
-                }
-            }
-            else
+            if (packetHandler == null)
             {
                 _context.Logger.LogWarning("No handler found for packet type {PacketType}", (int)packet.Header.Type);
+                continue;
             }
+
+            if (packet.Payload.Buffer.Length < packetHandler.MinPayloadSize)
+            {
+                _context.Logger.LogWarning("A {PacketType} packet of invalid size ({PacketSize}) was requested. Minimum required: {Minimum}", packet.Header.Type, packet.Payload.Length, packetHandler.MinPayloadSize);
+                continue;
+            }
+
+            packetHandler.Handle(packet, this);
         }
 
         _context.Logger.LogInformation("Room #{RoomId} was shutdown sucessfully", Id);

@@ -20,7 +20,7 @@ internal class PacketAckHandler : IPacketHandler
     /// </summary>
     public uint MinPayloadSize => sizeof(ushort);
 
-    public Result<Error> Handle(Packet packet, Room room)
+    public void Handle(Packet packet, Room room)
     {
         SpanReader reader = new SpanReader(packet.Payload.Buffer);
 
@@ -30,13 +30,12 @@ internal class PacketAckHandler : IPacketHandler
         if (pendingPacket == null)
         {
             _context.Logger.LogError("An error occured while trying to remove packet #{SequenceNumber} in room #{RoomId}", sequenceNumber, room.Id);
-            return Result<Error>.Failure(Error.OperationFailed);
+            Result<Error>.Failure(Error.OperationFailed);
+            return;
         }
 
         ArrayPool<byte>.Shared.Return(pendingPacket.Payload);
 
         _context.Logger.LogTrace("Successfully Acked packet #{PacketNumber} in Room #{RoomId}", pendingPacket.SequenceNumber, room.Id);
-
-        return Result<Error>.Success();
     }
 }

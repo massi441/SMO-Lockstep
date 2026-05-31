@@ -2,7 +2,6 @@
 using Lockstep.Client;
 using Lockstep.Protocol;
 using Lockstep.Server;
-using Lockstep.Util;
 
 namespace Lockstep.Net;
 
@@ -17,14 +16,12 @@ internal class PacketPlayerInputHandler : IPacketHandler
 
     public uint MinPayloadSize => 0;
 
-    public Result<Error> Handle(Packet packet, Room room)
+    public void Handle(Packet packet, Room room)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
             string message = "Relayed Player inputs!";
             _context.PacketSender.Send(player.Endpoint, Encoding.UTF8.GetBytes(message));
         }
-
-        return Result<Error>.Success();
     }
 }

@@ -1,7 +1,4 @@
-﻿using System.Buffers;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using Lockstep.Client;
+﻿using Lockstep.Client;
 using Lockstep.Protocol;
 using Lockstep.Server;
 using Lockstep.Util;
@@ -19,7 +16,7 @@ internal class PacketLeaveRoomHandler : IPacketHandler
         _context = context;
     }
 
-    public Result<Error> Handle(Packet packet, Room room)
+    public void Handle(Packet packet, Room room)
     {
         Player player = room.PlayerHolder.FindPlayerByHost(packet.Sender)!;
 
@@ -27,7 +24,7 @@ internal class PacketLeaveRoomHandler : IPacketHandler
         if (unregisterResult.IsFailed)
         {
             _context.Logger.LogError("An error occured while trying to unregister player {Name} from room #{RoomId}", player.Name, room.Id);
-            return unregisterResult;
+            return;
         }
 
         Result<Error> disconnectResult = _context.PlayerDisconnector.Disconnect(player);
@@ -35,7 +32,5 @@ internal class PacketLeaveRoomHandler : IPacketHandler
         {
             _context.Logger.LogWarning("Player {Name} left room {RoomId}", player.Name, room.Id);
         }
-
-        return disconnectResult;
     }
 }

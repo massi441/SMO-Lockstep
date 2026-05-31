@@ -62,12 +62,12 @@ internal class PacketJoinRoomHandler : IPacketHandler
         }
     }
 
-    public Result<Error> Handle(Packet packet, Room room)
+    public void Handle(Packet packet, Room room)
     {
         if (IsInOtherRoom(packet.Sender, out Player takenRoomPlayer, out Room takenRoom))
         {
             _context.Logger.LogWarning("Player {Name} ({Address}:{Port}) is already in room {RoomId}", takenRoomPlayer.Name, takenRoomPlayer.Endpoint.Address, takenRoomPlayer.Endpoint.Port, takenRoom.Id);
-            return Result<Error>.Failure(Error.PlayerAlreadyInRoom);
+            return;
         }
 
         SpanReader reader = new SpanReader(packet.Payload.Buffer);
@@ -75,7 +75,8 @@ internal class PacketJoinRoomHandler : IPacketHandler
         byte nameLength = reader.ReadByte();
         if (!IsValidNameLength(nameLength, packet))
         {
-            return Result<Error>.Failure(Error.InvalidNameLength);
+            // TODO: Add log
+            return;
         }
 
         PlayerInfo playerInfo = new PlayerInfo()
@@ -89,7 +90,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
         if (addResult.IsFailed)
         {
             _context.Logger.LogError("Failed to register {PlayerName} in Room #{RoomId}", playerInfo.Name, room.Id);
-            return Result<Error>.Failure(addResult.Error!.Value);
+            return;
         }
 
         Player newPlayer = addResult.Data!;
@@ -99,8 +100,6 @@ internal class PacketJoinRoomHandler : IPacketHandler
         {
             _context.Logger.LogTrace("Player {Name} joined room #{RoomId} with port #{Port}", newPlayer.Name, packet.Header.RoomId, newPlayer.PortNumber);
         }
-
-        return notifyResult;
     }
 
     private static Result<Error> NotifyRoom(Packet packet, Room room, Player newPlayer)

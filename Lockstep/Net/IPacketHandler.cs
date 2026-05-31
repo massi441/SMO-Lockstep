@@ -16,6 +16,5 @@ internal interface IPacketHandler
     /// </summary>
     /// <param name="packet">The packet to handle.</param>
     /// <param name="room">The room the packet was routed to.</param>
-    /// <returns>A result indicating either success, or the error that occurred during handling.</returns>
-    Result<Error> Handle(Packet packet, Room room); // TODO: Remove Result as return type
+    void Handle(Packet packet, Room room);
 }

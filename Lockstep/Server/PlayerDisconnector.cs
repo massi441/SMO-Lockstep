@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Lockstep.Client;
+using Lockstep.Net;
 using Lockstep.Protocol;
 using Lockstep.Util;
 
@@ -29,7 +30,7 @@ internal class PlayerDisconnector : IPlayerDisconnector
 
     public Result<Error> Disconnect(Player player)
     {
-        Span<byte> broadcastBuffer = ArrayPool<byte>.Shared.Rent(PacketPlayerLeaveRoom.SizeOf());
+        byte[] broadcastBuffer = ArrayPool<byte>.Shared.Rent(PacketPlayerLeaveRoom.SizeOf());
 
         PacketHeader header = new PacketHeader()
         {
@@ -49,6 +50,12 @@ internal class PlayerDisconnector : IPlayerDisconnector
 
         MemoryMarshal.Write(broadcastBuffer, leavePacket);
 
-        return player.Room.Broadcaster.BroadcastExcept(player.Room, player, broadcastBuffer);
+        PacketAckBroadcastRequest request = new PacketAckBroadcastRequest()
+        {
+            MaxRetries = Config.MaxRetries,
+            Payload = broadcastBuffer
+        };
+
+        return player.Room.Broadcaster.BroadcastAck(player.Room, request);
     }
 }
