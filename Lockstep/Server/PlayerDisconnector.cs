@@ -56,6 +56,12 @@ internal class PlayerDisconnector : IPlayerDisconnector
             Payload = broadcastBuffer
         };
 
+        Result<Error> unregisterResult = player.Room.PlayerHolder.UnregisterPlayer(player);
+        if (unregisterResult.IsFailed)
+        {
+            return unregisterResult;
+        }
+
         return player.Room.Broadcaster.BroadcastAck(player.Room, request);
     }
 }

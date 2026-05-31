@@ -21,6 +21,5 @@ internal interface IRoomBroadcaster
     Result<Error> BroadcastExceptWith(Room room, Player sender, ReadOnlySpan<byte> senderPayload, ReadOnlySpan<byte> broadcastPayload);
     Result<Error> BroadcastAckExceptWith(Room room, Player sender, in PacketAckBroadcastRequest playerRequest, in PacketAckBroadcastRequest broadcastRequest);
 
-    bool TryGetPendingCommand(out Action? command);
     Task Shutdown();
 }

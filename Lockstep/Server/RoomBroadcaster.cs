@@ -10,7 +10,6 @@ internal class RoomBroadcaster : IRoomBroadcaster
 {
     private readonly ServerContext _context;
     private readonly IPacketPendingStore _resendStore;
-    private readonly Queue<Action> _commands = [];
     private readonly CancellationTokenSource _resendToken;
     private readonly Task _resendTask;
 
@@ -46,7 +45,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
         if (pendingPacket.IsAlive)
         {
             // TODO: add time checking
-            Result<Error> sendResult = _context.PacketSender.Send(pendingPacket.Receiver.Endpoint, pendingPacket.Payload);
+            Result<Error> sendResult = _context.PacketSender.Send(pendingPacket.Player.Endpoint, pendingPacket.Payload);
             if (sendResult.IsSuccess)
             {
                 pendingPacket.DecrementTries();
@@ -59,10 +58,17 @@ internal class RoomBroadcaster : IRoomBroadcaster
         else
         {
             _resendStore.RemovePacket(pendingPacket.SequenceNumber);
-            _commands.Enqueue(() =>
+            pendingPacket.Player.Room.UploadCommand(() =>
             {
-                _context.Logger.LogInformation("Dropping packet #{Number}", pendingPacket.SequenceNumber);
-                _context.PlayerDisconnector.Disconnect(pendingPacket.Receiver);
+                Result<Error> disconnectResult = _context.PlayerDisconnector.Disconnect(pendingPacket.Player);
+                if (disconnectResult.IsSuccess)
+                {
+                    _context.Logger.LogWarning("Disconnected player {PlayerName} for not Acking packet #{PacketId} in room #{RoomId}", pendingPacket.Player.Name, pendingPacket.SequenceNumber, pendingPacket.Player.Room.Id);
+                }
+                else
+                {
+                    _context.Logger.LogError("Failed to disconnect player {PlayerName} for no Acking packet #{PacketId} in room #{RoomId}", pendingPacket.Player.Name, pendingPacket.SequenceNumber, pendingPacket.Player.Room.Id);
+                }
             });
         }
     }
@@ -169,10 +175,5 @@ internal class RoomBroadcaster : IRoomBroadcaster
     {
         _resendToken.Cancel();
         return _resendTask;
-    }
-
-    public bool TryGetPendingCommand(out Action? command)
-    {
-        return _commands.TryDequeue(out command);
     }
 }

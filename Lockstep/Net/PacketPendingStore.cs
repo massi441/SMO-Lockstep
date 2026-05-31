@@ -20,7 +20,7 @@ internal class PacketPendingStore : IPacketPendingStore
 
         PacketPending pendingPacket = new PacketPending()
         {
-            Receiver = request.Receiver,
+            Player = request.Receiver,
             Payload = request.Payload,
             Tries = request.MaxRetries,
             SequenceNumber = _nextSequenceNumber

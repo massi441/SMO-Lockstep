@@ -18,7 +18,7 @@ internal class PacketLeaveRoomHandler : IPacketHandler
 
     public void Handle(Packet packet, Room room)
     {
-        Player player = room.PlayerHolder.FindPlayerByHost(packet.Sender)!;
+        Player? player = room.PlayerHolder.FindPlayerByHost(packet.Sender)!;
 
         Result<Error> unregisterResult = room.PlayerHolder.UnregisterPlayer(player);
         if (unregisterResult.IsFailed)

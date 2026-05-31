@@ -1,9 +1,12 @@
-﻿using Lockstep.Net;
+﻿using System.Collections.Concurrent;
+using System.Net;
+using System.Reflection.PortableExecutable;
+using System.Threading.Channels;
 using Lockstep.Client;
+using Lockstep.Net;
 using Lockstep.Protocol;
 using Lockstep.Util;
 using Microsoft.Extensions.Logging;
-using System.Threading.Channels;
 
 namespace Lockstep.Server;
 
@@ -11,6 +14,7 @@ internal class Room
 {
     private readonly ServerContext _context;
     private readonly Task _processTask;
+    private readonly ConcurrentQueue<Action> _commands = [];
 
     public ushort Id { get; }
     public Channel<Packet> Packets { get; }
@@ -26,20 +30,18 @@ internal class Room
         Packets = Channel.CreateUnbounded<Packet>();
         Broadcaster = broadcaster;
 
-        _processTask = Task.Run(StartWork, _context.CancellationToken);
+        _processTask = Task.Run(ProcessAsync, _context.CancellationToken);
     }
 
-    private Task StartWork()
+    public Task Shutdown()
     {
-        try
-        {
-            return ProcessAsync();
-        }
-        catch (Exception ex)
-        {
-            _context.Logger.LogError(ex, "An Error Occured while processing the room");
-            return Task.CompletedTask;
-        }
+        Packets.Writer.Complete();
+        return Task.WhenAll(_processTask, Broadcaster.Shutdown());
+    }
+
+    public void UploadCommand(Action action)
+    {
+        _commands.Enqueue(action);
     }
 
     private async Task ProcessAsync()
@@ -47,6 +49,14 @@ internal class Room
         await foreach (Packet packet in Packets.Reader.ReadAllAsync())
         {
             ProcessCommands();
+
+            if (!IsAllowedInRoom(packet.Sender, packet.Header, out Player? player))
+            {
+                _context.Logger.LogWarning("{Address}:{Port} illegally tried to access room #{RoomId}", packet.Sender.Address, packet.Sender.Port, Id);
+                continue;
+            }
+
+            player?.RefreshLastSeen();
 
             IPacketHandler? packetHandler = PacketHandlerFactory.CreateHandler(packet.Header.Type, _context);
             if (packetHandler == null)
@@ -69,16 +79,23 @@ internal class Room
 
     private void ProcessCommands()
     {
-        while (Broadcaster.TryGetPendingCommand(out Action? command))
+        while (_commands.TryDequeue(out Action? command))
         {
             _context.Logger.LogTrace("Processing command in room #{RoomId}", Id);
             command!.Invoke();
         }
     }
 
-    public Task Shutdown()
+    private bool IsAllowedInRoom(IPEndPoint sender, PacketHeader header, out Player? player)
     {
-        Packets.Writer.Complete();
-        return Task.WhenAll(_processTask, Broadcaster.Shutdown());
+        if (header.Type == PacketType.JoinRoom)
+        {
+            player = null;
+            return true;
+        }
+
+        player = PlayerHolder.FindPlayerByHost(sender)!;
+
+        return player != null;
     }
 }

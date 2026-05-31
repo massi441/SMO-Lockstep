@@ -7,7 +7,7 @@ internal class PacketPending
     private byte _tries;
     public required ushort SequenceNumber { get; init; }
     public required byte[] Payload { get; init; }
-    public required Player Receiver { get; init; }
+    public required Player Player { get; init; }
     public DateTime LastSent { get; private set; } = DateTime.UtcNow;
 
     public byte Tries

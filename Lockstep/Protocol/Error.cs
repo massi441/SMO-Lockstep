@@ -25,6 +25,5 @@ internal enum Error
     IllegalRoomAccess,
 
     // Generic
-    JobWriteFailed,
     OperationFailed,
 }
