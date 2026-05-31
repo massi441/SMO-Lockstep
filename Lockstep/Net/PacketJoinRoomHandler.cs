@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Buffers;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Lockstep.Client;
@@ -13,7 +14,9 @@ internal class PacketJoinRoomHandler : IPacketHandler
 {
     private readonly ServerContext _context;
 
-    // Must provide size of the player's name
+    /// <summary>
+    /// Requires at least one UInt16 for the length of the Player's name
+    /// </summary>
     public uint MinPayloadSize => 2;
 
     public PacketJoinRoomHandler(ServerContext context)
@@ -54,7 +57,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
 
         public static ushort SizeOfPayload(byte otherPlayersCount)
         {
-            //              Port           OtherPlayersCount        All Ports
+            // 1-[Port] 1-[OtherPlayersCount] N-[All Ports]
             return (ushort)(sizeof(byte) + sizeof(byte) + sizeof(byte) * otherPlayersCount);
         }
     }
@@ -103,11 +106,11 @@ internal class PacketJoinRoomHandler : IPacketHandler
     private Result<Error> NotifyRoom(Packet packet, Room room, Player newPlayer)
     {
         byte otherPlayersCount = room.PlayerHolder.OtherPlayerCount;
-        Span<byte> ackBuffer = stackalloc byte[PacketPlayerAckJoin.SizeOf(otherPlayersCount)];
+        Span<byte> ackBuffer = ArrayPool<byte>.Shared.Rent(PacketPlayerAckJoin.SizeOf(otherPlayersCount));;
 
         WriteAck(ackBuffer, packet, room, newPlayer, otherPlayersCount);
 
-        Span<byte> broadcastBuffer = stackalloc byte[PacketPlayerBroadcastJoin.SizeOf()];
+        Span<byte> broadcastBuffer = ArrayPool<byte>.Shared.Rent(PacketPlayerBroadcastJoin.SizeOf());
 
         WriteBroadcast(broadcastBuffer, packet, newPlayer);
 

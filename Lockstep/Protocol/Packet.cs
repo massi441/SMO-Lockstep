@@ -4,7 +4,7 @@ namespace Lockstep.Protocol;
 
 /// <summary>
 /// Represents a network packet containing a fully parsed header,
-/// and a payload ready for processing by the server
+/// and a payload ready for processing by a packet handler
 /// </summary>
 internal class Packet
 {

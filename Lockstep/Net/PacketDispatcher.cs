@@ -20,7 +20,7 @@ internal static class PacketDispatcher
             Room? room = context.RoomHolder.GetRoom(header.RoomId);
             if (room == null)
             {
-                return Result<Error>.Failure(Error.InvalidRoomId);
+                return Result<Error>.Failure(Error.RoomNotFound);
             }
 
             if (!IsAllowedInRoom(packet.Sender, room, ref header, out Player? player))

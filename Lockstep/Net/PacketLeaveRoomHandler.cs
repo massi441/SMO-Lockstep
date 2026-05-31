@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Buffers;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Lockstep.Client;
 using Lockstep.Protocol;
@@ -19,7 +20,7 @@ internal class PacketLeaveRoomHandler : IPacketHandler
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct PacketPlayerLeaveRoom
+    public struct PacketPlayerLeaveRoom
     {
         public uint Magic;
         public PacketHeader Header;
@@ -47,7 +48,7 @@ internal class PacketLeaveRoomHandler : IPacketHandler
             return unregisterResult;
         }
 
-        Span<byte> broadcastBuffer = stackalloc byte[PacketPlayerLeaveRoom.SizeOf()];
+        Span<byte> broadcastBuffer = ArrayPool<byte>.Shared.Rent(PacketPlayerLeaveRoom.SizeOf());
         WriteBroadcast(broadcastBuffer, packet, player);
 
         Result<Error> notifyResult = room.Notifier.NotifyOthers(broadcastBuffer, player);

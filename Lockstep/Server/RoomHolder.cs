@@ -1,4 +1,7 @@
-﻿using Lockstep.Client;
+﻿using System.Threading.Channels;
+using Lockstep.Client;
+using Lockstep.Net;
+using Lockstep.Protocol;
 
 namespace Lockstep.Server;
 
@@ -16,13 +19,10 @@ internal class RoomHolder : IRoomHolder
         }
 
         IPlayerHolder playerHolder = new PlayerHolder();
-        IRoomNotifier roomNotifier = new RoomNotifier(context, playerHolder);
+        IRoomNotifier roomNotifier = new RoomNotifier(context, playerHolder, new PendingPacketStore());
 
-        Room room = new Room(nextId, context, playerHolder, roomNotifier);
+        _rooms.Add(nextId, new Room(nextId, context, playerHolder, roomNotifier));
 
-        room.Start();
-
-        _rooms.Add(nextId, room);
         return nextId;
     }
 
@@ -33,6 +33,7 @@ internal class RoomHolder : IRoomHolder
             if (room != null)
             {
                 room.Shutdown();
+                _rooms.Remove(id);
                 return true;
             }
         }
@@ -52,11 +53,7 @@ internal class RoomHolder : IRoomHolder
 
     public Task ShutdownRooms()
     {
-        return Task.WhenAll(_rooms.Values.Select(room =>
-        {
-            room.Shutdown();
-            return room.Task;
-        }));
+        return Task.WhenAll(_rooms.Values.Select(room => room.Shutdown()));
     }
 
     public IEnumerable<Room> GetRooms()

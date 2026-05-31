@@ -8,7 +8,6 @@ internal enum Error
     InvalidPacketType,
     InvalidVersion,
     InvalidPayloadSize,
-    InvalidRoomId,
 
     // Packet Handling
     EmptyPayload,
@@ -17,11 +16,14 @@ internal enum Error
 
     // Packet Sending
     NotSent,
+    PendingPacketStoreFull,
+    PendingPacketNotFound,
 
     // Room
+    RoomNotFound,
+    RoomFull,
     PlayerAlreadyInRoom,
     IllegalRoomAccess,
-    RoomFull,
 
     // Generic
     JobWriteFailed,

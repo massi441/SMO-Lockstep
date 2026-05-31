@@ -10,9 +10,9 @@ namespace Lockstep.Server;
 internal class Room
 {
     private readonly ServerContext _context;
+    private readonly Task _processTask;
 
     public ushort Id { get; }
-    public Task Task { get; private set; } = null!;
     public Channel<Packet> Packets { get; }
     public IPlayerHolder PlayerHolder { get; }
     public IRoomNotifier Notifier { get; }
@@ -25,26 +25,20 @@ internal class Room
         PlayerHolder = playerHolder;
         Packets = Channel.CreateUnbounded<Packet>();
         Notifier = notifier;
+
+        _processTask = Task.Run(StartWork, _context.CancellationToken);
     }
 
-    public void Start()
+    private async Task StartWork()
     {
-        if (Task != null)
+        try
         {
-            return;
+            await ProcessAsync();
         }
-
-        Task = Task.Run(async () =>
+        catch (Exception ex)
         {
-            try
-            {
-                await ProcessAsync();
-            }
-            catch (Exception ex)
-            {
-                _context.Logger.LogError(ex, "An Error Occured while processing the room");
-            }
-        });
+            _context.Logger.LogError(ex, "An Error Occured while processing the room");
+        }
     }
 
     private async Task ProcessAsync()
@@ -75,10 +69,12 @@ internal class Room
                 _context.Logger.LogWarning("No handler found for packet type {PacketType}", (int)packet.Header.Type);
             }
         }
-    }
 
-    public void Shutdown()
+        _context.Logger.LogInformation("Room #{RoomId} was shutdown sucessfully", Id);
+    }
+    public Task Shutdown()
     {
         Packets.Writer.Complete();
+        return Task.WhenAll(_processTask, Notifier.Shutdown());
     }
 }
