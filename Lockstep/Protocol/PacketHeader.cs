@@ -14,6 +14,16 @@ internal record struct PacketHeader
 
     public const uint Magic = 0x534D4F4C; // "SMOL"
 
+    public PacketHeader WithSizeType(ushort payloadSize, PacketType type)
+    {
+        return this with { PayloadSize = payloadSize, Type = type };
+    }
+
+    public PacketHeader WithSize(ushort payloadSize)
+    {
+        return this with { PayloadSize = payloadSize };
+    }
+
     public PacketHeader WithType(PacketType type)
     {
         return this with { Type = type };

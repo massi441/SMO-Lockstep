@@ -19,7 +19,7 @@ internal class PacketLeaveRoomHandler : IPacketHandler
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct PlayerLeaveRoomPacket
+    private struct PacketPlayerLeaveRoom
     {
         public uint Magic;
         public PacketHeader Header;
@@ -27,7 +27,12 @@ internal class PacketLeaveRoomHandler : IPacketHandler
 
         public static int SizeOf()
         {
-            return Unsafe.SizeOf<PlayerLeaveRoomPacket>();
+            return Unsafe.SizeOf<PacketPlayerLeaveRoom>();
+        }
+
+        public static ushort SizeOfPayload()
+        {
+            return sizeof(byte);
         }
     }
 
@@ -42,7 +47,7 @@ internal class PacketLeaveRoomHandler : IPacketHandler
             return unregisterResult;
         }
 
-        Span<byte> broadcastBuffer = stackalloc byte[PlayerLeaveRoomPacket.SizeOf()];
+        Span<byte> broadcastBuffer = stackalloc byte[PacketPlayerLeaveRoom.SizeOf()];
         WriteBroadcast(broadcastBuffer, packet, player);
 
         Result<Error> notifyResult = room.Notifier.NotifyOthers(broadcastBuffer, player);
@@ -56,10 +61,10 @@ internal class PacketLeaveRoomHandler : IPacketHandler
 
     private static void WriteBroadcast(Span<byte> buffer, Packet packet, Player player)
     {
-        PlayerLeaveRoomPacket leavePacket = new PlayerLeaveRoomPacket()
+        PacketPlayerLeaveRoom leavePacket = new PacketPlayerLeaveRoom()
         {
             Magic = PacketHeader.Magic,
-            Header = packet.Header.WithType(PacketType.LeaveRoom),
+            Header = packet.Header.WithSizeType(PacketPlayerLeaveRoom.SizeOfPayload(), PacketType.LeaveRoom),
             PlayerPort = player.PortNumber
         };
 

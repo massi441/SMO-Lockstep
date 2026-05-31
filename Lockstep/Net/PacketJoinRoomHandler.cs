@@ -22,29 +22,40 @@ internal class PacketJoinRoomHandler : IPacketHandler
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct PlayerBroadcastJoinPacket
+    private struct PacketPlayerBroadcastJoin
     {
         public uint Magic;
         public PacketHeader Header;
         public byte PlayerPort;
 
-        public static int SizeOf()
+        public static ushort SizeOf()
         {
-            return Unsafe.SizeOf<PlayerBroadcastJoinPacket>();
+            return (ushort)Unsafe.SizeOf<PacketPlayerBroadcastJoin>();
+        }
+
+        public static ushort SizeOfPayload()
+        {
+            return sizeof(byte);
         }
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct PlayerAckJoinPacket
+    private struct PacketPlayerAckJoin
     {
         public uint Magic;
         public PacketHeader header;
         public byte SelfPort;
         public byte OtherPlayersCount;
 
-        public static int SizeOf(byte otherPlayersCount)
+        public static ushort SizeOf(byte otherPlayersCount)
         {
-            return Unsafe.SizeOf<PlayerAckJoinPacket>() + sizeof(byte) * otherPlayersCount;
+            return (ushort)(Unsafe.SizeOf<PacketPlayerAckJoin>() + sizeof(byte) * otherPlayersCount);
+        }
+
+        public static ushort SizeOfPayload(byte otherPlayersCount)
+        {
+            //              Port           OtherPlayersCount        All Ports
+            return (ushort)(sizeof(byte) + sizeof(byte) + sizeof(byte) * otherPlayersCount);
         }
     }
 
@@ -91,36 +102,26 @@ internal class PacketJoinRoomHandler : IPacketHandler
 
     private Result<Error> NotifyRoom(Packet packet, Room room, Player newPlayer)
     {
-        Span<byte> broadcastBuffer = stackalloc byte[PlayerBroadcastJoinPacket.SizeOf()];
-
-        WriteBroadcast(broadcastBuffer, packet, newPlayer);
-
         byte otherPlayersCount = room.PlayerHolder.OtherPlayerCount;
-        Span<byte> ackBuffer = stackalloc byte[PlayerAckJoinPacket.SizeOf(otherPlayersCount)];
+        Span<byte> ackBuffer = stackalloc byte[PacketPlayerAckJoin.SizeOf(otherPlayersCount)];
 
         WriteAck(ackBuffer, packet, room, newPlayer, otherPlayersCount);
+
+        Span<byte> broadcastBuffer = stackalloc byte[PacketPlayerBroadcastJoin.SizeOf()];
+
+        WriteBroadcast(broadcastBuffer, packet, newPlayer);
 
         return room.Notifier.NotifyOthers(broadcastBuffer, newPlayer, ackBuffer);
     }
 
-    private static void WriteBroadcast(Span<byte> buffer, Packet packet, Player newPlayer)
-    {
-        PlayerBroadcastJoinPacket broadcastPacket = new PlayerBroadcastJoinPacket
-        {
-            Magic = PacketHeader.Magic,
-            PlayerPort = newPlayer.PortNumber,
-            Header = packet.Header
-        };
-
-        MemoryMarshal.Write(buffer, broadcastPacket);
-    }
-
     private static void WriteAck(Span<byte> buffer, Packet packet, Room room, Player newPlayer, byte otherPlayersCount)
     {
-        PlayerAckJoinPacket ackPacket = new PlayerAckJoinPacket
+        ushort payloadSize = PacketPlayerAckJoin.SizeOfPayload(otherPlayersCount);
+
+        PacketPlayerAckJoin ackPacket = new PacketPlayerAckJoin
         {
             Magic = PacketHeader.Magic,
-            header = packet.Header.WithType(PacketType.Ack),
+            header = packet.Header.WithSizeType(payloadSize, PacketType.Ack),
             SelfPort = newPlayer.PortNumber,
             OtherPlayersCount = otherPlayersCount
         };
@@ -136,6 +137,18 @@ internal class PacketJoinRoomHandler : IPacketHandler
                 writer.Write(player.PortNumber);
             }
         }
+    }
+
+    private static void WriteBroadcast(Span<byte> buffer, Packet packet, Player newPlayer)
+    {
+        PacketPlayerBroadcastJoin broadcastPacket = new PacketPlayerBroadcastJoin
+        {
+            Magic = PacketHeader.Magic,
+            PlayerPort = newPlayer.PortNumber,
+            Header = packet.Header.WithSize(PacketPlayerBroadcastJoin.SizeOfPayload())
+        };
+
+        MemoryMarshal.Write(buffer, broadcastPacket);
     }
 
     private bool IsInOtherRoom(IPEndPoint sender, out Player player, out Room takenRoom)
