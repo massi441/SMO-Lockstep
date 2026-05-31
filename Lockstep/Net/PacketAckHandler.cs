@@ -29,7 +29,7 @@ internal class PacketAckHandler : IPacketHandler
         PacketPending? pendingPacket = room.Broadcaster.AckPacketStore.RemovePacket(sequenceNumber);
         if (pendingPacket == null)
         {
-            _context.Logger.LogError("An error occured while trying to remove packet #{SequenceNumber} in room #{RoomId}", sequenceNumber, room.Id);
+            _context.Logger.LogError("The packet #{SequenceNumber} was not found in room #{RoomId}", sequenceNumber, room.Id);
             Result<Error>.Failure(Error.OperationFailed);
             return;
         }

@@ -26,6 +26,8 @@ internal class PacketPendingStore : IPacketPendingStore
             SequenceNumber = _nextSequenceNumber
         };
 
+        WriteSequence(pendingPacket.Payload, pendingPacket.SequenceNumber);
+
         _pendingPackets[_nextSequenceNumber] = pendingPacket;
         _nextSequenceNumber++;
 
@@ -58,5 +60,14 @@ internal class PacketPendingStore : IPacketPendingStore
         }
 
         return true;
+    }
+
+    private static void WriteSequence(byte[] payload, ushort sequenceNumber)
+    {
+        SpanWriter writer = new SpanWriter(payload);
+
+        writer.Advance(PacketHeader.SizeOf());
+
+        writer.Write(sequenceNumber);
     }
 }

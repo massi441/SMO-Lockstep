@@ -19,6 +19,11 @@ internal ref struct SpanWriter
         _offset = 0;
     }
 
+    public void Advance(int offset)
+    {
+        _offset += offset;
+    }
+
     public void Write<T>(T value) where T : struct
     {
         MemoryMarshal.Write(Span[_offset..], value);

@@ -27,10 +27,11 @@ internal class PacketJoinRoomHandler : IPacketHandler
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct PacketPlayerAckJoin
     {
-        public uint Magic;
-        public PacketHeader header;
-        public byte SelfPort;
-        public byte OtherPlayersCount;
+        public required uint Magic;
+        public required PacketHeader header;
+        public ushort SequenceNumber;
+        public required byte SelfPort;
+        public required byte OtherPlayersCount;
 
         public static ushort SizeOf(byte otherPlayersCount)
         {
@@ -47,9 +48,10 @@ internal class PacketJoinRoomHandler : IPacketHandler
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct PacketPlayerBroadcastJoin
     {
-        public uint Magic;
-        public PacketHeader Header;
-        public byte PlayerPort;
+        public required uint Magic;
+        public required PacketHeader Header;
+        public ushort SequenceNumber;
+        public required byte PlayerPort;
 
         public static ushort SizeOf()
         {

@@ -87,8 +87,11 @@ internal class RoomBroadcaster : IRoomBroadcaster
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
-            _context.PacketSender.Send(player.Endpoint, request.Payload);
-            UploadPlayerAckPacket(player, in request);
+            Result<Error> uploadResult = UploadPlayerAckPacket(player, in request);
+            if (uploadResult.IsSuccess)
+            {
+                _context.PacketSender.Send(player.Endpoint, request.Payload);
+            }
         }
 
         return Result<Error>.Success();
@@ -118,8 +121,11 @@ internal class RoomBroadcaster : IRoomBroadcaster
                 continue;
             }
 
-            _context.PacketSender.Send(player.Endpoint, request.Payload);
-            UploadPlayerAckPacket(player, in request);
+            Result<Error> uploadResult = UploadPlayerAckPacket(player, in request);
+            if (uploadResult.IsSuccess)
+            {
+                _context.PacketSender.Send(player.Endpoint, request.Payload);
+            }
         }
 
         return Result<Error>.Success();
@@ -147,8 +153,12 @@ internal class RoomBroadcaster : IRoomBroadcaster
         {
             if (player == sender)
             {
-                _context.PacketSender.Send(player.Endpoint, playerRequest.Payload);
-                UploadPlayerAckPacket(sender, in playerRequest);
+                Result<Error> result = UploadPlayerAckPacket(sender, in playerRequest);
+                if (result.IsSuccess)
+                {
+                    _context.PacketSender.Send(player.Endpoint, playerRequest.Payload);
+                }
+
                 continue;
             }
 
@@ -159,7 +169,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
         return Result<Error>.Success();
     }
 
-    private bool UploadPlayerAckPacket(Player player, in PacketAckBroadcastRequest ackRequest)
+    private Result<Error> UploadPlayerAckPacket(Player player, in PacketAckBroadcastRequest ackRequest)
     {
         PacketPendingRequest request = new PacketPendingRequest()
         {
@@ -168,7 +178,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
             MaxRetries = ackRequest.MaxRetries
         };
 
-        return _resendStore.UploadPacket(in request).IsSuccess;
+        return _resendStore.UploadPacket(in request);
     }
 
     public Task Shutdown()

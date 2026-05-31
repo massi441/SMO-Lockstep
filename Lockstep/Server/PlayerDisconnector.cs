@@ -13,9 +13,10 @@ internal class PlayerDisconnector : IPlayerDisconnector
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct PacketPlayerLeaveRoom
     {
-        public uint Magic;
-        public PacketHeader Header;
-        public byte PlayerPort;
+        public required uint Magic;
+        public required PacketHeader Header;
+        public ushort SequenceNumber;
+        public required byte PlayerPort;
 
         public static int SizeOf()
         {

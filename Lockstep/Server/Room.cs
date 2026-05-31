@@ -1,11 +1,9 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
-using System.Reflection.PortableExecutable;
 using System.Threading.Channels;
 using Lockstep.Client;
 using Lockstep.Net;
 using Lockstep.Protocol;
-using Lockstep.Util;
 using Microsoft.Extensions.Logging;
 
 namespace Lockstep.Server;

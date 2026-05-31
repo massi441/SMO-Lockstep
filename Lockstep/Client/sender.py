@@ -25,6 +25,9 @@ PTYPE_NAMES = {
 
 HEADER_FORMAT = "<IBBBHH"   # Magic(4) Type(1) Flags(1) Version(1) RoomId(2) PayloadSize(2)
 HEADER_SIZE   = struct.calcsize(HEADER_FORMAT)
+SEQ_SIZE      = 2  # ushort sequence number in reliable packets
+
+RELIABLE_PTYPES = {PTYPE_JOIN_ROOM, PTYPE_LEAVE_ROOM, PTYPE_ACK}
 
 # [Magic: 4 LE][Type: 1][Flags: 1][Version: 1][RoomId: 2 LE][PayloadSize: 2 LE][Payload]
 def build_packet(ptype, room_id, payload=b""):
@@ -40,15 +43,23 @@ def parse_header(data):
     return {"type": ptype, "flags": flags, "version": version, "room_id": room_id, "payload_size": payload_size}
 
 def decode_payload(ptype, data):
-    payload = data[HEADER_SIZE:]
+    is_reliable = ptype in RELIABLE_PTYPES
+    payload_start = HEADER_SIZE + (SEQ_SIZE if is_reliable else 0)
+    payload = data[payload_start:]
+
+    seq_str = ""
+    if is_reliable and len(data) >= HEADER_SIZE + SEQ_SIZE:
+        seq = struct.unpack_from("<H", data, HEADER_SIZE)[0]
+        seq_str = f"seq={seq} "
+
     if ptype in (PTYPE_JOIN_ROOM, PTYPE_LEAVE_ROOM) and len(payload) >= 1:
         port = struct.unpack_from("B", payload, 0)[0]
-        return f"PlayerPort={port}"
+        return f"{seq_str}PlayerPort={port}"
     elif ptype == PTYPE_ACK and len(payload) >= 2:
         self_port, other_count = struct.unpack_from("BB", payload, 0)
         ports = [struct.unpack_from("B", payload, 2 + i)[0] for i in range(other_count) if 2 + i < len(payload)]
-        return f"SelfPort={self_port}, OtherPlayers={other_count}, Ports={ports}"
-    return f"({len(payload)} payload bytes)"
+        return f"{seq_str}SelfPort={self_port}, OtherPlayers={other_count}, Ports={ports}"
+    return f"{seq_str}({len(payload)} payload bytes)"
 
 def send(sock, packet, server):
     sock.sendto(packet, server)
@@ -59,15 +70,21 @@ def send(sock, packet, server):
     else:
         print(f"  >> {len(packet)} bytes to {server}")
 
-def receive_loop(sock):
+def receive_loop(sock, server):
     while True:
         try:
             data, sender = sock.recvfrom(1024)
             header = parse_header(data)
             if header:
-                ptype_name = PTYPE_NAMES.get(header["type"], f"Unknown({header['type']})")
-                payload_str = decode_payload(header["type"], data)
+                ptype = header["type"]
+                ptype_name = PTYPE_NAMES.get(ptype, f"Unknown({ptype})")
+                payload_str = decode_payload(ptype, data)
                 print(f"\n  << {ptype_name} from {sender} | room={header['room_id']} flags={header['flags']:#04x} | {payload_str}")
+
+                if ptype in RELIABLE_PTYPES and len(data) >= HEADER_SIZE + SEQ_SIZE:
+                    seq = struct.unpack_from("<H", data, HEADER_SIZE)[0]
+                    ack = build_packet(PTYPE_ACK, header["room_id"], struct.pack("<H", seq))
+                    send(sock, ack, server)
             else:
                 print(f"\n  << {len(data)} bytes from {sender} (unrecognised) | {data.hex(' ')}")
             print("> ", end="", flush=True)
@@ -106,7 +123,7 @@ def main():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", 0))
 
-    receiver = threading.Thread(target=receive_loop, args=(sock,), daemon=True)
+    receiver = threading.Thread(target=receive_loop, args=(sock, server), daemon=True)
     receiver.start()
 
     while True:
