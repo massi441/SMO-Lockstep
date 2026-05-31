@@ -13,7 +13,6 @@ internal class RoomBroadcaster : IRoomBroadcaster
     private readonly CancellationTokenSource _resendToken;
     private readonly Task _resendTask;
 
-    private const int ResendTick = 50;
 
     public IPacketPendingStore AckPacketStore => _resendStore;
 
@@ -34,7 +33,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
                 ProcessPacket(pair.Value);
             }
 
-            await Task.Delay(ResendTick);
+            await Task.Delay(Config.ResendTick);
         }
 
         _context.Logger.LogInformation("Room Broadcaster was shutdown successfully");
@@ -42,9 +41,8 @@ internal class RoomBroadcaster : IRoomBroadcaster
 
     private void ProcessPacket(PacketPending pendingPacket)
     {
-        if (pendingPacket.IsAlive)
+        if (pendingPacket.IsResendTime())
         {
-            // TODO: add time checking
             Result<Error> sendResult = _context.PacketSender.Send(pendingPacket.Player.Endpoint, pendingPacket.Payload);
             if (sendResult.IsSuccess)
             {
@@ -54,6 +52,8 @@ internal class RoomBroadcaster : IRoomBroadcaster
             {
                 _context.Logger.LogError("An error occured while trying to resend the packet");
             }
+
+            pendingPacket.RefreshTime();
         }
         else
         {

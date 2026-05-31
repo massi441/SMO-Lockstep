@@ -1,4 +1,5 @@
 ﻿using Lockstep.Client;
+using Lockstep.Util;
 
 namespace Lockstep.Protocol;
 
@@ -16,12 +17,16 @@ internal class PacketPending
         init => _tries = value;
     }
 
-    public bool IsAlive => _tries > 0;
     public bool IsDead => _tries <= 0;
 
-    public void UpdateTime()
+    public void RefreshTime()
     {
         LastSent = DateTime.UtcNow;
+    }
+
+    public bool IsResendTime()
+    {
+        return !IsDead && (DateTime.UtcNow - LastSent).Milliseconds > Config.MinimumResendSpan.Milliseconds;
     }
 
     public void DecrementTries()
