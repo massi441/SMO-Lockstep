@@ -17,7 +17,6 @@ internal enum Error
     // Packet Sending
     NotSent,
     PendingPacketStoreFull,
-    PendingPacketNotFound,
 
     // Room
     RoomNotFound,

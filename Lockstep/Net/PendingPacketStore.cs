@@ -30,14 +30,14 @@ internal class PendingPacketStore : IPendingPacketStore
         return Result<Error>.Success();
     }
 
-    public Result<Error> RemovePacket(ushort sequenceNumber)
+    public PendingPacket? RemovePacket(ushort sequenceNumber)
     {
-        if (_pendingPackets.TryRemove(sequenceNumber, out PendingPacket? _))
+        if (_pendingPackets.TryRemove(sequenceNumber, out PendingPacket? pendingPacket))
         {
-            return Result<Error>.Success();
+            return pendingPacket;
         }
 
-        return Result<Error>.Failure(Error.PendingPacketNotFound);
+        return null;
     }
 
     private bool IsFull()

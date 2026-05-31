@@ -6,7 +6,7 @@ namespace Lockstep.Net;
 
 internal interface IPendingPacketStore
 {
-    public Result<Error> UploadPacket(in PendingPacketRequest request);
-    public Result<Error> RemovePacket(ushort sequenceNumber);
     public ConcurrentDictionary<ushort, PendingPacket> PendingPackets { get; }
+    public Result<Error> UploadPacket(in PendingPacketRequest request);
+    public PendingPacket? RemovePacket(ushort sequenceNumber);
 }

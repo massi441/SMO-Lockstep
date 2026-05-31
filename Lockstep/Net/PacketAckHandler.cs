@@ -1,4 +1,5 @@
-﻿using Lockstep.Protocol;
+﻿using System.Buffers;
+using Lockstep.Protocol;
 using Lockstep.Server;
 using Lockstep.Util;
 using Microsoft.Extensions.Logging;
@@ -25,12 +26,14 @@ internal class PacketAckHandler : IPacketHandler
 
         ushort sequenceNumber = reader.ReadUInt16LittleEndian();
 
-        Result<Error> removeResult = room.Notifier.AckPacketStore.RemovePacket(sequenceNumber);
-        if (removeResult.IsFailed)
+        PendingPacket? pendingPacket = room.Notifier.AckPacketStore.RemovePacket(sequenceNumber);
+        if (pendingPacket == null)
         {
             _context.Logger.LogError("An error occured while trying to remove packet #{SequenceNumber} in room #{RoomId}", sequenceNumber, room.Id);
-            return removeResult;
+            return Result<Error>.Failure(Error.OperationFailed);
         }
+
+        ArrayPool<byte>.Shared.Return(pendingPacket.Payload);
 
         return Result<Error>.Success();
     }
