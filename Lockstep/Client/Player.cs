@@ -9,7 +9,7 @@ internal class Player
     public required PlayerInfo Info { get; set; }
     public byte PortNumber { get; init; }
     public DateTime LastSeen { get; set; } = DateTime.UtcNow;
-    public ConcurrentDictionary<ushort, PendingPacket> PendingPackets = [];
+    public ConcurrentDictionary<ushort, PacketPending> PendingPackets = [];
 
     public ushort NextSequenceNumber => _nextSequenceNumber++;
 }

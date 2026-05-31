@@ -4,24 +4,26 @@ using Lockstep.Util;
 
 namespace Lockstep.Net;
 
-internal class PendingPacketStore : IPendingPacketStore
+internal class PacketPendingStore : IPacketPendingStore
 {
     private ushort _nextSequenceNumber = 0;
-    private readonly ConcurrentDictionary<ushort, PendingPacket> _pendingPackets = [];
-    public ConcurrentDictionary<ushort, PendingPacket> PendingPackets => _pendingPackets;
+    private readonly ConcurrentDictionary<ushort, PacketPending> _pendingPackets = [];
 
-    public Result<Error> UploadPacket(in PendingPacketRequest request)
+    public ConcurrentDictionary<ushort, PacketPending> PendingPackets => _pendingPackets;
+
+    public Result<Error> UploadPacket(in PacketPendingRequest request)
     {
         if (IsFull())
         {
             return Result<Error>.Failure(Error.PendingPacketStoreFull);
         }
 
-        PendingPacket pendingPacket = new PendingPacket(request.MaxRetries)
+        PacketPending pendingPacket = new PacketPending(request.MaxRetries)
         {
             Receiver = request.Receiver,
             Payload = request.Payload,
-            SequenceNumber = _nextSequenceNumber
+            SequenceNumber = _nextSequenceNumber,
+            OnDropped = request.OnDropped
         };
 
         _pendingPackets[_nextSequenceNumber] = pendingPacket;
@@ -30,9 +32,9 @@ internal class PendingPacketStore : IPendingPacketStore
         return Result<Error>.Success();
     }
 
-    public PendingPacket? RemovePacket(ushort sequenceNumber)
+    public PacketPending? RemovePacket(ushort sequenceNumber)
     {
-        if (_pendingPackets.TryRemove(sequenceNumber, out PendingPacket? pendingPacket))
+        if (_pendingPackets.TryRemove(sequenceNumber, out PacketPending? pendingPacket))
         {
             return pendingPacket;
         }

@@ -19,7 +19,7 @@ internal class RoomHolder : IRoomHolder
         }
 
         IPlayerHolder playerHolder = new PlayerHolder();
-        IRoomNotifier roomNotifier = new RoomNotifier(context, playerHolder, new PendingPacketStore());
+        IRoomNotifier roomNotifier = new RoomNotifier(context, playerHolder, new PacketPendingStore());
 
         _rooms.Add(nextId, new Room(nextId, context, playerHolder, roomNotifier));
 

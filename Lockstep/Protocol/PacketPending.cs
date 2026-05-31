@@ -3,10 +3,9 @@ using Lockstep.Util;
 
 namespace Lockstep.Protocol;
 
-internal class PendingPacket
+internal class PacketPending
 {
     private byte _triesLeft;
-
     public required ushort SequenceNumber { get; init; }
     public required byte[] Payload { get; init; }
     public required IPEndPoint Receiver { get; init; }
@@ -17,7 +16,7 @@ internal class PendingPacket
     public bool IsAlive => _triesLeft > 0;
     public bool IsDead => _triesLeft <= 0;
 
-    public PendingPacket(byte maxTries = 3)
+    public PacketPending(byte maxTries = 3)
     {
         _triesLeft = maxTries;
     }

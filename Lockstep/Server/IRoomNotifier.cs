@@ -12,5 +12,5 @@ internal interface IRoomNotifier
     Result<Error> NotifyOthers(ReadOnlySpan<byte> payload, Player sender, ReadOnlySpan<byte> senderPayload);
     Task Shutdown();
 
-    IPendingPacketStore AckPacketStore { get; }
+    IPacketPendingStore AckPacketStore { get; }
 }

@@ -26,7 +26,7 @@ internal class PacketAckHandler : IPacketHandler
 
         ushort sequenceNumber = reader.ReadUInt16LittleEndian();
 
-        PendingPacket? pendingPacket = room.Notifier.AckPacketStore.RemovePacket(sequenceNumber);
+        PacketPending? pendingPacket = room.Notifier.AckPacketStore.RemovePacket(sequenceNumber);
         if (pendingPacket == null)
         {
             _context.Logger.LogError("An error occured while trying to remove packet #{SequenceNumber} in room #{RoomId}", sequenceNumber, room.Id);

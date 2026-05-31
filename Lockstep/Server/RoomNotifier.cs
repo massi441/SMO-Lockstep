@@ -10,15 +10,15 @@ internal class RoomNotifier : IRoomNotifier
 {
     private readonly ServerContext _context;
     private readonly IPlayerHolder _playerHolder;
-    private readonly IPendingPacketStore _resendStore;
+    private readonly IPacketPendingStore _resendStore;
     private readonly CancellationTokenSource _resendToken;
     private readonly Task _resendTask;
 
     private const int ResendTick = 20;
 
-    public IPendingPacketStore AckPacketStore => _resendStore;
+    public IPacketPendingStore AckPacketStore => _resendStore;
 
-    public RoomNotifier(ServerContext context, IPlayerHolder playerHolder, IPendingPacketStore resendStore)
+    public RoomNotifier(ServerContext context, IPlayerHolder playerHolder, IPacketPendingStore resendStore)
     {
         _context = context;
         _playerHolder = playerHolder;
@@ -42,7 +42,7 @@ internal class RoomNotifier : IRoomNotifier
         _context.Logger.LogInformation("Room Notifier was shutdown successfully");
     }
 
-    private void ProcessPacket(PendingPacket packet)
+    private void ProcessPacket(PacketPending packet)
     {
         if (packet.IsAlive)
         {
