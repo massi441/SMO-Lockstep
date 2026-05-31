@@ -17,17 +17,15 @@ internal class PacketPending
         init => _tries = value;
     }
 
+    public bool IsAlive => _tries > 0;
     public bool IsDead => _tries <= 0;
+    public bool IsResendTime => (DateTime.UtcNow - LastSent).Milliseconds > Config.MinimumResendSpan.Milliseconds;
 
     public void RefreshTime()
     {
         LastSent = DateTime.UtcNow;
     }
 
-    public bool IsResendTime()
-    {
-        return !IsDead && (DateTime.UtcNow - LastSent).Milliseconds > Config.MinimumResendSpan.Milliseconds;
-    }
 
     public void DecrementTries()
     {

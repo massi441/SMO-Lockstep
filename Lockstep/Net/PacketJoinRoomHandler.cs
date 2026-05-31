@@ -78,6 +78,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
         if (!IsValidNameLength(nameLength, packet))
         {
             // TODO: Add log
+            _context.Logger.LogWarning("Invalid player name length {Length}", nameLength);
             return;
         }
 

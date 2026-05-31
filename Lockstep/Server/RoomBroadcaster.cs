@@ -30,7 +30,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
         {
             foreach (var pair in _resendStore.PendingPackets)
             {
-                ProcessPacket(pair.Value);
+                ProcessAckPacket(pair.Value);
             }
 
             await Task.Delay(Config.ResendTick);
@@ -39,10 +39,15 @@ internal class RoomBroadcaster : IRoomBroadcaster
         _context.Logger.LogInformation("Room Broadcaster was shutdown successfully");
     }
 
-    private void ProcessPacket(PacketPending pendingPacket)
+    private void ProcessAckPacket(PacketPending pendingPacket)
     {
-        if (pendingPacket.IsResendTime())
+        if (pendingPacket.IsAlive)
         {
+            if (!pendingPacket.IsResendTime)
+            {
+                return;
+            }
+
             Result<Error> sendResult = _context.PacketSender.Send(pendingPacket.Player.Endpoint, pendingPacket.Payload);
             if (sendResult.IsSuccess)
             {
@@ -87,11 +92,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
-            Result<Error> uploadResult = UploadPlayerAckPacket(player, in request);
-            if (uploadResult.IsSuccess)
-            {
-                _context.PacketSender.Send(player.Endpoint, request.Payload);
-            }
+            SendPlayerAckPacket(player, in request);
         }
 
         return Result<Error>.Success();
@@ -116,15 +117,9 @@ internal class RoomBroadcaster : IRoomBroadcaster
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
-            if (player == sender)
+            if (player != sender)
             {
-                continue;
-            }
-
-            Result<Error> uploadResult = UploadPlayerAckPacket(player, in request);
-            if (uploadResult.IsSuccess)
-            {
-                _context.PacketSender.Send(player.Endpoint, request.Payload);
+                SendPlayerAckPacket(player, in request);
             }
         }
 
@@ -153,23 +148,18 @@ internal class RoomBroadcaster : IRoomBroadcaster
         {
             if (player == sender)
             {
-                Result<Error> result = UploadPlayerAckPacket(sender, in playerRequest);
-                if (result.IsSuccess)
-                {
-                    _context.PacketSender.Send(player.Endpoint, playerRequest.Payload);
-                }
-
-                continue;
+                SendPlayerAckPacket(sender, in playerRequest);
             }
-
-            _context.PacketSender.Send(player.Endpoint, request.Payload);
-            UploadPlayerAckPacket(player, in request);
+            else
+            {
+                SendPlayerAckPacket(player, in request);
+            }
         }
 
         return Result<Error>.Success();
     }
 
-    private Result<Error> UploadPlayerAckPacket(Player player, in PacketAckBroadcastRequest ackRequest)
+    private void SendPlayerAckPacket(Player player, in PacketAckBroadcastRequest ackRequest)
     {
         PacketPendingRequest request = new PacketPendingRequest()
         {
@@ -178,7 +168,11 @@ internal class RoomBroadcaster : IRoomBroadcaster
             MaxRetries = ackRequest.MaxRetries
         };
 
-        return _resendStore.UploadPacket(in request);
+        Result<Error> uploadResult = _resendStore.UploadPacket(in request);
+        if (uploadResult.IsSuccess)
+        {
+            _context.PacketSender.Send(player.Endpoint, request.Payload);
+        }
     }
 
     public Task Shutdown()
