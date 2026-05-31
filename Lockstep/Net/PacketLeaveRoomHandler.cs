@@ -21,9 +21,11 @@ internal class PacketLeaveRoomHandler : IPacketHandler
         Player? player = room.PlayerHolder.FindPlayerByHost(packet.Sender)!;
 
         Result<Error> disconnectResult = _context.PlayerDisconnector.Disconnect(player);
-        if (disconnectResult.IsSuccess)
+        if (disconnectResult.IsFailed)
         {
-            _context.Logger.LogWarning("Player {Name} left room {RoomId}", player.Name, room.Id);
+            _context.Logger.LogError("Unable to disconnect {PlayerName} in room #{RoomId}", player.Name, room.Id);
         }
+
+        _context.Logger.LogWarning("Player {Name} left room {RoomId}", player.Name, room.Id);
     }
 }
