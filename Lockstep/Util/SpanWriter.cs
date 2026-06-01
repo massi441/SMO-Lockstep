@@ -19,7 +19,7 @@ internal ref struct SpanWriter
         _offset = 0;
     }
 
-    public void Advance(int offset)
+    public void Jump(int offset)
     {
         _offset += offset;
     }

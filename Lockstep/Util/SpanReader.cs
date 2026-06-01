@@ -23,6 +23,16 @@ internal ref struct SpanReader
 
     }
 
+    public void Reset()
+    {
+        _offset = 0;
+    }
+
+    public void Jump(int bytes)
+    {
+        _offset += bytes;
+    }
+
     public byte ReadByte()
     {
         byte result = _span[_offset];

@@ -2,7 +2,7 @@
 using Lockstep.Protocol;
 using Lockstep.Util;
 
-namespace Lockstep.Server;
+namespace Lockstep.Services;
 
 internal interface IPlayerDisconnector
 {

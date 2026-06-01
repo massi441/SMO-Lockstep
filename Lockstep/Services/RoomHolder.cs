@@ -1,7 +1,8 @@
 ﻿using Lockstep.Client;
 using Lockstep.Net;
+using Lockstep.Server;
 
-namespace Lockstep.Server;
+namespace Lockstep.Services;
 
 internal class RoomHolder : IRoomHolder
 {

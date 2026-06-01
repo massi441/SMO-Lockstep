@@ -3,13 +3,13 @@ using System.Net.Sockets;
 using Lockstep.Protocol;
 using Lockstep.Util;
 
-namespace Lockstep.Net;
+namespace Lockstep.Services;
 
-internal class UdpPacketSender : IPacketSender
+internal class PacketSenderUdp : IPacketSender
 {
     private readonly Socket _socket;
 
-    public UdpPacketSender(Socket socket)
+    public PacketSenderUdp(Socket socket)
     {
         _socket = socket;
     }

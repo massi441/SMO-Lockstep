@@ -9,7 +9,7 @@ namespace Lockstep.Server;
 internal interface IRoomBroadcaster
 {
     /// <summary>
-    /// Returns the store of packets that need to be acked by clients
+    /// The store of packets that need to be acked by clients
     /// </summary>
     IPacketPendingStore AckPacketStore { get; }
 

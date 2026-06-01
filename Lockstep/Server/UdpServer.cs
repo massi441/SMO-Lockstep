@@ -1,5 +1,6 @@
 ﻿using Lockstep.Net;
 using Lockstep.Protocol;
+using Lockstep.Services;
 using Lockstep.Util;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
@@ -130,7 +131,7 @@ internal class UdpServer
         {
             Logger = LockstepLogger.Instance(),
             RoomHolder = new RoomHolder(),
-            PacketSender = new UdpPacketSender(socket),
+            PacketSender = new PacketSenderUdp(socket),
             PlayerDisconnector = new PlayerDisconnector(),
             CancellationToken = cancellationToken
         };

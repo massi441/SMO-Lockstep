@@ -6,7 +6,7 @@ using Lockstep.Net;
 using Lockstep.Protocol;
 using Lockstep.Util;
 
-namespace Lockstep.Server;
+namespace Lockstep.Services;
 
 internal class PlayerDisconnector : IPlayerDisconnector
 {

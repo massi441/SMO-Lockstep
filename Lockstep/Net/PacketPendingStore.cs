@@ -66,7 +66,7 @@ internal class PacketPendingStore : IPacketPendingStore
     {
         SpanWriter writer = new SpanWriter(payload);
 
-        writer.Advance(PacketHeader.SizeOf());
+        writer.Jump(PacketHeader.SizeOf());
 
         writer.Write(sequenceNumber);
     }
