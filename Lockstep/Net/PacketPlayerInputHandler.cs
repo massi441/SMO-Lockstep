@@ -1,6 +1,4 @@
-﻿using System.Text;
-using Lockstep.Client;
-using Lockstep.Protocol;
+﻿using Lockstep.Protocol;
 using Lockstep.Server;
 
 namespace Lockstep.Net;
@@ -18,10 +16,6 @@ internal class PacketPlayerInputHandler : IPacketHandler
 
     public void Handle(Packet packet, Room room)
     {
-        foreach (Player player in room.PlayerHolder.Players)
-        {
-            string message = "Relayed Player inputs!";
-            _context.PacketSender.Send(player.Endpoint, Encoding.UTF8.GetBytes(message));
-        }
+        room.Broadcaster.BroadcastExcept(room, packet.Sender, packet.Payload.Buffer.Span);
     }
 }

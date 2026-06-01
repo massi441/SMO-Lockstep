@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using System.Threading.Channels;
 using Lockstep.Client;
@@ -69,7 +70,9 @@ internal class Room
                 continue;
             }
 
+            long start = Stopwatch.GetTimestamp();
             packetHandler.Handle(packet, this);
+            _context.Logger.LogTrace("Handled {PacketType} in {Elapsed}μs", packet.Header.Type, Stopwatch.GetElapsedTime(start).TotalMicroseconds);
         }
 
         _context.Logger.LogInformation("Room #{RoomId} was shutdown sucessfully", Id);

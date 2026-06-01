@@ -6,6 +6,7 @@ internal enum PacketType : byte
     LeaveRoom,
     PlayerInput,
     HealthCheck,
+    Ping,
     Ack,
 
     /// <summary>

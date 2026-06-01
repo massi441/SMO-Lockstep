@@ -13,13 +13,15 @@ PTYPE_JOIN_ROOM    = 0
 PTYPE_LEAVE_ROOM   = 1
 PTYPE_PLAYER_INPUT = 2
 PTYPE_HEALTH_CHECK = 3
-PTYPE_ACK          = 4
+PTYPE_PING         = 4
+PTYPE_ACK          = 5
 
 PTYPE_NAMES = {
     PTYPE_JOIN_ROOM:    "JoinRoom",
     PTYPE_LEAVE_ROOM:   "LeaveRoom",
     PTYPE_PLAYER_INPUT: "PlayerInput",
     PTYPE_HEALTH_CHECK: "HealthCheck",
+    PTYPE_PING:         "Ping",
     PTYPE_ACK:          "Ack",
 }
 
@@ -28,6 +30,7 @@ HEADER_SIZE   = struct.calcsize(HEADER_FORMAT)
 SEQ_SIZE      = 2  # ushort sequence number in reliable packets
 
 RELIABLE_PTYPES = {PTYPE_JOIN_ROOM, PTYPE_LEAVE_ROOM, PTYPE_ACK}
+ECHO_PTYPES     = {PTYPE_PING, PTYPE_HEALTH_CHECK}
 
 # [Magic: 4 LE][Type: 1][Flags: 1][Version: 1][RoomId: 2 LE][PayloadSize: 2 LE][Payload]
 def build_packet(ptype, room_id, payload=b""):
@@ -59,6 +62,8 @@ def decode_payload(ptype, data):
         self_port, other_count = struct.unpack_from("BB", payload, 0)
         ports = [struct.unpack_from("B", payload, 2 + i)[0] for i in range(other_count) if 2 + i < len(payload)]
         return f"{seq_str}SelfPort={self_port}, OtherPlayers={other_count}, Ports={ports}"
+    if ptype in ECHO_PTYPES and len(payload) > 0:
+        return f"{seq_str}echo={payload.decode('utf-8', errors='replace')}"
     return f"{seq_str}({len(payload)} payload bytes)"
 
 def send(sock, packet, server):
@@ -107,12 +112,22 @@ def packet_player_input():
     room_id = int(input("room id: "))
     return build_packet(ptype=PTYPE_PLAYER_INPUT, room_id=room_id)
 
+def packet_health_check():
+    room_id = int(input("room id: "))
+    payload = input("payload: ").encode("utf-8")
+    return build_packet(ptype=PTYPE_HEALTH_CHECK, room_id=room_id, payload=payload)
+
+def packet_ping():
+    return build_packet(ptype=PTYPE_PING, room_id=0)
+
 # --- menu ---
 
 PACKETS = [
-    ("join room",    packet_join_room),
-    ("leave room",   packet_leave_room),
-    ("player input", packet_player_input),
+    ("join room",     packet_join_room),
+    ("leave room",    packet_leave_room),
+    ("player input",  packet_player_input),
+    ("health check",  packet_health_check),
+    ("ping",          packet_ping),
 ]
 
 def main():
