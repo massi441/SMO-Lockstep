@@ -9,13 +9,13 @@ internal static class PacketDispatcher
 {
     public static Result<Error> Dispatch(Packet packet, ServerContext context)
     {
-        Result<PacketHeader, Error> headerResult = PacketParser.ParseHeader(packet.RentedBuffer);
+        Result<Error> headerResult = PacketParser.ParseHeader(packet);
         if (headerResult.IsFailed)
         {
             return Result<Error>.Failure(headerResult.Error!.Value);
         }
 
-        PacketHeader header = headerResult.Data;
+        ref PacketHeader header = ref packet.Header;
         if (header.Type == PacketType.Ping)
         {
             context.Logger.LogTrace("Ping received from {Address}:{Port}", packet.Sender.Address, packet.Sender.Port);
@@ -28,13 +28,7 @@ internal static class PacketDispatcher
             return Result<Error>.Failure(Error.RoomNotFound);
         }
 
-        ParsedPacket roomPacket = new ParsedPacket()
-        {
-            Sender = packet.Sender,
-            RentedBuffer = packet.RentedBuffer,
-        };
-
-        room.Packets.Writer.TryWrite(roomPacket);
+        room.Packets.Writer.TryWrite(packet);
 
         return Result<Error>.Success();
     }

@@ -37,7 +37,7 @@ internal class PacketAckHandler : IPacketHandler
         }
     }
 
-    public void Handle(ParsedPacket packet, Room room)
+    public void Handle(Packet packet, Room room)
     {
         PacketAckPayload payload = new PacketAckPayload(packet.Payload);
 

@@ -1,16 +1,36 @@
 ﻿using System.Net;
+using System.Runtime.InteropServices;
 using Lockstep.Util;
 
 namespace Lockstep.Protocol;
 
+/// <summary>
+/// Represents a network packet ready to be processed by the server
+/// </summary>
 internal readonly struct Packet
 {
-    public readonly IPEndPoint Sender;
-    public readonly RentedBuffer<byte> RentedBuffer;
+    /// <summary>
+    /// The sender of the packet
+    /// </summary>
+    public required IPEndPoint Sender { get; init; }
 
-    public Packet(IPEndPoint sender, RentedBuffer<byte> buffer)
-    {
-        RentedBuffer = buffer;
-        Sender = sender;
-    }
+    /// <summary>
+    /// The rented buffer of the packet
+    /// </summary>
+    public required RentedBuffer<byte> RentedBuffer { get; init; }
+
+    /// <summary>
+    /// Returns a view of the header inside the packet's payload
+    /// </summary>
+    public ref PacketHeader Header => ref MemoryMarshal.AsRef<PacketHeader>(RentedBuffer.Ref.AsSpan());
+
+    /// <summary>
+    /// Returns a span of the payload of the packet
+    /// </summary>
+    public ReadOnlySpan<byte> Payload => RentedBuffer.Ref.AsSpan(PacketHeader.SizeOf(), Header.PayloadSize);
+
+    /// <summary>
+    /// The Length of the packet
+    /// </summary>
+    public int Length => RentedBuffer.UsedBytes;
 }

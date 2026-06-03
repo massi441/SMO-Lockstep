@@ -4,53 +4,36 @@ namespace Lockstep.Protocol;
 
 internal static class PacketParser
 {
-    internal static Result<PacketHeader, Error> ParseHeader(ReadOnlySpan<byte> packet)
+    internal static Result<Error> ParseHeader(Packet packet)
     {
-        if (!IsValidHeaderSize(packet))
+        if (!IsValidHeaderSize(packet.RentedBuffer))
         {
-            return Result<PacketHeader, Error>.Failure(Error.InvalidHeaderSize);
+            return Result<Error>.Failure(Error.InvalidHeaderSize);
         }
 
-        SpanReader reader = new SpanReader(packet);
+        ref PacketHeader header = ref packet.Header;
 
-        uint magic = reader.ReadUInt32LittleEndian();
-        if (magic != Config.Magic)
+        if (header.Magic != Config.Magic)
         {
-            return Result<PacketHeader, Error>.Failure(Error.InvalidMagic);
+            return Result<Error>.Failure(Error.InvalidMagic);
         }
 
-        byte packetType = reader.ReadByte();
-        if (!IsValidType(packetType))
+        if (!IsValidType((byte)header.Type))
         {
-            return Result<PacketHeader, Error>.Failure(Error.InvalidPacketType);
+            return Result<Error>.Failure(Error.InvalidPacketType);
         }
 
-        byte flags = reader.ReadByte();
-
-        byte version = reader.ReadByte();
-        if (!IsValidVersion(version))
+        if (!IsValidVersion(header.Version))
         {
-            return Result<PacketHeader, Error>.Failure(Error.InvalidVersion);
+            return Result<Error>.Failure(Error.InvalidVersion);
         }
 
-        ushort roomId = reader.ReadUInt16LittleEndian();
-
-        ushort payloadSize = reader.ReadUInt16LittleEndian();
-        if (!IsValidPayloadSize(packet, payloadSize))
+        if (!IsValidPayloadSize(packet.RentedBuffer, header.PayloadSize))
         {
-            return Result<PacketHeader, Error>.Failure(Error.InvalidPayloadSize);
+            return Result<Error>.Failure(Error.InvalidPayloadSize);
         }
 
-        PacketHeader header = new PacketHeader
-        {
-            Type = (PacketType)packetType,
-            Flags = flags,
-            Version = version,
-            RoomId = roomId,
-            PayloadSize = payloadSize
-        };
-
-        return Result<PacketHeader, Error>.Success(header);
+        return Result<Error>.Success();
     }
 
     private static bool IsValidVersion(byte version)

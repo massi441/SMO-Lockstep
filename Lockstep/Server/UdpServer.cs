@@ -65,11 +65,11 @@ internal class UdpServer
                 SocketReceiveFromResult receiveResult = await socket.ReceiveFromAsync(buffer, SocketFlags.None, sender, cancellationTokenSource);
                 if (receiveResult.ReceivedBytes > 0)
                 {
-                    RentedBuffer<byte> RentedBuffer = new RentedBuffer<byte>(buffer, receiveResult.ReceivedBytes);
-
-                    Packet packet = new Packet((IPEndPoint)receiveResult.RemoteEndPoint, RentedBuffer);
-
-                    _packets.Writer.TryWrite(packet);
+                    _packets.Writer.TryWrite(new Packet
+                    {
+                        Sender = (IPEndPoint)receiveResult.RemoteEndPoint,
+                        RentedBuffer = new RentedBuffer<byte>(buffer, receiveResult.ReceivedBytes)
+                    });
                 }
                 else
                 {

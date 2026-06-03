@@ -14,7 +14,7 @@ internal class PacketPlayerInputHandler : IPacketHandler
 
     public uint MinPayloadSize => 0;
 
-    public void Handle(ParsedPacket packet, Room room)
+    public void Handle(Packet packet, Room room)
     {
         room.Broadcaster.Broadcast(room, packet.RentedBuffer.Ref);
     }

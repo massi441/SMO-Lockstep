@@ -17,7 +17,7 @@ internal class Room
     private readonly ConcurrentQueue<Action> _commands = [];
 
     public ushort Id { get; }
-    public Channel<ParsedPacket> Packets { get; }
+    public Channel<Packet> Packets { get; }
     public IPlayerHolder PlayerHolder { get; }
     public IRoomBroadcaster Broadcaster { get; }
 
@@ -27,7 +27,7 @@ internal class Room
 
         Id = roomId;
         PlayerHolder = playerHolder;
-        Packets = Channel.CreateUnbounded<ParsedPacket>();
+        Packets = Channel.CreateUnbounded<Packet>();
         Broadcaster = broadcaster;
 
         _processTask = Task.Run(ProcessAsync, _context.CancellationToken);
@@ -46,7 +46,7 @@ internal class Room
 
     private async Task ProcessAsync()
     {
-        await foreach (ParsedPacket packet in Packets.Reader.ReadAllAsync())
+        await foreach (Packet packet in Packets.Reader.ReadAllAsync())
         {
             ProcessCommands();
 
