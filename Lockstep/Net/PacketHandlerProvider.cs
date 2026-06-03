@@ -3,7 +3,7 @@ using Lockstep.Server;
 
 namespace Lockstep.Net;
 
-internal static class PacketHandlerFactory
+internal static class PacketHandlerProvider
 {
     public static IPacketHandler? CreateHandler(PacketType packetType, ServerContext context)
     {

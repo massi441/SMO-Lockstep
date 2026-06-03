@@ -2,6 +2,7 @@ import socket
 import struct
 import sys
 import threading
+import time
 
 MAGIC = 0x534D4F4C  # "SMOL"
 VERSION = 1
@@ -127,14 +128,25 @@ def packet_health_check():
 def packet_ping():
     return build_packet(ptype=PTYPE_PING, room_id=0)
 
+def spam_player_input(sock, server):
+    room_id = int(input("room id: "))
+    count = int(input("packet count: "))
+    packet = build_packet(ptype=PTYPE_PLAYER_INPUT, room_id=room_id)
+    print(f"  sending {count} PlayerInput packets at 60fps...")
+    for i in range(count):
+        send(sock, packet, server)
+        time.sleep(1 / 60)
+    print("  done.")
+
 # --- menu ---
 
 PACKETS = [
-    ("join room",     packet_join_room),
-    ("leave room",    packet_leave_room),
-    ("player input",  packet_player_input),
-    ("health check",  packet_health_check),
-    ("ping",          packet_ping),
+    ("join room",           packet_join_room),
+    ("leave room",          packet_leave_room),
+    ("player input",        packet_player_input),
+    ("health check",        packet_health_check),
+    ("ping",                packet_ping),
+    ("spam player input",   None),
 ]
 
 def main():
@@ -160,8 +172,11 @@ def main():
         if not choice.isdigit() or not (1 <= int(choice) <= len(PACKETS)):
             print(f"enter a number between 1 and {len(PACKETS)}")
             continue
-        _, builder = PACKETS[int(choice) - 1]
-        send(sock, builder(), server)
+        name, builder = PACKETS[int(choice) - 1]
+        if builder is None:
+            spam_player_input(sock, server)
+        else:
+            send(sock, builder(), server)
 
     sock.close()
 
