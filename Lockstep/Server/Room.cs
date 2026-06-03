@@ -61,7 +61,7 @@ internal class Room
 
                 player?.RefreshLastSeen();
 
-                IPacketHandler? packetHandler = PacketHandlerFactory.CreateHandler(packet.Header.Type, _context);
+                IPacketHandler? packetHandler = PacketHandlerProvider.CreateHandler(packet.Header.Type, _context);
                 if (packetHandler == null)
                 {
                     _context.Logger.LogWarning("No handler found for packet type {PacketType}", (int)packet.Header.Type);
