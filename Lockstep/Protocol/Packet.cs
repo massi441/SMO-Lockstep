@@ -1,15 +1,16 @@
 ﻿using System.Net;
+using Lockstep.Util;
 
 namespace Lockstep.Protocol;
 
-/// <summary>
-/// Represents a network packet containing a fully parsed header,
-/// and a payload ready for processing by a packet handler
-/// </summary>
-internal class Packet
+internal readonly struct Packet
 {
-    public PacketHeader Header { get; init; }
-    public Payload Payload { get; init; }
+    public readonly IPEndPoint Sender;
+    public readonly RentedBuffer<byte> RentedBuffer;
 
-    public IPEndPoint Sender => Payload.Sender;
+    public Packet(IPEndPoint sender, RentedBuffer<byte> buffer)
+    {
+        RentedBuffer = buffer;
+        Sender = sender;
+    }
 }

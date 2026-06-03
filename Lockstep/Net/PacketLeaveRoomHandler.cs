@@ -16,7 +16,7 @@ internal class PacketLeaveRoomHandler : IPacketHandler
         _context = context;
     }
 
-    public void Handle(Packet packet, Room room)
+    public void Handle(ParsedPacket packet, Room room)
     {
         Player? player = room.PlayerHolder.FindPlayerByHost(packet.Sender)!;
 

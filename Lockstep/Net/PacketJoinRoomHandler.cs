@@ -28,7 +28,6 @@ internal class PacketJoinRoomHandler : IPacketHandler
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct PacketPlayerJoinRoomSelfAck
     {
-        public required uint Magic;
         public required PacketHeader Header;
         public ushort SequenceNumber;
         public required byte SelfPort;
@@ -49,7 +48,6 @@ internal class PacketJoinRoomHandler : IPacketHandler
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct PacketPlayerJoinRoomAck
     {
-        public required uint Magic;
         public required PacketHeader Header;
         public ushort SequenceNumber;
         public required byte PlayerPort;
@@ -86,7 +84,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
         }
     }
 
-    public void Handle(Packet packet, Room room)
+    public void Handle(ParsedPacket packet, Room room)
     {
         if (IsInOtherRoom(packet.Sender, out Player takenRoomPlayer, out Room takenRoom))
         {
@@ -94,7 +92,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
             return;
         }
 
-        PlayerJoinRoomPayload joinPayload = new PlayerJoinRoomPayload(packet.Payload.Buffer.Span);
+        PlayerJoinRoomPayload joinPayload = new PlayerJoinRoomPayload(packet.Payload);
 
         byte nameLength = joinPayload.NameLength;
 
@@ -130,7 +128,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
         _context.Logger.LogTrace("Player {Name} joined room #{RoomId} with port #{Port}", newPlayer.Name, packet.Header.RoomId, newPlayer.PortNumber);
     }
 
-    private static Result<Error> NotifyRoom(Packet packet, Room room, Player newPlayer)
+    private static Result<Error> NotifyRoom(ParsedPacket packet, Room room, Player newPlayer)
     {
         byte otherPlayersCount = room.PlayerHolder.OtherPlayerCount;
         byte[] ackBuffer = ArrayPool<byte>.Shared.Rent(PacketPlayerJoinRoomSelfAck.SizeOf(otherPlayersCount)); ;
@@ -155,13 +153,12 @@ internal class PacketJoinRoomHandler : IPacketHandler
         return room.Broadcaster.BroadcastAckExceptWith(room, newPlayer, in newPlayerAckRequest, in broadcastRequest);
     }
 
-    private static void WriteSelfAck(Span<byte> buffer, Packet packet, Room room, Player newPlayer, byte otherPlayersCount)
+    private static void WriteSelfAck(Span<byte> buffer, ParsedPacket packet, Room room, Player newPlayer, byte otherPlayersCount)
     {
         ushort payloadSize = PacketPlayerJoinRoomSelfAck.SizeOfPayload(otherPlayersCount);
 
         PacketPlayerJoinRoomSelfAck ackPacket = new PacketPlayerJoinRoomSelfAck
         {
-            Magic = PacketHeader.Magic,
             Header = packet.Header.WithSizeType(payloadSize, PacketType.PlayerJoinRoomSelf),
             SelfPort = newPlayer.PortNumber,
             OtherPlayersCount = otherPlayersCount
@@ -180,11 +177,10 @@ internal class PacketJoinRoomHandler : IPacketHandler
         }
     }
 
-    private static void WriteBroadcast(Span<byte> buffer, Packet packet, Player newPlayer)
+    private static void WriteBroadcast(Span<byte> buffer, ParsedPacket packet, Player newPlayer)
     {
         PacketPlayerJoinRoomAck broadcastPacket = new PacketPlayerJoinRoomAck
         {
-            Magic = PacketHeader.Magic,
             PlayerPort = newPlayer.PortNumber,
             Header = packet.Header.WithSizeType(PacketPlayerJoinRoomAck.SizeOfPayload(), PacketType.PlayerJoinRoomBroadcast)
         };

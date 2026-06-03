@@ -7,9 +7,9 @@ namespace Lockstep.Net;
 
 internal static class PacketDispatcher
 {
-    public static Result<Error> Dispatch(Payload packet, ServerContext context)
+    public static Result<Error> Dispatch(Packet packet, ServerContext context)
     {
-        Result<PacketHeader, Error> headerResult = PacketParser.ParseHeader(packet.Buffer.Span);
+        Result<PacketHeader, Error> headerResult = PacketParser.ParseHeader(packet.RentedBuffer);
         if (headerResult.IsFailed)
         {
             return Result<Error>.Failure(headerResult.Error!.Value);
@@ -19,7 +19,7 @@ internal static class PacketDispatcher
         if (header.Type == PacketType.Ping)
         {
             context.Logger.LogTrace("Ping received from {Address}:{Port}", packet.Sender.Address, packet.Sender.Port);
-            return context.PacketSender.Send(packet.Sender, packet.Buffer.Span);
+            return context.PacketSender.Send(packet.Sender, packet.RentedBuffer);
         }
 
         Room? room = context.RoomHolder.GetRoom(header.RoomId);
@@ -28,10 +28,10 @@ internal static class PacketDispatcher
             return Result<Error>.Failure(Error.RoomNotFound);
         }
 
-        Packet roomPacket = new Packet()
+        ParsedPacket roomPacket = new ParsedPacket()
         {
-            Header = header,
-            Payload = new Payload(packet, PacketHeader.SizeOf()),
+            Sender = packet.Sender,
+            RentedBuffer = packet.RentedBuffer,
         };
 
         room.Packets.Writer.TryWrite(roomPacket);

@@ -12,10 +12,8 @@ namespace Lockstep.Server;
 
 internal class UdpServer
 {
-    private const int BufferSize = 1024;
-
     private readonly int _port;
-    private readonly Channel<ServerJob> _jobs;
+    private readonly Channel<Packet> _packets;
 
     private ILogger Logger => Context.Logger;
     public ServerContext Context { get; private set; } = null!;
@@ -23,7 +21,7 @@ internal class UdpServer
     public UdpServer(int port)
     {
         _port = port;
-        _jobs = Channel.CreateUnbounded<ServerJob>();
+        _packets = Channel.CreateUnbounded<Packet>();
     }
 
     public async Task RunAsync(CancellationToken cancellationToken)
@@ -42,7 +40,7 @@ internal class UdpServer
         {
             await Task.WhenAll(
                 ReceiveLoop(socket, cancellationToken),
-                ProcessLoop(socket, cancellationToken)
+                ProcessLoop(cancellationToken)
             );
         }
         catch (OperationCanceledException)
@@ -59,10 +57,24 @@ internal class UdpServer
     {
         while (!cancellationTokenSource.IsCancellationRequested)
         {
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(Config.ServerBufferSize);
             try
             {
-                await ReceiveNext(socket, buffer, cancellationTokenSource);
+                IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
+
+                SocketReceiveFromResult receiveResult = await socket.ReceiveFromAsync(buffer, SocketFlags.None, sender, cancellationTokenSource);
+                if (receiveResult.ReceivedBytes > 0)
+                {
+                    RentedBuffer<byte> RentedBuffer = new RentedBuffer<byte>(buffer, receiveResult.ReceivedBytes);
+
+                    Packet packet = new Packet((IPEndPoint)receiveResult.RemoteEndPoint, RentedBuffer);
+
+                    _packets.Writer.TryWrite(packet);
+                }
+                else
+                {
+                    Logger.LogInformation("Empty packet received from {Address}:{Port}", sender.Address.ToString(), sender.Port);
+                }
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
             {
@@ -83,45 +95,15 @@ internal class UdpServer
             }
         }
     }
-    private async Task ProcessLoop(Socket socket, CancellationToken cancellationTokenSource)
+    private async Task ProcessLoop(CancellationToken cancellationTokenSource)
     {
-        await foreach (ServerJob workItem in _jobs.Reader.ReadAllAsync(cancellationTokenSource))
+        await foreach (Packet packet in _packets.Reader.ReadAllAsync(cancellationTokenSource))
         {
-            try
+            Result<Error> dispatchResult = PacketDispatcher.Dispatch(packet, Context);
+            if (dispatchResult.IsFailed)
             {
-                ref Payload packet = ref workItem.Packet;
-
-                Result<Error> dispatchResult = PacketDispatcher.Dispatch(packet, Context);
-                if (dispatchResult.IsFailed)
-                {
-                    Logger.LogWarning("Packet rejected. Sender: {Address}:{Port}, Error: {Error}", packet.Sender.Address, packet.Sender.Port, dispatchResult.Error);
-                }
+                Logger.LogWarning("Packet rejected. Sender: {Address}:{Port}, Error: {Error}", packet.Sender.Address, packet.Sender.Port, dispatchResult.Error);
             }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(workItem.RentedBuffer);
-            }
-        }
-    }
-
-    private async Task ReceiveNext(Socket socket, byte[] buffer, CancellationToken cancellationTokenSource)
-    {
-        IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-
-        SocketReceiveFromResult receiveResult = await socket.ReceiveFromAsync(buffer, SocketFlags.None, sender, cancellationTokenSource);
-        if (receiveResult.ReceivedBytes > 0)
-        {
-            ServerJob workItem = new ServerJob()
-            {
-                Packet = new Payload(buffer.AsMemory()[..receiveResult.ReceivedBytes], (IPEndPoint)receiveResult.RemoteEndPoint),
-                RentedBuffer = buffer
-            };
-
-            _jobs.Writer.TryWrite(workItem);
-        }
-        else
-        {
-            Logger.LogInformation("Empty packet received from {Address}:{Port}", sender.Address.ToString(), sender.Port);
         }
     }
 

@@ -14,7 +14,7 @@ internal static class PacketParser
         SpanReader reader = new SpanReader(packet);
 
         uint magic = reader.ReadUInt32LittleEndian();
-        if (magic != PacketHeader.Magic)
+        if (magic != Config.Magic)
         {
             return Result<PacketHeader, Error>.Failure(Error.InvalidMagic);
         }

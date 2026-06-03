@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System.Buffers;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Threading.Channels;
@@ -16,7 +17,7 @@ internal class Room
     private readonly ConcurrentQueue<Action> _commands = [];
 
     public ushort Id { get; }
-    public Channel<Packet> Packets { get; }
+    public Channel<ParsedPacket> Packets { get; }
     public IPlayerHolder PlayerHolder { get; }
     public IRoomBroadcaster Broadcaster { get; }
 
@@ -26,7 +27,7 @@ internal class Room
 
         Id = roomId;
         PlayerHolder = playerHolder;
-        Packets = Channel.CreateUnbounded<Packet>();
+        Packets = Channel.CreateUnbounded<ParsedPacket>();
         Broadcaster = broadcaster;
 
         _processTask = Task.Run(ProcessAsync, _context.CancellationToken);
@@ -45,7 +46,7 @@ internal class Room
 
     private async Task ProcessAsync()
     {
-        await foreach (Packet packet in Packets.Reader.ReadAllAsync())
+        await foreach (ParsedPacket packet in Packets.Reader.ReadAllAsync())
         {
             ProcessCommands();
 
@@ -64,7 +65,7 @@ internal class Room
                 continue;
             }
 
-            if (packet.Payload.Buffer.Length < packetHandler.MinPayloadSize)
+            if (packet.Payload.Length < packetHandler.MinPayloadSize)
             {
                 _context.Logger.LogWarning("A {PacketType} packet of invalid size ({PacketSize}) was requested. Minimum required: {Minimum}", packet.Header.Type, packet.Payload.Length, packetHandler.MinPayloadSize);
                 continue;
@@ -74,7 +75,7 @@ internal class Room
             packetHandler.Handle(packet, this);
             _context.Logger.LogTrace("Handled {PacketType} in {Elapsed}μs", packet.Header.Type, Stopwatch.GetElapsedTime(start).TotalMicroseconds);
 
-            // TODO: Return buffer here
+            ArrayPool<byte>.Shared.Return(packet.RentedBuffer.Ref);
         }
 
         _context.Logger.LogInformation("Room #{RoomId} was shutdown sucessfully", Id);

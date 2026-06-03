@@ -1,5 +1,4 @@
-﻿using System.Buffers;
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using Lockstep.Protocol;
 using Lockstep.Server;
@@ -38,9 +37,9 @@ internal class PacketAckHandler : IPacketHandler
         }
     }
 
-    public void Handle(Packet packet, Room room)
+    public void Handle(ParsedPacket packet, Room room)
     {
-        PacketAckPayload payload = new PacketAckPayload(packet.Payload.Span);
+        PacketAckPayload payload = new PacketAckPayload(packet.Payload);
 
         ushort sequenceNumber = payload.SequenceNumber;
 
@@ -51,8 +50,6 @@ internal class PacketAckHandler : IPacketHandler
             Result<Error>.Failure(Error.OperationFailed);
             return;
         }
-
-        ArrayPool<byte>.Shared.Return(pendingPacket.Payload);
 
         _context.Logger.LogTrace("Successfully Acked packet #{PacketNumber} from {PlayerName} in Room #{RoomId}", pendingPacket.SequenceNumber, pendingPacket.Player.Name, room.Id);
     }
