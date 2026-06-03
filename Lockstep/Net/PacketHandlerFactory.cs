@@ -9,8 +9,8 @@ internal static class PacketHandlerFactory
     {
         return packetType switch
         {
-            PacketType.JoinRoom => new PacketJoinRoomHandler(context),
-            PacketType.LeaveRoom => new PacketLeaveRoomHandler(context),
+            PacketType.RequestJoinRoom => new PacketJoinRoomHandler(context),
+            PacketType.PlayerLeaveRoom => new PacketLeaveRoomHandler(context),
             PacketType.PlayerInput => new PacketPlayerInputHandler(context),
             PacketType.HealthCheck => new PacketHealthCheckHandler(context),
             PacketType.Ack => new PacketAckHandler(context),

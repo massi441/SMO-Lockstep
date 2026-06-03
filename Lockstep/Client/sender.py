@@ -9,27 +9,31 @@ FLAGS   = 0
 PORT = 5001
 
 # PacketType enum order
-PTYPE_JOIN_ROOM    = 0
-PTYPE_LEAVE_ROOM   = 1
-PTYPE_PLAYER_INPUT = 2
-PTYPE_HEALTH_CHECK = 3
-PTYPE_PING         = 4
-PTYPE_ACK          = 5
+PTYPE_JOIN_ROOM           = 0
+PTYPE_JOIN_ROOM_SELF      = 1
+PTYPE_JOIN_ROOM_BROADCAST = 2
+PTYPE_LEAVE_ROOM          = 3
+PTYPE_PLAYER_INPUT        = 4
+PTYPE_HEALTH_CHECK        = 5
+PTYPE_PING                = 6
+PTYPE_ACK                 = 7
 
 PTYPE_NAMES = {
-    PTYPE_JOIN_ROOM:    "JoinRoom",
-    PTYPE_LEAVE_ROOM:   "LeaveRoom",
-    PTYPE_PLAYER_INPUT: "PlayerInput",
-    PTYPE_HEALTH_CHECK: "HealthCheck",
-    PTYPE_PING:         "Ping",
-    PTYPE_ACK:          "Ack",
+    PTYPE_JOIN_ROOM:           "JoinRoom",
+    PTYPE_JOIN_ROOM_SELF:      "JoinRoomSelf",
+    PTYPE_JOIN_ROOM_BROADCAST: "JoinRoomBroadcast",
+    PTYPE_LEAVE_ROOM:          "LeaveRoom",
+    PTYPE_PLAYER_INPUT:        "PlayerInput",
+    PTYPE_HEALTH_CHECK:        "HealthCheck",
+    PTYPE_PING:                "Ping",
+    PTYPE_ACK:                 "Ack",
 }
 
 HEADER_FORMAT = "<IBBBHH"   # Magic(4) Type(1) Flags(1) Version(1) RoomId(2) PayloadSize(2)
 HEADER_SIZE   = struct.calcsize(HEADER_FORMAT)
 SEQ_SIZE      = 2  # ushort sequence number in reliable packets
 
-RELIABLE_PTYPES = {PTYPE_JOIN_ROOM, PTYPE_LEAVE_ROOM, PTYPE_ACK}
+RELIABLE_PTYPES = {PTYPE_JOIN_ROOM, PTYPE_JOIN_ROOM_SELF, PTYPE_JOIN_ROOM_BROADCAST, PTYPE_LEAVE_ROOM, PTYPE_ACK}
 ECHO_PTYPES     = {PTYPE_PING, PTYPE_HEALTH_CHECK}
 
 # [Magic: 4 LE][Type: 1][Flags: 1][Version: 1][RoomId: 2 LE][PayloadSize: 2 LE][Payload]
@@ -55,13 +59,16 @@ def decode_payload(ptype, data):
         seq = struct.unpack_from("<H", data, HEADER_SIZE)[0]
         seq_str = f"seq={seq} "
 
-    if ptype in (PTYPE_JOIN_ROOM, PTYPE_LEAVE_ROOM) and len(payload) >= 1:
+    if ptype in (PTYPE_JOIN_ROOM, PTYPE_JOIN_ROOM_BROADCAST, PTYPE_LEAVE_ROOM) and len(payload) >= 1:
         port = struct.unpack_from("B", payload, 0)[0]
         return f"{seq_str}PlayerPort={port}"
-    elif ptype == PTYPE_ACK and len(payload) >= 2:
+    elif ptype == PTYPE_JOIN_ROOM_SELF and len(payload) >= 2:
         self_port, other_count = struct.unpack_from("BB", payload, 0)
         ports = [struct.unpack_from("B", payload, 2 + i)[0] for i in range(other_count) if 2 + i < len(payload)]
         return f"{seq_str}SelfPort={self_port}, OtherPlayers={other_count}, Ports={ports}"
+    elif ptype == PTYPE_ACK and len(payload) >= 2:
+        seq = struct.unpack_from("<H", payload, 0)[0]
+        return f"{seq_str}AckedSeq={seq}"
     if ptype in ECHO_PTYPES and len(payload) > 0:
         return f"{seq_str}echo={payload.decode('utf-8', errors='replace')}"
     return f"{seq_str}({len(payload)} payload bytes)"

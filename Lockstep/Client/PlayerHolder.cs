@@ -13,7 +13,7 @@ internal class PlayerHolder : IPlayerHolder
 
     public PlayerHolder(byte size = 4)
     {
-        _players = new Player[size];
+        _players = new Player[Math.Min(size, Config.MaxRoomSize)];
     }
 
     public Result<Player, Error> RegisterPlayer(PlayerInfo playerInfo)

@@ -35,7 +35,7 @@ internal class PlayerDisconnector : IPlayerDisconnector
 
         PacketHeader header = new PacketHeader()
         {
-            Type = PacketType.LeaveRoom,
+            Type = PacketType.PlayerLeaveRoom,
             Flags = (byte)PacketFlags.None,
             Version = Config.Version,
             RoomId = player.Room.Id,

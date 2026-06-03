@@ -12,6 +12,7 @@
   <PropertyGroup>
 	<NoWarn>$(NoWarn);CA1873</NoWarn>
 	<NoWarn>$(NoWarn);CA1873</NoWarn>
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

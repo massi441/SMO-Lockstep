@@ -73,6 +73,8 @@ internal class Room
             long start = Stopwatch.GetTimestamp();
             packetHandler.Handle(packet, this);
             _context.Logger.LogTrace("Handled {PacketType} in {Elapsed}μs", packet.Header.Type, Stopwatch.GetElapsedTime(start).TotalMicroseconds);
+
+            // TODO: Return buffer here
         }
 
         _context.Logger.LogInformation("Room #{RoomId} was shutdown sucessfully", Id);
@@ -89,7 +91,7 @@ internal class Room
 
     private bool IsAllowedInRoom(IPEndPoint sender, PacketHeader header, out Player? player)
     {
-        if (header.Type == PacketType.JoinRoom)
+        if (header.Type == PacketType.RequestJoinRoom)
         {
             player = null;
             return true;
