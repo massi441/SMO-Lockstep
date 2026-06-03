@@ -55,7 +55,7 @@ internal class PlayerHolder : IPlayerHolder
         return Result<Error>.Failure(Error.OperationFailed);
     }
 
-    public Player? FindPlayerByHost(IPEndPoint endpoint)
+    public Player? FindPlayerByIp(IPEndPoint endpoint)
     {
         foreach (Player p in _players)
         {
@@ -64,7 +64,7 @@ internal class PlayerHolder : IPlayerHolder
                 continue;
             }
 
-            if (p.Endpoint.Equals(endpoint))
+            if (p.Endpoint.Address.Equals(endpoint.Address))
             {
                 return p;
             }
@@ -109,6 +109,6 @@ internal class PlayerHolder : IPlayerHolder
 
     private bool ContainsPlayer(PlayerInfo playerInfo)
     {
-        return FindPlayerByHost(playerInfo.Endpoint) != null;
+        return FindPlayerByIp(playerInfo.Endpoint) != null;
     }
 }

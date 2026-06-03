@@ -131,7 +131,7 @@ internal class PacketConnectHandler : IPacketHandler
     {
         foreach (Room room in _context.RoomHolder.GetRooms())
         {
-            Player? p = room.PlayerHolder.FindPlayerByHost(sender);
+            Player? p = room.PlayerHolder.FindPlayerByIp(sender);
             if (p != null)
             {
                 player = p;

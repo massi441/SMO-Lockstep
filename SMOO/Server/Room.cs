@@ -105,7 +105,7 @@ internal class Room
             return true;
         }
 
-        player = PlayerHolder.FindPlayerByHost(sender)!;
+        player = PlayerHolder.FindPlayerByIp(sender)!;
 
         return player != null;
     }

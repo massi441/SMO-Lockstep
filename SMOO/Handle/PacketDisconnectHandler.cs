@@ -18,7 +18,7 @@ internal class PacketDisconnectHandler : IPacketHandler
 
     public void Handle(Packet packet, Room room)
     {
-        Player? player = room.PlayerHolder.FindPlayerByHost(packet.Sender)!;
+        Player? player = room.PlayerHolder.FindPlayerByIp(packet.Sender)!;
 
         Result<Error> disconnectResult = _context.PlayerDisconnector.Disconnect(player);
         if (disconnectResult.IsFailed)

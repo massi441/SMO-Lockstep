@@ -57,7 +57,7 @@ internal class PacketConnectSynAckHandler : IPacketHandler
 
     public void Handle(Packet packet, Room room)
     {
-        Player player = room.PlayerHolder.FindPlayerByHost(packet.Sender)!;
+        Player player = room.PlayerHolder.FindPlayerByIp(packet.Sender)!;
 
         PacketConnectSynAckPayload synAckPayload = new PacketConnectSynAckPayload(packet.Payload);
 
@@ -75,6 +75,7 @@ internal class PacketConnectSynAckHandler : IPacketHandler
             PlayerNameLength = (byte)player.Name.Length
         };
 
+        // the name is of variable length, so we write the base members of the struct, followed by the name
         int bufferSize = PacketPlayerJoinRoom.SizeOf() + joinPacket.PlayerNameLength;
         RentedBuffer joinRoomBuffer = new RentedBuffer(bufferSize);
 

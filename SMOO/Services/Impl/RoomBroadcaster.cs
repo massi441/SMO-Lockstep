@@ -63,7 +63,13 @@ internal class RoomBroadcaster : IRoomBroadcaster
         }
         else
         {
-            _resendStore.RemovePacket(pendingPacket.SequenceNumber);
+            ReliablePacket? expiredPacket = _resendStore.RemovePacket(pendingPacket.SequenceNumber);
+            if (expiredPacket == null)
+            {
+                _context.Logger.LogWarning("Expired packet already removed");
+                return;
+            }
+
             pendingPacket.Player.Room.UploadCommand(() =>
             {
                 Result<Error> disconnectResult = _context.PlayerDisconnector.Disconnect(pendingPacket.Player);
