@@ -24,9 +24,4 @@ internal readonly struct RentedBuffer<T>
         Ref = reference;
         UsedBytes = usedBytes;
     }
-
-    public static implicit operator Span<T>(RentedBuffer<T> rentedBuffer)
-    {
-        return new Span<T>(rentedBuffer.Ref, 0, rentedBuffer.UsedBytes);
-    }
 }

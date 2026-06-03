@@ -16,6 +16,6 @@ internal class PacketPlayerInputHandler : IPacketHandler
 
     public void Handle(Packet packet, Room room)
     {
-        room.Broadcaster.Broadcast(room, packet.RentedBuffer.Ref);
+        room.Broadcaster.Broadcast(room, packet.RentedBuffer.Span);
     }
 }

@@ -102,7 +102,7 @@ internal class UdpServer
             Result<Error> dispatchResult = PacketDispatcher.Dispatch(packet, Context);
             if (dispatchResult.IsFailed)
             {
-                Logger.LogWarning("Packet rejected. Sender: {Address}:{Port}, Error: {Error}", packet.Sender.Address, packet.Sender.Port, dispatchResult.Error);
+                Logger.LogWarning("Dispatch failed. Error: {Error}, Sender: {Address}:{Port}", dispatchResult.Error, packet.Sender.Address, packet.Sender.Port);
             }
         }
     }
