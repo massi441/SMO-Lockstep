@@ -1,9 +1,10 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using SMOO.Protocol;
+using SMOO.Services.Interface;
 using SMOO.Util;
 
-namespace SMOO.Services;
+namespace SMOO.Services.Impl;
 
 internal class PacketSenderUdp : IPacketSender
 {

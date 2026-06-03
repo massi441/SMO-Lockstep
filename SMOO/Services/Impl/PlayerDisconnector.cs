@@ -2,11 +2,11 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using SMOO.Client;
-using SMOO.Net;
 using SMOO.Protocol;
+using SMOO.Services.Interface;
 using SMOO.Util;
 
-namespace SMOO.Services;
+namespace SMOO.Services.Impl;
 
 internal class PlayerDisconnector : IPlayerDisconnector
 {

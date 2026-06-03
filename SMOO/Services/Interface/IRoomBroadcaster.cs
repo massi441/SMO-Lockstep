@@ -1,10 +1,10 @@
 ﻿using System.Net;
 using SMOO.Client;
-using SMOO.Net;
 using SMOO.Protocol;
+using SMOO.Server;
 using SMOO.Util;
 
-namespace SMOO.Server;
+namespace SMOO.Services.Interface;
 
 internal interface IRoomBroadcaster
 {

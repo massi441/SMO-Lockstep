@@ -4,7 +4,7 @@ using SMOO.Server;
 using SMOO.Util;
 using Microsoft.Extensions.Logging;
 
-namespace SMOO.Net;
+namespace SMOO.Handle;
 
 internal class PacketLeaveRoomHandler : IPacketHandler
 {

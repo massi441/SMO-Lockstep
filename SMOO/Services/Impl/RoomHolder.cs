@@ -1,8 +1,9 @@
 ﻿using SMOO.Client;
 using SMOO.Net;
 using SMOO.Server;
+using SMOO.Services.Interface;
 
-namespace SMOO.Services;
+namespace SMOO.Services.Impl;
 
 internal class RoomHolder : IRoomHolder
 {

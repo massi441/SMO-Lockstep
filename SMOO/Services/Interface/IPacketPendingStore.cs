@@ -2,7 +2,7 @@
 using SMOO.Protocol;
 using SMOO.Util;
 
-namespace SMOO.Net;
+namespace SMOO.Services.Interface;
 
 internal interface IPacketPendingStore
 {

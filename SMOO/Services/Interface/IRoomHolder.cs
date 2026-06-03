@@ -1,6 +1,6 @@
 ﻿using SMOO.Server;
 
-namespace SMOO.Services;
+namespace SMOO.Services.Interface;
 
 internal interface IRoomHolder
 {

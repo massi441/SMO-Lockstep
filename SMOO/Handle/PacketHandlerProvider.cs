@@ -1,7 +1,7 @@
 ﻿using SMOO.Protocol;
 using SMOO.Server;
 
-namespace SMOO.Net;
+namespace SMOO.Handle;
 
 internal static class PacketHandlerProvider
 {

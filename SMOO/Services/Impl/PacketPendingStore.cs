@@ -1,8 +1,9 @@
 ﻿using System.Collections.Concurrent;
 using SMOO.Protocol;
+using SMOO.Services.Interface;
 using SMOO.Util;
 
-namespace SMOO.Net;
+namespace SMOO.Services.Impl;
 
 internal class PacketPendingStore : IPacketPendingStore
 {

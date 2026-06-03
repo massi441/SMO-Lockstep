@@ -1,15 +1,15 @@
-﻿using SMOO.Protocol;
-using SMOO.Server;
+﻿using SMOO.Server;
 using SMOO.Util;
 using Microsoft.Extensions.Logging;
 
-namespace SMOO.Net;
+namespace SMOO.Protocol;
 
 internal static class PacketDispatcher
 {
     public static Result<Error> Dispatch(Packet packet, ServerContext context)
     {
-        Result<Error> headerResult = PacketParser.ParseHeader(packet);
+        // Potentially move header parsing logic in private function here
+        Result<Error> headerResult = PacketParser.ParseHeader(packet, context);
         if (headerResult.IsFailed)
         {
             return Result<Error>.Failure(headerResult.Error!.Value);

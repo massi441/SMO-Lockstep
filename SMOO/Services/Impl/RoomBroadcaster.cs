@@ -1,11 +1,12 @@
 ﻿using System.Net;
 using SMOO.Client;
-using SMOO.Net;
 using SMOO.Protocol;
 using SMOO.Util;
 using Microsoft.Extensions.Logging;
+using SMOO.Server;
+using SMOO.Services.Interface;
 
-namespace SMOO.Server;
+namespace SMOO.Services.Impl;
 
 internal class RoomBroadcaster : IRoomBroadcaster
 {

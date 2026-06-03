@@ -2,7 +2,7 @@
 using SMOO.Server;
 using Microsoft.Extensions.Logging;
 
-namespace SMOO.Net;
+namespace SMOO.Handle;
 
 internal class PacketHealthCheckHandler : IPacketHandler
 {

@@ -4,9 +4,10 @@ using System.Diagnostics;
 using System.Net;
 using System.Threading.Channels;
 using SMOO.Client;
-using SMOO.Net;
 using SMOO.Protocol;
 using Microsoft.Extensions.Logging;
+using SMOO.Services.Interface;
+using SMOO.Handle;
 
 namespace SMOO.Server;
 
@@ -70,7 +71,7 @@ internal class Room
 
                 if (packet.Payload.Length < packetHandler.MinPayloadSize)
                 {
-                    _context.Logger.LogWarning("A {PacketType} packet of invalid size ({PacketSize}) was requested. Minimum required: {Minimum}", packet.Header.Type, packet.Payload.Length, packetHandler.MinPayloadSize);
+                    _context.Logger.LogWarning("{PacketType} packet of invalid size ({PacketSize}) was requested. Minimum required: {Minimum}", packet.Header.Type, packet.Payload.Length, packetHandler.MinPayloadSize);
                     continue;
                 }
 

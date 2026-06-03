@@ -1,6 +1,6 @@
 ﻿using SMOO.Client;
 
-namespace SMOO.Net;
+namespace SMOO.Protocol;
 
 internal readonly struct PacketPendingRequest
 {

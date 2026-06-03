@@ -9,7 +9,7 @@ using SMOO.Server;
 using SMOO.Util;
 using Microsoft.Extensions.Logging;
 
-namespace SMOO.Net;
+namespace SMOO.Handle;
 
 internal class PacketJoinRoomHandler : IPacketHandler
 {
@@ -165,7 +165,7 @@ internal class PacketJoinRoomHandler : IPacketHandler
 
         PacketPlayerJoinRoomSelfAck ackPacket = new PacketPlayerJoinRoomSelfAck
         {
-            Header = packet.Header.WithSizeType(payloadSize, PacketType.PlayerJoinRoomSelf),
+            Header = packet.Header.WithSizeType(payloadSize, PacketType.AckConnect),
             SelfPort = newPlayer.PortNumber,
             OtherPlayersCount = otherPlayersCount
         };
