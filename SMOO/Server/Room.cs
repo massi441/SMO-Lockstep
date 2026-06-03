@@ -3,12 +3,12 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Threading.Channels;
-using Lockstep.Client;
-using Lockstep.Net;
-using Lockstep.Protocol;
+using SMOO.Client;
+using SMOO.Net;
+using SMOO.Protocol;
 using Microsoft.Extensions.Logging;
 
-namespace Lockstep.Server;
+namespace SMOO.Server;
 
 internal class Room
 {

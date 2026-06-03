@@ -1,8 +1,8 @@
-﻿using Lockstep.Protocol;
-using Lockstep.Server;
+﻿using SMOO.Protocol;
+using SMOO.Server;
 using Microsoft.Extensions.Logging;
 
-namespace Lockstep.Net;
+namespace SMOO.Net;
 
 internal class PacketHealthCheckHandler : IPacketHandler
 {

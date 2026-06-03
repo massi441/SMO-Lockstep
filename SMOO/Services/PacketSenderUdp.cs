@@ -1,9 +1,9 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using Lockstep.Protocol;
-using Lockstep.Util;
+using SMOO.Protocol;
+using SMOO.Util;
 
-namespace Lockstep.Services;
+namespace SMOO.Services;
 
 internal class PacketSenderUdp : IPacketSender
 {

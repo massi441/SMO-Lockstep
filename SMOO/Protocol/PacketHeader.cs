@@ -1,8 +1,8 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Lockstep.Util;
+using SMOO.Util;
 
-namespace Lockstep.Protocol;
+namespace SMOO.Protocol;
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 internal record struct PacketHeader

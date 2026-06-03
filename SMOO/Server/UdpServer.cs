@@ -1,14 +1,14 @@
-﻿using Lockstep.Net;
-using Lockstep.Protocol;
-using Lockstep.Services;
-using Lockstep.Util;
+﻿using SMOO.Net;
+using SMOO.Protocol;
+using SMOO.Services;
+using SMOO.Util;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Channels;
 
-namespace Lockstep.Server;
+namespace SMOO.Server;
 
 internal class UdpServer
 {

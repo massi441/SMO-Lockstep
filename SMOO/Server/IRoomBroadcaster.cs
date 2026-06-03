@@ -1,10 +1,10 @@
 ﻿using System.Net;
-using Lockstep.Client;
-using Lockstep.Net;
-using Lockstep.Protocol;
-using Lockstep.Util;
+using SMOO.Client;
+using SMOO.Net;
+using SMOO.Protocol;
+using SMOO.Util;
 
-namespace Lockstep.Server;
+namespace SMOO.Server;
 
 internal interface IRoomBroadcaster
 {

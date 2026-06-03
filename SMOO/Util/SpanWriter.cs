@@ -1,7 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Lockstep.Util;
+namespace SMOO.Util;
 
 internal ref struct SpanWriter
 {

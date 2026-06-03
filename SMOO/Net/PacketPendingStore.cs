@@ -1,8 +1,8 @@
 ﻿using System.Collections.Concurrent;
-using Lockstep.Protocol;
-using Lockstep.Util;
+using SMOO.Protocol;
+using SMOO.Util;
 
-namespace Lockstep.Net;
+namespace SMOO.Net;
 
 internal class PacketPendingStore : IPacketPendingStore
 {

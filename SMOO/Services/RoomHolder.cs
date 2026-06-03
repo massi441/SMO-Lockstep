@@ -1,8 +1,8 @@
-﻿using Lockstep.Client;
-using Lockstep.Net;
-using Lockstep.Server;
+﻿using SMOO.Client;
+using SMOO.Net;
+using SMOO.Server;
 
-namespace Lockstep.Services;
+namespace SMOO.Services;
 
 internal class RoomHolder : IRoomHolder
 {

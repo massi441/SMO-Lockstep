@@ -1,6 +1,6 @@
-﻿using Lockstep.Server;
+﻿using SMOO.Server;
 
-namespace Lockstep.Services;
+namespace SMOO.Services;
 
 internal interface IRoomHolder
 {

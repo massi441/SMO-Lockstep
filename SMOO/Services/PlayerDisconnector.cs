@@ -1,12 +1,12 @@
 ﻿using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Lockstep.Client;
-using Lockstep.Net;
-using Lockstep.Protocol;
-using Lockstep.Util;
+using SMOO.Client;
+using SMOO.Net;
+using SMOO.Protocol;
+using SMOO.Util;
 
-namespace Lockstep.Services;
+namespace SMOO.Services;
 
 internal class PlayerDisconnector : IPlayerDisconnector
 {

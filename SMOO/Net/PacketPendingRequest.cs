@@ -1,6 +1,6 @@
-﻿using Lockstep.Client;
+﻿using SMOO.Client;
 
-namespace Lockstep.Net;
+namespace SMOO.Net;
 
 internal readonly struct PacketPendingRequest
 {

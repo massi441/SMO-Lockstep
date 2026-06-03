@@ -1,8 +1,8 @@
 ﻿using System.Net;
-using Lockstep.Protocol;
-using Lockstep.Util;
+using SMOO.Protocol;
+using SMOO.Util;
 
-namespace Lockstep.Client;
+namespace SMOO.Client;
 
 internal class PlayerHolder : IPlayerHolder
 {

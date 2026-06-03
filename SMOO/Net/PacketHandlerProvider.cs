@@ -1,7 +1,7 @@
-﻿using Lockstep.Protocol;
-using Lockstep.Server;
+﻿using SMOO.Protocol;
+using SMOO.Server;
 
-namespace Lockstep.Net;
+namespace SMOO.Net;
 
 internal static class PacketHandlerProvider
 {

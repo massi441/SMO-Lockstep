@@ -1,10 +1,10 @@
-﻿using Lockstep.Client;
-using Lockstep.Protocol;
-using Lockstep.Server;
-using Lockstep.Util;
+﻿using SMOO.Client;
+using SMOO.Protocol;
+using SMOO.Server;
+using SMOO.Util;
 using Microsoft.Extensions.Logging;
 
-namespace Lockstep.Net;
+namespace SMOO.Net;
 
 internal class PacketLeaveRoomHandler : IPacketHandler
 {

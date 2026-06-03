@@ -1,6 +1,6 @@
-﻿using Lockstep.Util;
+﻿using SMOO.Util;
 
-namespace Lockstep.Protocol;
+namespace SMOO.Protocol;
 
 internal static class PacketParser
 {

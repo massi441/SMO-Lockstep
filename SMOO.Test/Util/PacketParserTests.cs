@@ -1,4 +1,4 @@
-﻿namespace Lockstep.Test.Util;
+﻿namespace SMOO.Test.Util;
 
 internal class PacketParserTests
 {

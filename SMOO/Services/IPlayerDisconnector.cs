@@ -1,8 +1,8 @@
-﻿using Lockstep.Client;
-using Lockstep.Protocol;
-using Lockstep.Util;
+﻿using SMOO.Client;
+using SMOO.Protocol;
+using SMOO.Util;
 
-namespace Lockstep.Services;
+namespace SMOO.Services;
 
 internal interface IPlayerDisconnector
 {

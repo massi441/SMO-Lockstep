@@ -1,11 +1,11 @@
 ﻿using System.Net;
-using Lockstep.Client;
-using Lockstep.Net;
-using Lockstep.Protocol;
-using Lockstep.Util;
+using SMOO.Client;
+using SMOO.Net;
+using SMOO.Protocol;
+using SMOO.Util;
 using Microsoft.Extensions.Logging;
 
-namespace Lockstep.Server;
+namespace SMOO.Server;
 
 internal class RoomBroadcaster : IRoomBroadcaster
 {

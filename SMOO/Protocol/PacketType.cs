@@ -1,4 +1,4 @@
-﻿namespace Lockstep.Protocol;
+﻿namespace SMOO.Protocol;
 
 internal enum PacketType : byte
 {

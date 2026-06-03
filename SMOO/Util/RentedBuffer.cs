@@ -1,4 +1,4 @@
-﻿namespace Lockstep.Util;
+﻿namespace SMOO.Util;
 
 /// <summary>
 /// Represents a buffer that was rented from the array pool.

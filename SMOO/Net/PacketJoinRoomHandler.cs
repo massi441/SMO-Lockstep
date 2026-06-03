@@ -3,13 +3,13 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using Lockstep.Client;
-using Lockstep.Protocol;
-using Lockstep.Server;
-using Lockstep.Util;
+using SMOO.Client;
+using SMOO.Protocol;
+using SMOO.Server;
+using SMOO.Util;
 using Microsoft.Extensions.Logging;
 
-namespace Lockstep.Net;
+namespace SMOO.Net;
 
 internal class PacketJoinRoomHandler : IPacketHandler
 {
@@ -25,6 +25,9 @@ internal class PacketJoinRoomHandler : IPacketHandler
         _context = context;
     }
 
+    /// <summary>
+    /// The packet sent to a player requesting to join a room
+    /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct PacketPlayerJoinRoomSelfAck
     {
@@ -45,6 +48,9 @@ internal class PacketJoinRoomHandler : IPacketHandler
         }
     }
 
+    /// <summary>
+    /// The packet sent to notify a room that a player has joined
+    /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct PacketPlayerJoinRoomAck
     {

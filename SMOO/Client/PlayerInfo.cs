@@ -1,7 +1,7 @@
 ﻿using System.Net;
-using Lockstep.Server;
+using SMOO.Server;
 
-namespace Lockstep.Client;
+namespace SMOO.Client;
 
 internal class PlayerInfo
 {

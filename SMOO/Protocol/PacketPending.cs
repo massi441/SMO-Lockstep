@@ -1,7 +1,7 @@
-﻿using Lockstep.Client;
-using Lockstep.Util;
+﻿using SMOO.Client;
+using SMOO.Util;
 
-namespace Lockstep.Protocol;
+namespace SMOO.Protocol;
 
 internal class PacketPending
 {

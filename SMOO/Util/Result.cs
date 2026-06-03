@@ -1,4 +1,4 @@
-﻿namespace Lockstep.Util;
+﻿namespace SMOO.Util;
 
 internal readonly struct Result<E> where E : struct, Enum
 {

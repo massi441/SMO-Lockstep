@@ -1,8 +1,7 @@
-﻿using Lockstep.Protocol;
-using Lockstep.Server;
-using Lockstep.Util;
+﻿using SMOO.Protocol;
+using SMOO.Server;
 
-namespace Lockstep.Net;
+namespace SMOO.Net;
 
 internal interface IPacketHandler
 {

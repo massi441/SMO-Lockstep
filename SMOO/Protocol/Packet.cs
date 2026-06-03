@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using System.Runtime.InteropServices;
-using Lockstep.Util;
+using SMOO.Util;
 
-namespace Lockstep.Protocol;
+namespace SMOO.Protocol;
 
 /// <summary>
 /// Represents a network packet ready to be processed by the server

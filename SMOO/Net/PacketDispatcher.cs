@@ -1,9 +1,9 @@
-﻿using Lockstep.Protocol;
-using Lockstep.Server;
-using Lockstep.Util;
+﻿using SMOO.Protocol;
+using SMOO.Server;
+using SMOO.Util;
 using Microsoft.Extensions.Logging;
 
-namespace Lockstep.Net;
+namespace SMOO.Net;
 
 internal static class PacketDispatcher
 {

@@ -1,7 +1,7 @@
-﻿using Lockstep.Services;
+﻿using SMOO.Services;
 using Microsoft.Extensions.Logging;
 
-namespace Lockstep.Server;
+namespace SMOO.Server;
 
 internal class ServerContext
 {
