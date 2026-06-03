@@ -46,39 +46,47 @@ internal class Room
 
     private async Task ProcessAsync()
     {
-        await foreach (Packet packet in Packets.Reader.ReadAllAsync())
+        try
+            {
+
+            await foreach (Packet packet in Packets.Reader.ReadAllAsync())
+            {
+                ProcessCommands();
+
+                if (!IsAllowedInRoom(packet.Sender, packet.Header, out Player? player))
+                {
+                    _context.Logger.LogWarning("{Address}:{Port} illegally tried to access room #{RoomId}", packet.Sender.Address, packet.Sender.Port, Id);
+                    continue;
+                }
+
+                player?.RefreshLastSeen();
+
+                IPacketHandler? packetHandler = PacketHandlerFactory.CreateHandler(packet.Header.Type, _context);
+                if (packetHandler == null)
+                {
+                    _context.Logger.LogWarning("No handler found for packet type {PacketType}", (int)packet.Header.Type);
+                    continue;
+                }
+
+                if (packet.Payload.Length < packetHandler.MinPayloadSize)
+                {
+                    _context.Logger.LogWarning("A {PacketType} packet of invalid size ({PacketSize}) was requested. Minimum required: {Minimum}", packet.Header.Type, packet.Payload.Length, packetHandler.MinPayloadSize);
+                    continue;
+                }
+
+                long start = Stopwatch.GetTimestamp();
+                packetHandler.Handle(packet, this);
+                _context.Logger.LogTrace("Handled {PacketType} in {Elapsed}μs", packet.Header.Type, Stopwatch.GetElapsedTime(start).TotalMicroseconds);
+
+                ArrayPool<byte>.Shared.Return(packet.RentedBuffer.Ref);
+            }
+        } 
+        catch (Exception ex)
         {
-            ProcessCommands();
-
-            if (!IsAllowedInRoom(packet.Sender, packet.Header, out Player? player))
-            {
-                _context.Logger.LogWarning("{Address}:{Port} illegally tried to access room #{RoomId}", packet.Sender.Address, packet.Sender.Port, Id);
-                continue;
-            }
-
-            player?.RefreshLastSeen();
-
-            IPacketHandler? packetHandler = PacketHandlerFactory.CreateHandler(packet.Header.Type, _context);
-            if (packetHandler == null)
-            {
-                _context.Logger.LogWarning("No handler found for packet type {PacketType}", (int)packet.Header.Type);
-                continue;
-            }
-
-            if (packet.Payload.Length < packetHandler.MinPayloadSize)
-            {
-                _context.Logger.LogWarning("A {PacketType} packet of invalid size ({PacketSize}) was requested. Minimum required: {Minimum}", packet.Header.Type, packet.Payload.Length, packetHandler.MinPayloadSize);
-                continue;
-            }
-
-            long start = Stopwatch.GetTimestamp();
-            packetHandler.Handle(packet, this);
-            _context.Logger.LogTrace("Handled {PacketType} in {Elapsed}μs", packet.Header.Type, Stopwatch.GetElapsedTime(start).TotalMicroseconds);
-
-            ArrayPool<byte>.Shared.Return(packet.RentedBuffer.Ref);
+            _context.Logger.LogError(ex, "Error in Room #{RoomId}", Id);
         }
 
-        _context.Logger.LogInformation("Room #{RoomId} was shutdown sucessfully", Id);
+        //_context.Logger.LogInformation("Room #{RoomId} was shutdown sucessfully", Id);
     }
 
     private void ProcessCommands()
