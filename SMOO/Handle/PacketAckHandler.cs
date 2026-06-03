@@ -43,7 +43,7 @@ internal class PacketAckHandler : IPacketHandler
 
         ushort sequenceNumber = payload.SequenceNumber;
 
-        PacketPending? pendingPacket = room.Broadcaster.AckPacketStore.RemovePacket(sequenceNumber);
+        PendingPacket? pendingPacket = room.Broadcaster.PendingPacketStore.RemovePacket(sequenceNumber);
         if (pendingPacket == null)
         {
             _context.Logger.LogError("The packet #{SequenceNumber} was not found in room #{RoomId}", sequenceNumber, room.Id);

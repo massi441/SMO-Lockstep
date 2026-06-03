@@ -3,11 +3,11 @@ using SMOO.Util;
 
 namespace SMOO.Protocol;
 
-internal class PacketPending
+internal class PendingPacket
 {
     private byte _tries;
     public required ushort SequenceNumber { get; init; }
-    public required byte[] Payload { get; init; }
+    public required RentedBuffer RentedPayload { get; init; }
     public required Player Player { get; init; }
     public DateTime LastSent { get; private set; } = DateTime.UtcNow;
 
@@ -21,11 +21,10 @@ internal class PacketPending
     public bool IsDead => _tries <= 0;
     public bool IsResendTime => (DateTime.UtcNow - LastSent).Milliseconds > Config.MinimumResendSpan.Milliseconds;
 
-    public void RefreshTime()
+    public void RefreshLastSent()
     {
         LastSent = DateTime.UtcNow;
     }
-
 
     public void DecrementTries()
     {

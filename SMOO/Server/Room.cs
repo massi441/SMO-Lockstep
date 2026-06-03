@@ -1,5 +1,4 @@
-﻿using System.Buffers;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Threading.Channels;
@@ -48,8 +47,7 @@ internal class Room
     private async Task ProcessAsync()
     {
         try
-            {
-
+        {
             await foreach (Packet packet in Packets.Reader.ReadAllAsync())
             {
                 ProcessCommands();
@@ -62,10 +60,10 @@ internal class Room
 
                 player?.RefreshLastSeen();
 
-                IPacketHandler? packetHandler = PacketHandlerProvider.CreateHandler(packet.Header.Type, _context);
+                IPacketHandler? packetHandler = _context.PacketHandlerProvider.GetShared(packet.Header.Type, _context);
                 if (packetHandler == null)
                 {
-                    _context.Logger.LogWarning("No handler found for packet type {PacketType}", (int)packet.Header.Type);
+                    _context.Logger.LogWarning("No handler found for packet type {PacketType}", packet.Header.Type);
                     continue;
                 }
 
@@ -79,7 +77,7 @@ internal class Room
                 packetHandler.Handle(packet, this);
                 _context.Logger.LogTrace("Handled {PacketType} in {Elapsed}μs", packet.Header.Type, Stopwatch.GetElapsedTime(start).TotalMicroseconds);
 
-                ArrayPool<byte>.Shared.Return(packet.RentedBuffer.Ref);
+                packet.RentedBuffer.Return();
             }
         } 
         catch (Exception ex)
@@ -101,7 +99,7 @@ internal class Room
 
     private bool IsAllowedInRoom(IPEndPoint sender, PacketHeader header, out Player? player)
     {
-        if (header.Type == PacketType.RequestJoinRoom)
+        if (header.Type == PacketType.Connect)
         {
             player = null;
             return true;

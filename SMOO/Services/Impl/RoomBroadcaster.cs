@@ -11,13 +11,13 @@ namespace SMOO.Services.Impl;
 internal class RoomBroadcaster : IRoomBroadcaster
 {
     private readonly ServerContext _context;
-    private readonly IPacketPendingStore _resendStore;
+    private readonly IPendingPacketStore _resendStore;
     private readonly CancellationTokenSource _resendToken;
     private readonly Task _resendTask;
 
-    public IPacketPendingStore AckPacketStore => _resendStore;
+    public IPendingPacketStore PendingPacketStore => _resendStore;
 
-    public RoomBroadcaster(ServerContext context, IPacketPendingStore resendStore)
+    public RoomBroadcaster(ServerContext context, IPendingPacketStore resendStore)
     {
         _context = context;
         _resendStore = resendStore;
@@ -40,7 +40,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
         _context.Logger.LogInformation("Room Broadcaster was shutdown successfully");
     }
 
-    private void ProcessAckPacket(PacketPending pendingPacket)
+    private void ProcessAckPacket(PendingPacket pendingPacket)
     {
         if (pendingPacket.IsAlive)
         {
@@ -49,7 +49,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
                 return;
             }
 
-            Result<Error> sendResult = _context.PacketSender.Send(pendingPacket.Player.Endpoint, pendingPacket.Payload);
+            Result<Error> sendResult = _context.PacketSender.Send(pendingPacket.Player.Endpoint, pendingPacket.RentedPayload.Span);
             if (sendResult.IsSuccess)
             {
                 pendingPacket.DecrementTries();
@@ -59,7 +59,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
                 _context.Logger.LogError("An error occured while trying to resend the packet");
             }
 
-            pendingPacket.RefreshTime();
+            pendingPacket.RefreshLastSent();
         }
         else
         {
@@ -89,11 +89,11 @@ internal class RoomBroadcaster : IRoomBroadcaster
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastAck(Room room, in PacketAckBroadcastRequest request)
+    public Result<Error> BroadcastAck(Room room, PacketBroadcastRequest request)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
-            SendPlayerAckPacket(player, in request);
+            SendPlayerAckPacket(player, request);
         }
 
         return Result<Error>.Success();
@@ -114,13 +114,13 @@ internal class RoomBroadcaster : IRoomBroadcaster
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastAckExcept(Room room, Player sender, in PacketAckBroadcastRequest request)
+    public Result<Error> BroadcastAckExcept(Room room, Player sender, PacketBroadcastRequest request)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
             if (player != sender)
             {
-                SendPlayerAckPacket(player, in request);
+                SendPlayerAckPacket(player, request);
             }
         }
 
@@ -143,36 +143,36 @@ internal class RoomBroadcaster : IRoomBroadcaster
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastAckExceptWith(Room room, Player sender, in PacketAckBroadcastRequest playerRequest, in PacketAckBroadcastRequest request)
+    public Result<Error> BroadcastAckExceptWith(Room room, Player sender, PacketBroadcastRequest playerRequest, PacketBroadcastRequest request)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
             if (player == sender)
             {
-                SendPlayerAckPacket(sender, in playerRequest);
+                SendPlayerAckPacket(sender, playerRequest);
             }
             else
             {
-                SendPlayerAckPacket(player, in request);
+                SendPlayerAckPacket(player, request);
             }
         }
 
         return Result<Error>.Success();
     }
 
-    private void SendPlayerAckPacket(Player player, in PacketAckBroadcastRequest ackRequest)
+    private void SendPlayerAckPacket(Player player, PacketBroadcastRequest ackRequest)
     {
-        PacketPendingRequest request = new PacketPendingRequest()
+        PendingPacketRequest request = new PendingPacketRequest()
         {
             Receiver = player,
-            Payload = ackRequest.Payload,
+            RentedPayload = ackRequest.RentedPayload,
             MaxRetries = ackRequest.MaxRetries
         };
 
-        Result<Error> uploadResult = _resendStore.UploadPacket(in request);
+        Result<Error> uploadResult = _resendStore.UploadPacket(request);
         if (uploadResult.IsSuccess)
         {
-            _context.PacketSender.Send(player.Endpoint, request.Payload);
+            _context.PacketSender.Send(player.Endpoint, request.RentedPayload.Span);
         }
     }
 

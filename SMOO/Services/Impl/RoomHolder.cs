@@ -1,5 +1,4 @@
 ﻿using SMOO.Client;
-using SMOO.Net;
 using SMOO.Server;
 using SMOO.Services.Interface;
 
@@ -19,7 +18,7 @@ internal class RoomHolder : IRoomHolder
         }
 
         IPlayerHolder playerHolder = new PlayerHolder();
-        IRoomBroadcaster roomBroadcaster = new RoomBroadcaster(context, new PacketPendingStore());
+        IRoomBroadcaster roomBroadcaster = new RoomBroadcaster(context, new PendingPacketStore());
 
         _rooms.Add(nextId, new Room(nextId, context, playerHolder, roomBroadcaster));
 

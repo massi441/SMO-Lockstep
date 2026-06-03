@@ -11,16 +11,16 @@ internal interface IRoomBroadcaster
     /// <summary>
     /// The store of packets that need to be acked by clients
     /// </summary>
-    IPacketPendingStore AckPacketStore { get; }
+    IPendingPacketStore PendingPacketStore { get; }
 
     Result<Error> Broadcast(Room room, ReadOnlySpan<byte> payload);
-    Result<Error> BroadcastAck(Room room, in PacketAckBroadcastRequest request);
+    Result<Error> BroadcastAck(Room room, PacketBroadcastRequest request);
 
     Result<Error> BroadcastExcept(Room room, IPEndPoint sender, ReadOnlySpan<byte> payload);
-    Result<Error> BroadcastAckExcept(Room room, Player sender, in PacketAckBroadcastRequest request);
+    Result<Error> BroadcastAckExcept(Room room, Player sender, PacketBroadcastRequest request);
 
     Result<Error> BroadcastExceptWith(Room room, IPEndPoint sender, ReadOnlySpan<byte> senderPayload, ReadOnlySpan<byte> broadcastPayload);
-    Result<Error> BroadcastAckExceptWith(Room room, Player sender, in PacketAckBroadcastRequest playerRequest, in PacketAckBroadcastRequest broadcastRequest);
+    Result<Error> BroadcastAckExceptWith(Room room, Player sender, PacketBroadcastRequest playerRequest, PacketBroadcastRequest broadcastRequest);
 
     Task Shutdown();
 }

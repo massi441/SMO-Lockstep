@@ -6,12 +6,12 @@ using Microsoft.Extensions.Logging;
 
 namespace SMOO.Handle;
 
-internal class PacketLeaveRoomHandler : IPacketHandler
+internal class PacketDisconnectHandler : IPacketHandler
 {
     private readonly ServerContext _context;
     public uint MinPayloadSize => 0;
 
-    public PacketLeaveRoomHandler(ServerContext context)
+    public PacketDisconnectHandler(ServerContext context)
     {
         _context = context;
     }
@@ -24,6 +24,7 @@ internal class PacketLeaveRoomHandler : IPacketHandler
         if (disconnectResult.IsFailed)
         {
             _context.Logger.LogError("Unable to disconnect {PlayerName} in room #{RoomId}", player.Name, room.Id);
+            return;
         }
 
         _context.Logger.LogWarning("Player {Name} left room {RoomId}", player.Name, room.Id);

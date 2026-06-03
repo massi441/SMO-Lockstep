@@ -1,5 +1,4 @@
-﻿using System.Buffers;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using SMOO.Client;
 using SMOO.Protocol;
@@ -11,15 +10,14 @@ namespace SMOO.Services.Impl;
 internal class PlayerDisconnector : IPlayerDisconnector
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct PacketPlayerLeaveRoom
+    private struct PacketDisconnect
     {
         public required PacketHeader Header;
         public ushort SequenceNumber;
-        public required byte PlayerPort;
 
         public static int SizeOf()
         {
-            return Unsafe.SizeOf<PacketPlayerLeaveRoom>();
+            return Unsafe.SizeOf<PacketDisconnect>();
         }
 
         public static ushort SizeOfPayload()
@@ -30,30 +28,19 @@ internal class PlayerDisconnector : IPlayerDisconnector
 
     public Result<Error> Disconnect(Player player)
     {
-        byte[] broadcastBuffer = ArrayPool<byte>.Shared.Rent(PacketPlayerLeaveRoom.SizeOf());
+        RentedBuffer broadcastBuffer = MemoryUtil.Rent<PacketDisconnect>();
 
-        PacketHeader header = new PacketHeader()
+        broadcastBuffer.Write(new PacketDisconnect()
         {
-            Type = PacketType.PlayerLeaveRoom,
-            Flags = (byte)PacketFlags.None,
-            Version = Config.Version,
-            RoomId = player.Room.Id,
-            PayloadSize = PacketPlayerLeaveRoom.SizeOfPayload()
-        };
-
-        PacketPlayerLeaveRoom leavePacket = new PacketPlayerLeaveRoom()
-        {
-            Header = header,
-            PlayerPort = player.PortNumber
-        };
-
-        MemoryMarshal.Write(broadcastBuffer, leavePacket);
-
-        PacketAckBroadcastRequest request = new PacketAckBroadcastRequest()
-        {
-            MaxRetries = Config.MaxRetries,
-            Payload = broadcastBuffer
-        };
+            Header = new PacketHeader()
+            {
+                Type = PacketType.Disconnect,
+                Flags = (byte)PacketFlags.None,
+                Version = Config.Version,
+                RoomId = player.Room.Id,
+                PayloadSize = PacketDisconnect.SizeOfPayload()
+            }
+        });
 
         Result<Error> unregisterResult = player.Room.PlayerHolder.UnregisterPlayer(player);
         if (unregisterResult.IsFailed)
@@ -61,6 +48,10 @@ internal class PlayerDisconnector : IPlayerDisconnector
             return unregisterResult;
         }
 
-        return player.Room.Broadcaster.BroadcastAck(player.Room, request);
+        return player.Room.Broadcaster.BroadcastAck(player.Room, new PacketBroadcastRequest()
+        {
+            MaxRetries = Config.MaxRetries,
+            RentedPayload = broadcastBuffer
+        });
     }
 }

@@ -17,7 +17,7 @@ internal readonly struct Packet
     /// <summary>
     /// The rented buffer of the packet
     /// </summary>
-    public required RentedBuffer<byte> RentedBuffer { get; init; }
+    public required RentedBuffer RentedBuffer { get; init; }
 
     /// <summary>
     /// Returns a view of the header inside the packet's payload

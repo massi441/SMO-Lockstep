@@ -1,33 +1,34 @@
-﻿using System.Collections.Concurrent;
+﻿using System.Buffers;
+using System.Collections.Concurrent;
 using SMOO.Protocol;
 using SMOO.Services.Interface;
 using SMOO.Util;
 
 namespace SMOO.Services.Impl;
 
-internal class PacketPendingStore : IPacketPendingStore
+internal class PendingPacketStore : IPendingPacketStore
 {
     private ushort _nextSequenceNumber = 0;
-    private readonly ConcurrentDictionary<ushort, PacketPending> _pendingPackets = [];
+    private readonly ConcurrentDictionary<ushort, PendingPacket> _pendingPackets = [];
 
-    public ConcurrentDictionary<ushort, PacketPending> PendingPackets => _pendingPackets;
+    public ConcurrentDictionary<ushort, PendingPacket> PendingPackets => _pendingPackets;
 
-    public Result<Error> UploadPacket(in PacketPendingRequest request)
+    public Result<Error> UploadPacket(PendingPacketRequest request)
     {
         if (IsFull())
         {
             return Result<Error>.Failure(Error.PendingPacketStoreFull);
         }
 
-        PacketPending pendingPacket = new PacketPending()
+        PendingPacket pendingPacket = new PendingPacket()
         {
             Player = request.Receiver,
-            Payload = request.Payload,
+            RentedPayload = request.RentedPayload,
             Tries = request.MaxRetries,
             SequenceNumber = _nextSequenceNumber
         };
 
-        WriteSequence(pendingPacket.Payload, pendingPacket.SequenceNumber);
+        WriteSequence(pendingPacket.RentedPayload.Ref, pendingPacket.SequenceNumber);
 
         _pendingPackets[_nextSequenceNumber] = pendingPacket;
         _nextSequenceNumber++;
@@ -35,10 +36,11 @@ internal class PacketPendingStore : IPacketPendingStore
         return Result<Error>.Success();
     }
 
-    public PacketPending? RemovePacket(ushort sequenceNumber)
+    public PendingPacket? RemovePacket(ushort sequenceNumber)
     {
-        if (_pendingPackets.TryRemove(sequenceNumber, out PacketPending? pendingPacket))
+        if (_pendingPackets.TryRemove(sequenceNumber, out PendingPacket? pendingPacket))
         {
+            pendingPacket.RentedPayload.Return();
             return pendingPacket;
         }
 

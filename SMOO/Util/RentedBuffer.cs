@@ -1,27 +1,51 @@
-﻿namespace SMOO.Util;
+﻿using System.Buffers;
+using System.Runtime.InteropServices;
+
+namespace SMOO.Util;
 
 /// <summary>
-/// Represents a buffer that was rented from the array pool.
+/// Represents a byte buffer that was rented from the array pool.
 /// </summary>
-/// <typeparam name="T">Type of element in the array</typeparam>
-internal readonly struct RentedBuffer<T>
+internal readonly struct RentedBuffer
 {
     /// <summary>
     /// The reference to the rented array
     /// </summary>
-    public readonly T[] Ref;
+    public byte[] Ref { get; init; }
 
     /// <summary>
     /// The actual amount of bytes used in the buffer, as a rented Array can be bigger than the capacity requested
     /// </summary>
-    public readonly int UsedBytes;
+    public int UsedBytes { get; init; }
 
-    public readonly Span<T> Span => Ref.AsSpan(0, UsedBytes);
-    public readonly Memory<T> Memory => Ref.AsMemory(0, UsedBytes);
+    /// <summary>
+    /// A span pointing at the start of the rented buffer, with the size of the used bytes in the rented buffer
+    /// </summary>
+    public readonly Span<byte> Span => Ref.AsSpan(0, UsedBytes);
 
-    public RentedBuffer(T[] reference, int usedBytes)
+    /// <summary>
+    /// A memory view pointing at the start of the rented buffer, with the size of the used bytes in the rented buffer
+    /// </summary>
+    public readonly Memory<byte> Memory => Ref.AsMemory(0, UsedBytes);
+
+    public RentedBuffer(byte[] rentRef, int size)
     {
-        Ref = reference;
-        UsedBytes = usedBytes;
+        Ref = rentRef;
+        UsedBytes = size;
+    }
+
+    public RentedBuffer(int size) : this(ArrayPool<byte>.Shared.Rent(size), size)
+    {
+
+    }
+
+    public void Return()
+    {
+        ArrayPool<byte>.Shared.Return(Ref);
+    }
+
+    public void Write<T>(in T structure) where T : struct
+    {
+        MemoryMarshal.Write(Ref, in structure);
     }
 }
