@@ -39,6 +39,11 @@ internal readonly struct RentedBuffer
 
     }
 
+    public Span<byte> SpanAt(int offset)
+    {
+        return Ref.AsSpan(offset, UsedBytes - offset);
+    }
+
     public void Return()
     {
         ArrayPool<byte>.Shared.Return(Ref);

@@ -13,7 +13,7 @@ internal static class PacketParser
             return Result<Error>.Failure(Error.InvalidHeaderSize);
         }
 
-        context.Logger.LogTrace("Incoming packet: {Header}, Payload Size: {Size}", packet.Header, packet.Payload.Length);
+        //context.Logger.LogTrace("Incoming packet: {Header}, Payload Size: {Size}", packet.Header, packet.Payload.Length);
 
         ref PacketHeader header = ref packet.Header;
 

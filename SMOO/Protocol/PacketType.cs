@@ -6,7 +6,7 @@ internal enum PacketType : byte
     ConnectAck,
     ConnectSynAck,
     Disconnect,
-    PlayerJoinRoomBroadcast,
+    PlayerJoinRoom,
     PlayerInput,
     HealthCheck,
     Ping,

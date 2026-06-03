@@ -48,7 +48,7 @@ internal class PlayerDisconnector : IPlayerDisconnector
             return unregisterResult;
         }
 
-        return player.Room.Broadcaster.BroadcastAck(player.Room, new PacketBroadcastRequest()
+        return player.Room.Broadcaster.BroadcastReliably(player.Room, new ReliablePacketBroadcastRequest()
         {
             MaxRetries = Config.MaxRetries,
             RentedPayload = broadcastBuffer

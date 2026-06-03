@@ -11,13 +11,13 @@ namespace SMOO.Services.Impl;
 internal class RoomBroadcaster : IRoomBroadcaster
 {
     private readonly ServerContext _context;
-    private readonly IPendingPacketStore _resendStore;
+    private readonly IReliablePacketStore _resendStore;
     private readonly CancellationTokenSource _resendToken;
     private readonly Task _resendTask;
 
-    public IPendingPacketStore PendingPacketStore => _resendStore;
+    public IReliablePacketStore ReliablePacketStore => _resendStore;
 
-    public RoomBroadcaster(ServerContext context, IPendingPacketStore resendStore)
+    public RoomBroadcaster(ServerContext context, IReliablePacketStore resendStore)
     {
         _context = context;
         _resendStore = resendStore;
@@ -40,7 +40,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
         _context.Logger.LogInformation("Room Broadcaster was shutdown successfully");
     }
 
-    private void ProcessAckPacket(PendingPacket pendingPacket)
+    private void ProcessAckPacket(ReliablePacket pendingPacket)
     {
         if (pendingPacket.IsAlive)
         {
@@ -69,7 +69,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
                 Result<Error> disconnectResult = _context.PlayerDisconnector.Disconnect(pendingPacket.Player);
                 if (disconnectResult.IsSuccess)
                 {
-                    _context.Logger.LogWarning("Disconnected player {PlayerName} for not Acking packet #{PacketId} in room #{RoomId}", pendingPacket.Player.Name, pendingPacket.SequenceNumber, pendingPacket.Player.Room.Id);
+                    _context.Logger.LogWarning("Disconnected player {PlayerName} for not Acking {PacketType} packet (#{SequenceNumber}) in room #{RoomId}", pendingPacket.Player.Name, pendingPacket.Header.Type, pendingPacket.SequenceNumber, pendingPacket.Player.Room.Id);
                 }
                 else
                 {
@@ -89,7 +89,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastAck(Room room, PacketBroadcastRequest request)
+    public Result<Error> BroadcastReliably(Room room, ReliablePacketBroadcastRequest request)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
@@ -114,7 +114,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastAckExcept(Room room, Player sender, PacketBroadcastRequest request)
+    public Result<Error> BroadcastReliablyExcept(Room room, Player sender, ReliablePacketBroadcastRequest request)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
@@ -143,7 +143,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastAckExceptWith(Room room, Player sender, PacketBroadcastRequest playerRequest, PacketBroadcastRequest request)
+    public Result<Error> BroadcastReliablyExceptWith(Room room, Player sender, ReliablePacketBroadcastRequest playerRequest, ReliablePacketBroadcastRequest request)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
@@ -160,9 +160,9 @@ internal class RoomBroadcaster : IRoomBroadcaster
         return Result<Error>.Success();
     }
 
-    private void SendPlayerAckPacket(Player player, PacketBroadcastRequest ackRequest)
+    private void SendPlayerAckPacket(Player player, ReliablePacketBroadcastRequest ackRequest)
     {
-        PendingPacketRequest request = new PendingPacketRequest()
+        ReliablePacketRequest request = new ReliablePacketRequest()
         {
             Receiver = player,
             RentedPayload = ackRequest.RentedPayload,

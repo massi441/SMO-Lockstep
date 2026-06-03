@@ -1,76 +1,95 @@
-﻿//using System.Runtime.CompilerServices;
-//using System.Runtime.InteropServices;
-//using SMOO.Client;
-//using SMOO.Protocol;
-//using SMOO.Server;
-//using SMOO.Util;
+﻿using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
+using Microsoft.Extensions.Logging;
+using SMOO.Client;
+using SMOO.Protocol;
+using SMOO.Server;
+using SMOO.Util;
 
-//namespace SMOO.Handle;
+namespace SMOO.Handle;
 
-//internal class PacketConnectSynAckHandler : IPacketHandler
-//{
-//    public uint MinPayloadSize => 0;
+internal class PacketConnectSynAckHandler : IPacketHandler
+{
+    private readonly ServerContext _context;
 
-//    /// <summary>
-//    /// The packet sent to notify a room that a player has joined
-//    /// </summary>
-//    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-//    private struct PacketConnectSynAck
-//    {
-//        public required PacketHeader Header;
-//        public ushort SequenceNumber;
-//        public required byte PlayerPort;
+    public PacketConnectSynAckHandler(ServerContext context)
+    {
+        _context = context;
+    }
 
-//        public static ushort SizeOf()
-//        {
-//            return (ushort)Unsafe.SizeOf<PacketConnectSynAck>();
-//        }
+    public uint MinPayloadSize => 0;
 
-//        public static ushort SizeOfPayload()
-//        {
-//            return sizeof(byte);
-//        }
-//    }
+    /// <summary>
+    /// The payload sent by a new player, to confirm that they have joined a room
+    /// </summary>
+    private readonly ref struct PacketConnectSynAckPayload
+    {
+        private readonly ReadOnlySpan<byte> _buffer;
 
-//    public void Handle(Packet packet, Room room)
-//    {
-//        // TODO: Get player
+        /// <summary>
+        /// The sequence number of the SynAck packet, starting at offset 0x0
+        /// </summary>
+        public readonly ushort SequenceNumber => BinaryPrimitives.ReadUInt16LittleEndian(_buffer);
 
-//        RentedBuffer broadcastBuffer = MemoryUtil.Rent<PacketConnectSynAck>();
+        public PacketConnectSynAckPayload(ReadOnlySpan<byte> buffer)
+        {
+            _buffer = buffer;
+        }
+    }
 
-//        WriteBroadcast(broadcastBuffer, packet, null!);
+    /// <summary>
+    /// The packet sent to a room, to notify that a new player has joined
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    private struct PacketPlayerJoinRoom
+    {
+        public required PacketHeader Header;
+        public ushort SequenceNumber;
+        public byte PlayerNameLength;
 
-//        PacketBroadcastRequest broadcastRequest = new PacketBroadcastRequest()
-//        {
-//            MaxRetries = Config.MaxRetries,
-//            RentedPayload = broadcastBuffer
-//        };
-//    }
+        public static int SizeOf()
+        {
+            return Unsafe.SizeOf<PacketPlayerJoinRoom>();
+        }
+    }
 
-//    private static Result<Error> NotifyRoom(Packet packet, Room room, Player newPlayer)
-//    {
-//        byte otherPlayersCount = room.PlayerHolder.OtherPlayerCount;
-//        //byte[] ackBuffer = ArrayPool<byte>.Shared.Rent(PacketConnectAck.SizeOf(otherPlayersCount)); ;
+    public void Handle(Packet packet, Room room)
+    {
+        Player player = room.PlayerHolder.FindPlayerByHost(packet.Sender)!;
 
-//        //WriteAck(ackBuffer, packet, room, newPlayer, otherPlayersCount);
+        PacketConnectSynAckPayload synAckPayload = new PacketConnectSynAckPayload(packet.Payload);
 
-//        //PacketBroadcastRequest newPlayerAckRequest = new PacketBroadcastRequest()
-//        //{
-//        //    MaxRetries = Config.MaxRetries,
-//        //    Payload = ackBuffer
-//        //};
+        ReliablePacket? ackPacket = room.Broadcaster.ReliablePacketStore.RemovePacket(synAckPayload.SequenceNumber);
 
-//        return room.Broadcaster.BroadcastAckExceptWith(room, newPlayer, in newPlayerAckRequest, in broadcastRequest);
-//    }
+        if (ackPacket == null)
+        {
+            _context.Logger.LogWarning("Invalid SYN ACK sequence number ({SequenceNumber}) received by {PlayerName} in Room #{RoomId}, broadcast will be skipped", synAckPayload.SequenceNumber, player.Name, room.Id);
+            return;
+        }
 
-//    private static void WriteBroadcast(Span<byte> buffer, Packet packet, Player newPlayer)
-//    {
-//        PacketConnectSynAck broadcastPacket = new PacketConnectSynAck
-//        {
-//            PlayerPort = newPlayer.PortNumber,
-//            Header = packet.Header.WithSizeType(PacketConnectSynAck.SizeOfPayload(), PacketType.PlayerJoinRoomBroadcast)
-//        };
+        PacketPlayerJoinRoom joinPacket = new PacketPlayerJoinRoom()
+        {
+            Header = packet.Header.WithSizeType(MemoryUtil.PayloadSize<PacketPlayerJoinRoom>(), PacketType.PlayerJoinRoom),
+            PlayerNameLength = (byte)player.Name.Length
+        };
 
-//        MemoryMarshal.Write(buffer, broadcastPacket);
-//    }
-//}
+        int bufferSize = PacketPlayerJoinRoom.SizeOf() + joinPacket.PlayerNameLength;
+        RentedBuffer joinRoomBuffer = new RentedBuffer(bufferSize);
+
+        joinRoomBuffer.Write(joinPacket);
+
+        Encoding.UTF8.GetBytes(player.Name.AsSpan(), joinRoomBuffer.SpanAt(PacketPlayerJoinRoom.SizeOf()));
+
+        Result<Error> broadcastResult = room.Broadcaster.BroadcastReliablyExcept(room, player, new ReliablePacketBroadcastRequest(joinRoomBuffer));
+
+        if (broadcastResult.IsFailed)
+        {
+            _context.Logger.LogError("Failed to broadcast new player in room");
+            return;
+        }
+
+        _context.Logger.LogInformation("Player {PlayerName} has confirmed their connection in Room #{RoomId}, room will be notified", player.Name, room.Id);
+    }
+}

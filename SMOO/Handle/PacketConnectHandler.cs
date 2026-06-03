@@ -2,11 +2,11 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using SMOO.Client;
 using SMOO.Protocol;
 using SMOO.Server;
 using SMOO.Util;
-using Microsoft.Extensions.Logging;
 
 namespace SMOO.Handle;
 
@@ -25,9 +25,8 @@ internal class PacketConnectHandler : IPacketHandler
     }
 
     /// <summary>
-    /// The packet sent by clients who request to connect to a room
+    /// The payload sent by clients who request to connect to a room
     /// </summary>
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private readonly ref struct PacketConnectPayload
     {
         private readonly ReadOnlySpan<byte> _buffer;
@@ -73,7 +72,6 @@ internal class PacketConnectHandler : IPacketHandler
         }
 
         PacketConnectPayload connectPayload = new PacketConnectPayload(packet.Payload);
-
         if (!IsValidNameLength(connectPayload.NameLength))
         {
             _context.Logger.LogWarning("Invalid player name length {Length}", connectPayload.NameLength);
@@ -87,33 +85,46 @@ internal class PacketConnectHandler : IPacketHandler
             Room = room,
         };
 
-        Result<Player, Error> registerResult = room.PlayerHolder.RegisterPlayer(playerInfo);
-        if (registerResult.IsFailed)
+        Result<Player, Error> newPlayerResult = room.PlayerHolder.RegisterPlayer(playerInfo);
+        if (newPlayerResult.IsFailed)
         {
             _context.Logger.LogError("Failed to register {PlayerName} in Room #{RoomId}", playerInfo.Name, room.Id);
             return;
         }
 
-        Player newPlayer = registerResult.Data!;
+        if (!AckConnect(newPlayerResult.Data!, packet, room))
+        {
+            _context.Logger.LogError("Failed to upload connect ACK packet, new player will be ignored");
+            return;
+        }
 
-        RentedBuffer packetBuffer = MemoryUtil.Rent<PacketConnectAck>();
-        packetBuffer.Write(new PacketConnectAck()
+        _context.Logger.LogTrace("Player {Name} joined #{RoomId}, waiting for a confirmation with sequence #", newPlayerResult.Data!.Name, packet.Header.RoomId);
+    }
+
+    private bool AckConnect(Player newPlayer, Packet packet, Room room)
+    {
+        RentedBuffer ackBuffer = MemoryUtil.Rent<PacketConnectAck>();
+        ackBuffer.Write(new PacketConnectAck()
         {
             Header = packet.Header.WithSizeType(MemoryUtil.PayloadSize<PacketConnectAck>(), PacketType.ConnectAck),
             RoomSize = room.PlayerHolder.MaxSize
         });
 
-        PendingPacketRequest request = new PendingPacketRequest()
+        ReliablePacketRequest ackRequest = new ReliablePacketRequest()
         {
-            Receiver = registerResult.Data!,
-            RentedPayload = packetBuffer,
+            Receiver = newPlayer,
+            RentedPayload = ackBuffer,
         };
 
-        _context.PacketSender.Send(newPlayer.Endpoint, packetBuffer.Span);
+        Result<Error> uploadResult = room.Broadcaster.ReliablePacketStore.UploadPacket(ackRequest);
+        if (uploadResult.IsFailed)
+        {
+            return false;
+        }
 
-        room.Broadcaster.PendingPacketStore.UploadPacket(request);
+        _context.PacketSender.Send(newPlayer.Endpoint, ackBuffer.Span);
 
-        _context.Logger.LogTrace("Player {Name} joined #{RoomId}, waiting for a confirmation...", newPlayer.Name, packet.Header.RoomId);
+        return true;
     }
 
     private bool IsInOtherRoom(IPEndPoint sender, out Player player, out Room takenRoom)

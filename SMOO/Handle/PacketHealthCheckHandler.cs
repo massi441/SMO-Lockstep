@@ -18,6 +18,6 @@ internal class PacketHealthCheckHandler : IPacketHandler
     public void Handle(Packet packet, Room room)
     {
         _context.Logger.LogTrace("Health check accepted");
-        _context.PacketSender.Send(packet.Sender, packet.Payload);
+        _context.PacketSender.Send(packet.Sender, packet.RentedBuffer.Span);
     }
 }

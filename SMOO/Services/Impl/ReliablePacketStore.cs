@@ -1,26 +1,25 @@
-﻿using System.Buffers;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using SMOO.Protocol;
 using SMOO.Services.Interface;
 using SMOO.Util;
 
 namespace SMOO.Services.Impl;
 
-internal class PendingPacketStore : IPendingPacketStore
+internal class ReliablePacketStore : IReliablePacketStore
 {
     private ushort _nextSequenceNumber = 0;
-    private readonly ConcurrentDictionary<ushort, PendingPacket> _pendingPackets = [];
+    private readonly ConcurrentDictionary<ushort, ReliablePacket> _pendingPackets = [];
 
-    public ConcurrentDictionary<ushort, PendingPacket> PendingPackets => _pendingPackets;
+    public ConcurrentDictionary<ushort, ReliablePacket> PendingPackets => _pendingPackets;
 
-    public Result<Error> UploadPacket(PendingPacketRequest request)
+    public Result<Error> UploadPacket(ReliablePacketRequest request)
     {
         if (IsFull())
         {
             return Result<Error>.Failure(Error.PendingPacketStoreFull);
         }
 
-        PendingPacket pendingPacket = new PendingPacket()
+        ReliablePacket pendingPacket = new ReliablePacket()
         {
             Player = request.Receiver,
             RentedPayload = request.RentedPayload,
@@ -36,9 +35,9 @@ internal class PendingPacketStore : IPendingPacketStore
         return Result<Error>.Success();
     }
 
-    public PendingPacket? RemovePacket(ushort sequenceNumber)
+    public ReliablePacket? RemovePacket(ushort sequenceNumber)
     {
-        if (_pendingPackets.TryRemove(sequenceNumber, out PendingPacket? pendingPacket))
+        if (_pendingPackets.TryRemove(sequenceNumber, out ReliablePacket? pendingPacket))
         {
             pendingPacket.RentedPayload.Return();
             return pendingPacket;
