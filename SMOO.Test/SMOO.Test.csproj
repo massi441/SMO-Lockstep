@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Lockstep\Lockstep.csproj" />
+    <ProjectReference Include="..\SMOO\SMOO.csproj" />
   </ItemGroup>
 
   <ItemGroup>
