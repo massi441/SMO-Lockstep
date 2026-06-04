@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace SMOO.Util;
 
@@ -34,5 +35,11 @@ internal ref struct SpanWriter
     {
         MemoryMarshal.Write(CurrentSpan, value);
         _offset += Unsafe.SizeOf<T>();
+    }
+
+    public void WriteString(string str)
+    {
+        Encoding.UTF8.GetBytes(str, CurrentSpan);
+        _offset = Encoding.UTF8.GetByteCount(str);
     }
 }

@@ -60,8 +60,7 @@ internal class PacketConnectSynAckHandler : IPacketHandler
             writer.Write(Header);
             writer.Write(SequenceNumber);
             writer.Write(PlayerNameLength);
-
-            Encoding.UTF8.GetBytes(PlayerName, writer.CurrentSpan);
+            writer.WriteString(PlayerName);
         }
     }
 

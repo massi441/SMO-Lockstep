@@ -31,7 +31,11 @@ internal class PlayerHolder : IPlayerHolder
 
         Player player = new Player()
         {
-            Endpoint = playerInfo.Endpoint,
+            Id = new PlayerId()
+            {
+                Endpoint = playerInfo.Endpoint,
+                SessionId = Guid.NewGuid(),
+            },
             Name = playerInfo.Name,
             Room = playerInfo.Room,
         };
@@ -55,7 +59,7 @@ internal class PlayerHolder : IPlayerHolder
         return Result<Error>.Failure(Error.OperationFailed);
     }
 
-    public Player? FindPlayerByIp(IPEndPoint endpoint)
+    public Player? FindPlayerById(PlayerId id)
     {
         foreach (Player p in _players)
         {
@@ -64,7 +68,25 @@ internal class PlayerHolder : IPlayerHolder
                 continue;
             }
 
-            if (p.Endpoint.Address.Equals(endpoint.Address))
+            if (p.Id == id)
+            {
+                return p;
+            }
+        }
+
+        return null;
+    }
+
+    public Player? FindPlayerByHost(IPEndPoint endpoint)
+    {
+        foreach (Player p in _players)
+        {
+            if (p == null)
+            {
+                continue;
+            }
+
+            if (p.Endpoint.Equals(endpoint))
             {
                 return p;
             }
@@ -83,7 +105,7 @@ internal class PlayerHolder : IPlayerHolder
                 continue;
             }
 
-            if (p.Endpoint.Equals(player.Endpoint))
+            if (p.Id == player.Id)
             {
                 _players[i] = null!;
             }
@@ -109,6 +131,6 @@ internal class PlayerHolder : IPlayerHolder
 
     private bool ContainsPlayer(PlayerInfo playerInfo)
     {
-        return FindPlayerByIp(playerInfo.Endpoint) != null;
+        return FindPlayerByHost(playerInfo.Endpoint) != null;
     }
 }

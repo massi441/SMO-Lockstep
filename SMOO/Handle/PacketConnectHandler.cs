@@ -55,6 +55,7 @@ internal class PacketConnectHandler : IPacketHandler
         public required PacketHeader Header;
         public ushort SequenceNumber;
         public required byte RoomSize;
+        public required Guid SessionId;
 
         public static ushort SizeOf()
         {
@@ -113,7 +114,8 @@ internal class PacketConnectHandler : IPacketHandler
         PacketConnectAck ackPacket = new PacketConnectAck()
         {
             Header = packet.Header.WithSizeType(MemoryUtil.PayloadSize<PacketConnectAck>(), PacketType.ConnectAck),
-            RoomSize = room.PlayerHolder.MaxSize
+            RoomSize = room.PlayerHolder.MaxSize,
+            SessionId = newPlayer.Id.SessionId
         };
 
         ackPacket.Serialize(ackBuffer.Span);
@@ -140,7 +142,7 @@ internal class PacketConnectHandler : IPacketHandler
     {
         foreach (Room room in _context.RoomHolder.GetRooms())
         {
-            Player? p = room.PlayerHolder.FindPlayerByIp(sender);
+            Player? p = room.PlayerHolder.FindPlayerByHost(sender);
             if (p != null)
             {
                 player = p;

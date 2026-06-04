@@ -13,5 +13,7 @@ internal interface IPlayerHolder
 
     Result<Player, Error> RegisterPlayer(in PlayerInfo playerInfo);
     Result<Error> UnregisterPlayer(Player player);
-    Player? FindPlayerByIp(IPEndPoint endpoint);
+
+    Player? FindPlayerByHost(IPEndPoint endpoint);
+    Player? FindPlayerById(PlayerId id);
 }

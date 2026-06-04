@@ -73,9 +73,7 @@ internal class Room
                     continue;
                 }
 
-                long start = Stopwatch.GetTimestamp();
                 packetHandler.Handle(packet, this, player);
-                _context.Logger.LogTrace("Handled {PacketType} in {Elapsed}μs", packet.Header.Type, Stopwatch.GetElapsedTime(start).TotalMicroseconds);
 
                 packet.RentedBuffer.Return();
             }
@@ -106,7 +104,7 @@ internal class Room
             return true;
         }
 
-        player = PlayerHolder.FindPlayerByIp(sender)!;
+        player = PlayerHolder.FindPlayerByHost(sender);
 
         return player != null;
     }

@@ -3,6 +3,7 @@ import struct
 import sys
 import threading
 import time
+import uuid
 
 MAGIC   = 0x534D4F4F  # "SMOO"
 VERSION = 1
@@ -62,9 +63,10 @@ def decode_payload(ptype, data):
         seq_str = f"seq={seq} "
         rest = raw[SEQ_SIZE:]
 
-    if ptype == PTYPE_CONNECT_ACK and len(rest) >= 2:
-        room_size = struct.unpack_from("<H", rest, 0)[0]
-        return f"{seq_str}RoomSize={room_size}"
+    if ptype == PTYPE_CONNECT_ACK and len(rest) >= 17:
+        room_size = rest[0]
+        session_id = uuid.UUID(bytes_le=bytes(rest[1:17]))
+        return f"{seq_str}RoomSize={room_size} SessionId={session_id}"
     elif ptype == PTYPE_PLAYER_JOIN_ROOM and len(rest) >= 1:
         name_len = rest[0]
         name = rest[1:1 + name_len].decode("utf-8", errors="replace") if name_len > 0 else ""
