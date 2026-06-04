@@ -1,5 +1,7 @@
 ﻿using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 using SMOO.Protocol;
+using SMOO.Server;
 using SMOO.Services.Interface;
 using SMOO.Util;
 
@@ -8,9 +10,15 @@ namespace SMOO.Services.Impl;
 internal class ReliablePacketStore : IReliablePacketStore
 {
     private ushort _nextSequenceNumber = 0;
+    private readonly ServerContext _context;
     private readonly ConcurrentDictionary<ushort, ReliablePacket> _pendingPackets = [];
 
     public ConcurrentDictionary<ushort, ReliablePacket> PendingPackets => _pendingPackets;
+
+    public ReliablePacketStore(ServerContext context)
+    {
+        _context = context;
+    }
 
     public Result<Error> UploadPacket(ReliablePacketRequest request)
     {
@@ -27,10 +35,13 @@ internal class ReliablePacketStore : IReliablePacketStore
             SequenceNumber = _nextSequenceNumber
         };
 
+
         WriteSequence(pendingPacket.RentedPayload.Ref, pendingPacket.SequenceNumber);
 
         _pendingPackets[_nextSequenceNumber] = pendingPacket;
         _nextSequenceNumber++;
+
+        _context.Logger.LogTrace("Uploaded reliable packet with sequence number #{SequenceNumber}", pendingPacket.SequenceNumber);
 
         return Result<Error>.Success();
     }
@@ -39,6 +50,7 @@ internal class ReliablePacketStore : IReliablePacketStore
     {
         if (_pendingPackets.TryRemove(sequenceNumber, out ReliablePacket? pendingPacket))
         {
+            _context.Logger.LogTrace("Removing and freeing buffer used by reliable packet #{SequenceNumber}", sequenceNumber);
             pendingPacket.RentedPayload.Return();
             return pendingPacket;
         }

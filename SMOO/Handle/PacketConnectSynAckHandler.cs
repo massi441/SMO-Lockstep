@@ -55,27 +55,25 @@ internal class PacketConnectSynAckHandler : IPacketHandler
         }
     }
 
-    public void Handle(Packet packet, Room room)
+    public void Handle(Packet packet, Room room, Player? player)
     {
-        Player player = room.PlayerHolder.FindPlayerByIp(packet.Sender)!;
-
         PacketConnectSynAckPayload synAckPayload = new PacketConnectSynAckPayload(packet.Payload);
 
         ReliablePacket? ackPacket = room.Broadcaster.ReliablePacketStore.RemovePacket(synAckPayload.SequenceNumber);
 
         if (ackPacket == null)
         {
-            _context.Logger.LogWarning("Invalid SYN ACK sequence number ({SequenceNumber}) received by {PlayerName} in Room #{RoomId}, broadcast will be skipped", synAckPayload.SequenceNumber, player.Name, room.Id);
+            _context.Logger.LogWarning("Invalid SYN ACK sequence number ({SequenceNumber}) received by {PlayerName} in Room #{RoomId}, broadcast will be skipped", synAckPayload.SequenceNumber, player?.Name, room.Id);
             return;
         }
 
         PacketPlayerJoinRoom joinPacket = new PacketPlayerJoinRoom()
         {
             Header = packet.Header.WithSizeType(MemoryUtil.PayloadSize<PacketPlayerJoinRoom>(), PacketType.PlayerJoinRoom),
-            PlayerNameLength = (byte)player.Name.Length
+            PlayerNameLength = (byte)player!.Name.Length
         };
 
-        // the name is of variable length, so we write the base members of the struct, followed by the name
+        // the name is of variable length, so we write the base members of the struct, followed by the name directly into the buffer
         int bufferSize = PacketPlayerJoinRoom.SizeOf() + joinPacket.PlayerNameLength;
         RentedBuffer joinRoomBuffer = new RentedBuffer(bufferSize);
 

@@ -17,7 +17,7 @@ internal class PlayerHolder : IPlayerHolder
         _players = new Player[Math.Min(size, Config.MaxRoomSize)];
     }
 
-    public Result<Player, Error> RegisterPlayer(PlayerInfo playerInfo)
+    public Result<Player, Error> RegisterPlayer(in PlayerInfo playerInfo)
     {
         if (ContainsPlayer(playerInfo))
         {

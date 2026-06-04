@@ -18,20 +18,20 @@ internal class RoomHolder : IRoomHolder
         }
 
         IPlayerHolder playerHolder = new PlayerHolder();
-        IRoomBroadcaster roomBroadcaster = new RoomBroadcaster(context, new ReliablePacketStore());
+        IRoomBroadcaster roomBroadcaster = new RoomBroadcaster(context, new ReliablePacketStore(context));
 
         _rooms.Add(nextId, new Room(nextId, context, playerHolder, roomBroadcaster));
 
         return nextId;
     }
 
-    public bool RemoveRoom(ushort id)
+    public async Task<bool> RemoveRoom(ushort id)
     {
         if (_rooms.TryGetValue(id, out Room? room))
         {
             if (room != null)
             {
-                room.Shutdown();
+                await room.Shutdown();
                 _rooms.Remove(id);
                 return true;
             }

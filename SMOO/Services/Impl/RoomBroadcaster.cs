@@ -63,6 +63,8 @@ internal class RoomBroadcaster : IRoomBroadcaster
         }
         else
         {
+            PacketType packetType = pendingPacket.Header.Type; // need to capture here as packet store frees the rented buffer
+
             ReliablePacket? expiredPacket = _resendStore.RemovePacket(pendingPacket.SequenceNumber);
             if (expiredPacket == null)
             {
@@ -75,7 +77,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
                 Result<Error> disconnectResult = _context.PlayerDisconnector.Disconnect(pendingPacket.Player);
                 if (disconnectResult.IsSuccess)
                 {
-                    _context.Logger.LogWarning("Disconnected player {PlayerName} for not Acking {PacketType} packet (#{SequenceNumber}) in room #{RoomId}", pendingPacket.Player.Name, pendingPacket.Header.Type, pendingPacket.SequenceNumber, pendingPacket.Player.Room.Id);
+                    _context.Logger.LogWarning("Disconnected player {PlayerName} for not Acking {PacketType} packet (#{SequenceNumber}) in room #{RoomId}", pendingPacket.Player.Name, packetType, pendingPacket.SequenceNumber, pendingPacket.Player.Room.Id);
                 }
                 else
                 {

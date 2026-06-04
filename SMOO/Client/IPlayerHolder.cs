@@ -11,7 +11,7 @@ internal interface IPlayerHolder
     byte PlayerCount { get; }
     byte OtherPlayerCount => (byte)(PlayerCount - 1);
 
-    Result<Player, Error> RegisterPlayer(PlayerInfo playerInfo);
+    Result<Player, Error> RegisterPlayer(in PlayerInfo playerInfo);
     Result<Error> UnregisterPlayer(Player player);
     Player? FindPlayerByIp(IPEndPoint endpoint);
 }

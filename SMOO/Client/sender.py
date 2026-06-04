@@ -37,7 +37,7 @@ HEADER_SIZE   = struct.calcsize(HEADER_FORMAT)
 SEQ_SIZE      = 2  # ushort sequence number prepended to server-reliable payloads
 
 # Types the server sends reliably (each has a leading seq ushort in the payload)
-SERVER_RELIABLE_PTYPES = {PTYPE_CONNECT_ACK, PTYPE_PLAYER_JOIN_ROOM}
+SERVER_RELIABLE_PTYPES = {PTYPE_CONNECT_ACK, PTYPE_PLAYER_JOIN_ROOM, PTYPE_DISCONNECT}
 
 def build_packet(ptype, room_id, payload=b""):
     header = struct.pack(HEADER_FORMAT, MAGIC, ptype, FLAGS, VERSION, room_id, len(payload))
@@ -106,12 +106,13 @@ def receive_loop(sock, server):
                 if len(data) >= HEADER_SIZE + SEQ_SIZE:
                     seq = struct.unpack_from("<H", data, HEADER_SIZE)[0]
                     if ptype == PTYPE_CONNECT_ACK:
-                        # Complete the 3-way handshake
                         syn_ack = build_packet(PTYPE_CONNECT_SYN_ACK, header["room_id"], struct.pack("<H", seq))
                         send(sock, syn_ack, server)
                     elif ptype in SERVER_RELIABLE_PTYPES:
                         ack = build_packet(PTYPE_ACK, header["room_id"], struct.pack("<H", seq))
                         send(sock, ack, server)
+                        if ptype == PTYPE_DISCONNECT:
+                            print("\n  !! disconnected from room by server")
             else:
                 print(f"\n  << {len(data)} bytes from {sender} (unrecognised) | {data.hex(' ')}")
             print("> ", end="", flush=True)

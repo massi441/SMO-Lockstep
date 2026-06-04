@@ -63,11 +63,11 @@ internal class PacketConnectHandler : IPacketHandler
         }
     }
 
-    public void Handle(Packet packet, Room room)
+    public void Handle(Packet packet, Room room, Player? player)
     {
-        if (IsInOtherRoom(packet.Sender, out Player takenRoomPlayer, out Room takenRoom))
+        if (IsInOtherRoom(packet.Sender, out player, out Room takenRoom))
         {
-            _context.Logger.LogWarning("Player {Name} ({Address}:{Port}) is already in room {RoomId}", takenRoomPlayer.Name, takenRoomPlayer.Endpoint.Address, takenRoomPlayer.Endpoint.Port, takenRoom.Id);
+            _context.Logger.LogWarning("Player {Name} ({Address}:{Port}) is already in room {RoomId}", player.Name, player.Endpoint.Address, player.Endpoint.Port, takenRoom.Id);
             return;
         }
 
@@ -85,7 +85,7 @@ internal class PacketConnectHandler : IPacketHandler
             Room = room,
         };
 
-        Result<Player, Error> newPlayerResult = room.PlayerHolder.RegisterPlayer(playerInfo);
+        Result<Player, Error> newPlayerResult = room.PlayerHolder.RegisterPlayer(in playerInfo);
         if (newPlayerResult.IsFailed)
         {
             _context.Logger.LogError("Failed to register {PlayerName} in Room #{RoomId}", playerInfo.Name, room.Id);
@@ -98,7 +98,7 @@ internal class PacketConnectHandler : IPacketHandler
             return;
         }
 
-        _context.Logger.LogTrace("Player {Name} joined #{RoomId}, waiting for a confirmation with sequence #", newPlayerResult.Data!.Name, packet.Header.RoomId);
+        _context.Logger.LogTrace("Player {Name} joined #{RoomId}, waiting for a confirmation...", newPlayerResult.Data!.Name, packet.Header.RoomId);
     }
 
     private bool AckConnect(Player newPlayer, Packet packet, Room room)

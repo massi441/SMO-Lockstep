@@ -74,7 +74,7 @@ internal class Room
                 }
 
                 long start = Stopwatch.GetTimestamp();
-                packetHandler.Handle(packet, this);
+                packetHandler.Handle(packet, this, player);
                 _context.Logger.LogTrace("Handled {PacketType} in {Elapsed}μs", packet.Header.Type, Stopwatch.GetElapsedTime(start).TotalMicroseconds);
 
                 packet.RentedBuffer.Return();
@@ -83,9 +83,10 @@ internal class Room
         catch (Exception ex)
         {
             _context.Logger.LogError(ex, "Error in Room #{RoomId}", Id);
+            return;
         }
 
-        //_context.Logger.LogInformation("Room #{RoomId} was shutdown sucessfully", Id);
+        _context.Logger.LogInformation("Room #{RoomId} was shutdown sucessfully", Id);
     }
 
     private void ProcessCommands()

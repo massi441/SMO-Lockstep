@@ -3,7 +3,7 @@ using SMOO.Server;
 
 namespace SMOO.Client;
 
-internal class PlayerInfo
+internal readonly struct PlayerInfo
 {
     public required IPEndPoint Endpoint { get; init; }
     public required string Name { get; init; }
