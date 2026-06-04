@@ -27,23 +27,22 @@ internal class PacketConnectHandler : IPacketHandler
     /// <summary>
     /// The payload sent by clients who request to connect to a room
     /// </summary>
-    private readonly ref struct PacketConnectPayload
+    private struct PacketConnectPayload : IDeserializableStruct
     {
-        private readonly ReadOnlySpan<byte> _buffer;
-
         /// <summary>
         /// The length of the player's name, starting at offset 0x0
         /// </summary>
-        public readonly byte NameLength => _buffer[0];
+        public byte NameLength { get; private set; }
 
         /// <summary>
         /// The name of the player, starting at offset 0x1
         /// </summary>
-        public readonly string Name => Encoding.UTF8.GetString(_buffer.Slice(0x1, NameLength));
+        public string Name { get; private set; }
 
-        public PacketConnectPayload(ReadOnlySpan<byte> buffer)
+        public void Deserialize(ReadOnlySpan<byte> source)
         {
-            _buffer = buffer;
+            NameLength = source[0];
+            Name = Encoding.UTF8.GetString(source.Slice(0x1, NameLength));
         }
     }
 
@@ -51,15 +50,20 @@ internal class PacketConnectHandler : IPacketHandler
     /// The packet sent to a player that just connected to a room
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct PacketConnectAck
+    private struct PacketConnectAck : ISerializableStruct
     {
         public required PacketHeader Header;
         public ushort SequenceNumber;
-        public required ushort RoomSize;
+        public required byte RoomSize;
 
         public static ushort SizeOf()
         {
             return (ushort)Unsafe.SizeOf<PacketConnectAck>();
+        }
+
+        public readonly void Serialize(Span<byte> destination)
+        {
+            MemoryMarshal.Write(destination, this);
         }
     }
 
@@ -71,7 +75,8 @@ internal class PacketConnectHandler : IPacketHandler
             return;
         }
 
-        PacketConnectPayload connectPayload = new PacketConnectPayload(packet.Payload);
+        PacketConnectPayload connectPayload = PacketSerializer.Deserialize<PacketConnectPayload>(packet.Payload);
+
         if (!IsValidNameLength(connectPayload.NameLength))
         {
             _context.Logger.LogWarning("Invalid player name length {Length}", connectPayload.NameLength);
@@ -104,11 +109,14 @@ internal class PacketConnectHandler : IPacketHandler
     private bool AckConnect(Player newPlayer, Packet packet, Room room)
     {
         RentedBuffer ackBuffer = MemoryUtil.Rent<PacketConnectAck>();
-        ackBuffer.Write(new PacketConnectAck()
+
+        PacketConnectAck ackPacket = new PacketConnectAck()
         {
             Header = packet.Header.WithSizeType(MemoryUtil.PayloadSize<PacketConnectAck>(), PacketType.ConnectAck),
             RoomSize = room.PlayerHolder.MaxSize
-        });
+        };
+
+        ackPacket.Serialize(ackBuffer.Span);
 
         ReliablePacketRequest ackRequest = new ReliablePacketRequest()
         {

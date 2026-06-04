@@ -2,7 +2,6 @@
 using System.Runtime.InteropServices;
 using SMOO.Protocol;
 using SMOO.Server;
-using SMOO.Util;
 using Microsoft.Extensions.Logging;
 using SMOO.Client;
 
@@ -23,31 +22,27 @@ internal class PacketAckHandler : IPacketHandler
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private readonly ref struct PacketAckPayload
+    private ref struct PacketAckPayload : IDeserializableStruct
     {
-        private readonly ReadOnlySpan<byte> _buffer;
-
         /// <summary>
         /// The UInt16 sequence number of the ack packet, starting at offset 0x0
         /// </summary>
-        public ushort SequenceNumber => BinaryPrimitives.ReadUInt16LittleEndian(_buffer);
+        public ushort SequenceNumber;
 
-        public PacketAckPayload(ReadOnlySpan<byte> buffer)
+        public void Deserialize(ReadOnlySpan<byte> source)
         {
-            _buffer = buffer;
+            SequenceNumber = BinaryPrimitives.ReadUInt16LittleEndian(source);
         }
     }
 
     public void Handle(Packet packet, Room room, Player? player)
     {
-        PacketAckPayload payload = new PacketAckPayload(packet.Payload);
+        PacketAckPayload payload = PacketSerializer.Deserialize<PacketAckPayload>(packet.Payload);
 
-        ushort sequenceNumber = payload.SequenceNumber;
-
-        ReliablePacket? pendingPacket = room.Broadcaster.ReliablePacketStore.RemovePacket(sequenceNumber);
+        ReliablePacket? pendingPacket = room.Broadcaster.ReliablePacketStore.RemovePacket(payload.SequenceNumber);
         if (pendingPacket == null)
         {
-            _context.Logger.LogError("The packet #{SequenceNumber} was not found in room #{RoomId}", sequenceNumber, room.Id);
+            _context.Logger.LogError("The packet #{SequenceNumber} was not found in room #{RoomId}", payload.SequenceNumber, room.Id);
             return;
         }
 

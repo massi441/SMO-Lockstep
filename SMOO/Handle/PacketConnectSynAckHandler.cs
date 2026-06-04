@@ -24,18 +24,16 @@ internal class PacketConnectSynAckHandler : IPacketHandler
     /// <summary>
     /// The payload sent by a new player, to confirm that they have joined a room
     /// </summary>
-    private readonly ref struct PacketConnectSynAckPayload
+    private ref struct PacketConnectSynAckPayload : IDeserializableStruct
     {
-        private readonly ReadOnlySpan<byte> _buffer;
-
         /// <summary>
         /// The sequence number of the SynAck packet, starting at offset 0x0
         /// </summary>
-        public readonly ushort SequenceNumber => BinaryPrimitives.ReadUInt16LittleEndian(_buffer);
+        public ushort SequenceNumber { get; private set; }
 
-        public PacketConnectSynAckPayload(ReadOnlySpan<byte> buffer)
+        public void Deserialize(ReadOnlySpan<byte> source)
         {
-            _buffer = buffer;
+            SequenceNumber = BinaryPrimitives.ReadUInt16LittleEndian(source);
         }
     }
 
@@ -43,24 +41,37 @@ internal class PacketConnectSynAckHandler : IPacketHandler
     /// The packet sent to a room, to notify that a new player has joined
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct PacketPlayerJoinRoom
+    private struct PacketPlayerJoinRoom : ISerializableStruct
     {
         public required PacketHeader Header;
         public ushort SequenceNumber;
-        public byte PlayerNameLength;
+        public required byte PlayerNameLength;
+        public required string PlayerName;
 
-        public static int SizeOf()
+        public readonly int SizeOf()
         {
-            return Unsafe.SizeOf<PacketPlayerJoinRoom>();
+            return PacketHeader.SizeOf() + sizeof(ushort) + sizeof(byte) + (sizeof(byte) * PlayerNameLength);
+        }
+
+        public readonly void Serialize(Span<byte> destination)
+        {
+            SpanWriter writer = new SpanWriter(destination);
+
+            writer.Write(Header);
+            writer.Write(SequenceNumber);
+            writer.Write(PlayerNameLength);
+
+            Encoding.UTF8.GetBytes(PlayerName, writer.CurrentSpan);
         }
     }
 
     public void Handle(Packet packet, Room room, Player? player)
     {
-        PacketConnectSynAckPayload synAckPayload = new PacketConnectSynAckPayload(packet.Payload);
+        PacketConnectSynAckPayload synAckPayload = new PacketConnectSynAckPayload();
+
+        synAckPayload.Deserialize(packet.Payload);
 
         ReliablePacket? ackPacket = room.Broadcaster.ReliablePacketStore.RemovePacket(synAckPayload.SequenceNumber);
-
         if (ackPacket == null)
         {
             _context.Logger.LogWarning("Invalid SYN ACK sequence number ({SequenceNumber}) received by {PlayerName} in Room #{RoomId}, broadcast will be skipped", synAckPayload.SequenceNumber, player?.Name, room.Id);
@@ -70,17 +81,13 @@ internal class PacketConnectSynAckHandler : IPacketHandler
         PacketPlayerJoinRoom joinPacket = new PacketPlayerJoinRoom()
         {
             Header = packet.Header.WithSizeType(MemoryUtil.PayloadSize<PacketPlayerJoinRoom>(), PacketType.PlayerJoinRoom),
-            PlayerNameLength = (byte)player!.Name.Length
+            PlayerNameLength = (byte)player!.Name.Length,
+            PlayerName = player!.Name,
         };
 
-        // the name is of variable length, so we write the base members of the struct, followed by the name directly into the buffer
-        int bufferSize = PacketPlayerJoinRoom.SizeOf() + joinPacket.PlayerNameLength;
-        RentedBuffer joinRoomBuffer = new RentedBuffer(bufferSize);
+        RentedBuffer joinRoomBuffer = new RentedBuffer(joinPacket.SizeOf());
 
-        joinRoomBuffer.Write(joinPacket);
-
-        Encoding.UTF8.GetBytes(player.Name.AsSpan(), joinRoomBuffer.SpanAt(PacketPlayerJoinRoom.SizeOf()));
-
+        PacketSerializer.Serialize(joinRoomBuffer.Span, in joinPacket);
 
         ReliablePacketBroadcastRequest request = new ReliablePacketBroadcastRequest()
         {
@@ -89,7 +96,6 @@ internal class PacketConnectSynAckHandler : IPacketHandler
         };
 
         Result<Error> broadcastResult = room.Broadcaster.BroadcastReliablyExcept(room, player, request);
-
         if (broadcastResult.IsFailed)
         {
             _context.Logger.LogError("Failed to broadcast new player in room");
