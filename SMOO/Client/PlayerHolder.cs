@@ -12,7 +12,7 @@ internal class PlayerHolder : IPlayerHolder
     public IEnumerable<Player> Players => _players.Where(p => p != null);
     public byte PlayerCount => (byte)Players.Count();
 
-    public PlayerHolder(byte size = 4)
+    public PlayerHolder(byte size = Config.DefaultRoomSize)
     {
         _players = new Player[Math.Min(size, Config.MaxRoomSize)];
     }

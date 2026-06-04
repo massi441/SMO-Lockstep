@@ -25,7 +25,7 @@ internal class PacketConnectHandler : IPacketHandler
     }
 
     /// <summary>
-    /// The payload sent by clients who request to connect to a room
+    /// The payload sent by a client who requests to connect to a room
     /// </summary>
     private struct PacketConnectPayload : IDeserializableStruct
     {
@@ -98,13 +98,15 @@ internal class PacketConnectHandler : IPacketHandler
             return;
         }
 
-        if (!AckConnect(newPlayerResult.Data!, packet, room))
+        Player newPlayer = newPlayerResult.Data!;
+
+        if (!AckConnect(newPlayer, packet, room))
         {
             _context.Logger.LogError("Failed to upload connect ACK packet, new player will be ignored");
             return;
         }
 
-        _context.Logger.LogTrace("Player {Name} joined Room #{RoomId}, waiting for a confirmation...", newPlayerResult.Data!.Name, packet.Header.RoomId);
+        _context.Logger.LogTrace("Player {Name} joined Room #{RoomId}, waiting for a confirmation...", newPlayer.Name, packet.Header.RoomId);
     }
 
     private bool AckConnect(Player newPlayer, Packet packet, Room room)
