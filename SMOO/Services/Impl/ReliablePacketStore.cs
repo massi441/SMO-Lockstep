@@ -35,13 +35,12 @@ internal class ReliablePacketStore : IReliablePacketStore
             SequenceNumber = _nextSequenceNumber
         };
 
-
         WriteSequence(pendingPacket.RentedPayload.Ref, pendingPacket.SequenceNumber);
 
         _pendingPackets[_nextSequenceNumber] = pendingPacket;
         _nextSequenceNumber++;
 
-        _context.Logger.LogTrace("Uploaded reliable packet with sequence number #{SequenceNumber}", pendingPacket.SequenceNumber);
+        _context.Logger.LogTrace("Uploaded reliable packet with sequence number #{SequenceNumber}, and {Tries} tries", pendingPacket.SequenceNumber, pendingPacket.Tries);
 
         return Result<Error>.Success();
     }

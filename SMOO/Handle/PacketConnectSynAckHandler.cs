@@ -81,7 +81,14 @@ internal class PacketConnectSynAckHandler : IPacketHandler
 
         Encoding.UTF8.GetBytes(player.Name.AsSpan(), joinRoomBuffer.SpanAt(PacketPlayerJoinRoom.SizeOf()));
 
-        Result<Error> broadcastResult = room.Broadcaster.BroadcastReliablyExcept(room, player, new ReliablePacketBroadcastRequest(joinRoomBuffer));
+
+        ReliablePacketBroadcastRequest request = new ReliablePacketBroadcastRequest()
+        {
+            RentedPayload = joinRoomBuffer,
+            MaxRetries = Config.MaxRetries
+        };
+
+        Result<Error> broadcastResult = room.Broadcaster.BroadcastReliablyExcept(room, player, request);
 
         if (broadcastResult.IsFailed)
         {

@@ -98,7 +98,7 @@ internal class PacketConnectHandler : IPacketHandler
             return;
         }
 
-        _context.Logger.LogTrace("Player {Name} joined #{RoomId}, waiting for a confirmation...", newPlayerResult.Data!.Name, packet.Header.RoomId);
+        _context.Logger.LogTrace("Player {Name} joined Room #{RoomId}, waiting for a confirmation...", newPlayerResult.Data!.Name, packet.Header.RoomId);
     }
 
     private bool AckConnect(Player newPlayer, Packet packet, Room room)
@@ -114,6 +114,7 @@ internal class PacketConnectHandler : IPacketHandler
         {
             Receiver = newPlayer,
             RentedPayload = ackBuffer,
+            MaxRetries = Config.MaxRetries
         };
 
         Result<Error> uploadResult = room.Broadcaster.ReliablePacketStore.UploadPacket(ackRequest);
