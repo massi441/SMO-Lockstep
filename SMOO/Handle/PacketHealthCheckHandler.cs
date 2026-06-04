@@ -1,8 +1,9 @@
-﻿using Lockstep.Protocol;
-using Lockstep.Server;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using SMOO.Client;
+using SMOO.Protocol;
+using SMOO.Server;
 
-namespace Lockstep.Net;
+namespace SMOO.Handle;
 
 internal class PacketHealthCheckHandler : IPacketHandler
 {
@@ -15,9 +16,9 @@ internal class PacketHealthCheckHandler : IPacketHandler
 
     public uint MinPayloadSize => 0;
 
-    public void Handle(Packet packet, Room room)
+    public void Handle(Packet packet, Room room, Player? player)
     {
         _context.Logger.LogTrace("Health check accepted");
-        _context.PacketSender.Send(packet.Sender, packet.Payload);
+        _context.PacketSender.Send(packet.Sender, packet.RentedBuffer.Span);
     }
 }

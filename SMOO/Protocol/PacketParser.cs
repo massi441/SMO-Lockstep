@@ -1,15 +1,19 @@
-﻿using Lockstep.Util;
+﻿using Microsoft.Extensions.Logging;
+using SMOO.Server;
+using SMOO.Util;
 
-namespace Lockstep.Protocol;
+namespace SMOO.Protocol;
 
 internal static class PacketParser
 {
-    internal static Result<Error> ParseHeader(Packet packet)
+    internal static Result<Error> ParseHeader(Packet packet, ServerContext context)
     {
         if (!IsValidHeaderSize(packet.RentedBuffer.Span))
         {
             return Result<Error>.Failure(Error.InvalidHeaderSize);
         }
+
+        //context.Logger.LogTrace("Incoming packet: {Header}, Payload Size: {Size}", packet.Header, packet.Payload.Length);
 
         ref PacketHeader header = ref packet.Header;
 
@@ -28,7 +32,7 @@ internal static class PacketParser
             return Result<Error>.Failure(Error.InvalidVersion);
         }
 
-        if (!IsValidPayloadSize(packet.RentedBuffer.Span, header.PayloadSize))
+        if (!IsValidPayloadSize(packet.Payload, header.PayloadSize))
         {
             return Result<Error>.Failure(Error.InvalidPayloadSize);
         }
@@ -43,7 +47,7 @@ internal static class PacketParser
 
     private static bool IsValidPayloadSize(ReadOnlySpan<byte> payload, ushort payloadSize)
     {
-        return payloadSize == payload.Length - PacketHeader.SizeOf();
+        return payloadSize == payload.Length;
     }
 
     private static bool IsValidHeaderSize(ReadOnlySpan<byte> span)

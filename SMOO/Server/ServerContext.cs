@@ -1,7 +1,7 @@
-﻿using Lockstep.Services;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using SMOO.Services.Interface;
 
-namespace Lockstep.Server;
+namespace SMOO.Server;
 
 internal class ServerContext
 {
@@ -24,6 +24,11 @@ internal class ServerContext
     /// The player disconnector used across the server
     /// </summary>
     public required IPlayerDisconnector PlayerDisconnector { get; init; }
+
+    /// <summary>
+    /// The packet handler provider used across the server
+    /// </summary>
+    public required IPacketHandlerProvider PacketHandlerProvider { get; init; }
 
     /// <summary>
     /// The cancellation used to signal a server shutdown

@@ -1,14 +1,14 @@
-﻿using Lockstep.Net;
-using Lockstep.Protocol;
-using Lockstep.Services;
-using Lockstep.Util;
+﻿using SMOO.Protocol;
+using SMOO.Services;
+using SMOO.Util;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Channels;
+using SMOO.Services.Impl;
 
-namespace Lockstep.Server;
+namespace SMOO.Server;
 
 internal class UdpServer
 {
@@ -68,7 +68,7 @@ internal class UdpServer
                     _packets.Writer.TryWrite(new Packet
                     {
                         Sender = (IPEndPoint)receiveResult.RemoteEndPoint,
-                        RentedBuffer = new RentedBuffer<byte>(buffer, receiveResult.ReceivedBytes)
+                        RentedBuffer = new RentedBuffer(buffer, receiveResult.ReceivedBytes)
                     });
                 }
                 else
@@ -115,6 +115,7 @@ internal class UdpServer
             RoomHolder = new RoomHolder(),
             PacketSender = new PacketSenderUdp(socket),
             PlayerDisconnector = new PlayerDisconnector(),
+            PacketHandlerProvider = new PacketHandlerProvider(),
             CancellationToken = cancellationToken
         };
 

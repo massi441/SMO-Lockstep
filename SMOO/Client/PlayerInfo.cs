@@ -1,9 +1,9 @@
 ﻿using System.Net;
-using Lockstep.Server;
+using SMOO.Server;
 
-namespace Lockstep.Client;
+namespace SMOO.Client;
 
-internal class PlayerInfo
+internal readonly struct PlayerInfo
 {
     public required IPEndPoint Endpoint { get; init; }
     public required string Name { get; init; }

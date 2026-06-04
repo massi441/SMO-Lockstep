@@ -1,14 +1,14 @@
-﻿using System.Buffers;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Threading.Channels;
-using Lockstep.Client;
-using Lockstep.Net;
-using Lockstep.Protocol;
+using SMOO.Client;
+using SMOO.Protocol;
 using Microsoft.Extensions.Logging;
+using SMOO.Services.Interface;
+using SMOO.Handle;
 
-namespace Lockstep.Server;
+namespace SMOO.Server;
 
 internal class Room
 {
@@ -47,8 +47,7 @@ internal class Room
     private async Task ProcessAsync()
     {
         try
-            {
-
+        {
             await foreach (Packet packet in Packets.Reader.ReadAllAsync())
             {
                 ProcessCommands();
@@ -61,32 +60,33 @@ internal class Room
 
                 player?.RefreshLastSeen();
 
-                IPacketHandler? packetHandler = PacketHandlerProvider.CreateHandler(packet.Header.Type, _context);
+                IPacketHandler? packetHandler = _context.PacketHandlerProvider.GetShared(packet.Header.Type, _context);
                 if (packetHandler == null)
                 {
-                    _context.Logger.LogWarning("No handler found for packet type {PacketType}", (int)packet.Header.Type);
+                    _context.Logger.LogWarning("No handler found for packet type {PacketType}", packet.Header.Type);
                     continue;
                 }
 
                 if (packet.Payload.Length < packetHandler.MinPayloadSize)
                 {
-                    _context.Logger.LogWarning("A {PacketType} packet of invalid size ({PacketSize}) was requested. Minimum required: {Minimum}", packet.Header.Type, packet.Payload.Length, packetHandler.MinPayloadSize);
+                    _context.Logger.LogWarning("{PacketType} packet of invalid size ({PacketSize}) was requested. Minimum required: {Minimum}", packet.Header.Type, packet.Payload.Length, packetHandler.MinPayloadSize);
                     continue;
                 }
 
                 long start = Stopwatch.GetTimestamp();
-                packetHandler.Handle(packet, this);
+                packetHandler.Handle(packet, this, player);
                 _context.Logger.LogTrace("Handled {PacketType} in {Elapsed}μs", packet.Header.Type, Stopwatch.GetElapsedTime(start).TotalMicroseconds);
 
-                ArrayPool<byte>.Shared.Return(packet.RentedBuffer.Ref);
+                packet.RentedBuffer.Return();
             }
         } 
         catch (Exception ex)
         {
             _context.Logger.LogError(ex, "Error in Room #{RoomId}", Id);
+            return;
         }
 
-        //_context.Logger.LogInformation("Room #{RoomId} was shutdown sucessfully", Id);
+        _context.Logger.LogInformation("Room #{RoomId} was shutdown sucessfully", Id);
     }
 
     private void ProcessCommands()
@@ -100,13 +100,13 @@ internal class Room
 
     private bool IsAllowedInRoom(IPEndPoint sender, PacketHeader header, out Player? player)
     {
-        if (header.Type == PacketType.RequestJoinRoom)
+        if (header.Type == PacketType.Connect)
         {
             player = null;
             return true;
         }
 
-        player = PlayerHolder.FindPlayerByHost(sender)!;
+        player = PlayerHolder.FindPlayerByIp(sender)!;
 
         return player != null;
     }

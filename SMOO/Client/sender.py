@@ -4,40 +4,41 @@ import sys
 import threading
 import time
 
-MAGIC = 0x534D4F4C  # "SMOL"
+MAGIC   = 0x534D4F4F  # "SMOO"
 VERSION = 1
 FLAGS   = 0
-PORT = 5001
+PORT    = 5001
 
-# PacketType enum order
-PTYPE_JOIN_ROOM           = 0
-PTYPE_JOIN_ROOM_SELF      = 1
-PTYPE_JOIN_ROOM_BROADCAST = 2
-PTYPE_LEAVE_ROOM          = 3
-PTYPE_PLAYER_INPUT        = 4
-PTYPE_HEALTH_CHECK        = 5
-PTYPE_PING                = 6
-PTYPE_ACK                 = 7
+# PacketType enum order (matches server's PacketType enum)
+PTYPE_CONNECT          = 0
+PTYPE_CONNECT_ACK      = 1
+PTYPE_CONNECT_SYN_ACK  = 2
+PTYPE_DISCONNECT       = 3
+PTYPE_PLAYER_JOIN_ROOM = 4
+PTYPE_PLAYER_INPUT     = 5
+PTYPE_HEALTH_CHECK     = 6
+PTYPE_PING             = 7
+PTYPE_ACK              = 8
 
 PTYPE_NAMES = {
-    PTYPE_JOIN_ROOM:           "JoinRoom",
-    PTYPE_JOIN_ROOM_SELF:      "JoinRoomSelf",
-    PTYPE_JOIN_ROOM_BROADCAST: "JoinRoomBroadcast",
-    PTYPE_LEAVE_ROOM:          "LeaveRoom",
-    PTYPE_PLAYER_INPUT:        "PlayerInput",
-    PTYPE_HEALTH_CHECK:        "HealthCheck",
-    PTYPE_PING:                "Ping",
-    PTYPE_ACK:                 "Ack",
+    PTYPE_CONNECT:          "Connect",
+    PTYPE_CONNECT_ACK:      "ConnectAck",
+    PTYPE_CONNECT_SYN_ACK:  "ConnectSynAck",
+    PTYPE_DISCONNECT:       "Disconnect",
+    PTYPE_PLAYER_JOIN_ROOM: "PlayerJoinRoom",
+    PTYPE_PLAYER_INPUT:     "PlayerInput",
+    PTYPE_HEALTH_CHECK:     "HealthCheck",
+    PTYPE_PING:             "Ping",
+    PTYPE_ACK:              "Ack",
 }
 
 HEADER_FORMAT = "<IBBBHH"   # Magic(4) Type(1) Flags(1) Version(1) RoomId(2) PayloadSize(2)
 HEADER_SIZE   = struct.calcsize(HEADER_FORMAT)
-SEQ_SIZE      = 2  # ushort sequence number in reliable packets
+SEQ_SIZE      = 2  # ushort sequence number prepended to server-reliable payloads
 
-RELIABLE_PTYPES = {PTYPE_JOIN_ROOM, PTYPE_JOIN_ROOM_SELF, PTYPE_JOIN_ROOM_BROADCAST, PTYPE_LEAVE_ROOM, PTYPE_ACK}
-ECHO_PTYPES     = {PTYPE_PING, PTYPE_HEALTH_CHECK}
+# Types the server sends reliably (each has a leading seq ushort in the payload)
+SERVER_RELIABLE_PTYPES = {PTYPE_CONNECT_ACK, PTYPE_PLAYER_JOIN_ROOM, PTYPE_DISCONNECT}
 
-# [Magic: 4 LE][Type: 1][Flags: 1][Version: 1][RoomId: 2 LE][PayloadSize: 2 LE][Payload]
 def build_packet(ptype, room_id, payload=b""):
     header = struct.pack(HEADER_FORMAT, MAGIC, ptype, FLAGS, VERSION, room_id, len(payload))
     return header + payload
@@ -51,28 +52,36 @@ def parse_header(data):
     return {"type": ptype, "flags": flags, "version": version, "room_id": room_id, "payload_size": payload_size}
 
 def decode_payload(ptype, data):
-    is_reliable = ptype in RELIABLE_PTYPES
-    payload_start = HEADER_SIZE + (SEQ_SIZE if is_reliable else 0)
-    payload = data[payload_start:]
+    # Read everything after the header; don't trust PayloadSize for variable-length packets
+    raw = data[HEADER_SIZE:]
 
     seq_str = ""
-    if is_reliable and len(data) >= HEADER_SIZE + SEQ_SIZE:
-        seq = struct.unpack_from("<H", data, HEADER_SIZE)[0]
+    rest = raw
+    if ptype in SERVER_RELIABLE_PTYPES and len(raw) >= SEQ_SIZE:
+        seq = struct.unpack_from("<H", raw, 0)[0]
         seq_str = f"seq={seq} "
+        rest = raw[SEQ_SIZE:]
 
-    if ptype in (PTYPE_JOIN_ROOM, PTYPE_JOIN_ROOM_BROADCAST, PTYPE_LEAVE_ROOM) and len(payload) >= 1:
-        port = struct.unpack_from("B", payload, 0)[0]
-        return f"{seq_str}PlayerPort={port}"
-    elif ptype == PTYPE_JOIN_ROOM_SELF and len(payload) >= 2:
-        self_port, other_count = struct.unpack_from("BB", payload, 0)
-        ports = [struct.unpack_from("B", payload, 2 + i)[0] for i in range(other_count) if 2 + i < len(payload)]
-        return f"{seq_str}SelfPort={self_port}, OtherPlayers={other_count}, Ports={ports}"
-    elif ptype == PTYPE_ACK and len(payload) >= 2:
-        seq = struct.unpack_from("<H", payload, 0)[0]
-        return f"{seq_str}AckedSeq={seq}"
-    if ptype in ECHO_PTYPES and len(payload) > 0:
-        return f"{seq_str}echo={payload.decode('utf-8', errors='replace')}"
-    return f"{seq_str}({len(payload)} payload bytes)"
+    if ptype == PTYPE_CONNECT_ACK and len(rest) >= 2:
+        room_size = struct.unpack_from("<H", rest, 0)[0]
+        return f"{seq_str}RoomSize={room_size}"
+    elif ptype == PTYPE_PLAYER_JOIN_ROOM and len(rest) >= 1:
+        name_len = rest[0]
+        name = rest[1:1 + name_len].decode("utf-8", errors="replace") if name_len > 0 else ""
+        return f"{seq_str}Player={name!r}"
+    elif ptype == PTYPE_CONNECT and len(raw) >= 1:
+        name_len = raw[0]
+        name = raw[1:1 + name_len].decode("utf-8", errors="replace") if name_len > 0 else ""
+        return f"name={name!r}"
+    elif ptype == PTYPE_CONNECT_SYN_ACK and len(raw) >= 2:
+        seq = struct.unpack_from("<H", raw, 0)[0]
+        return f"AckedSeq={seq}"
+    elif ptype == PTYPE_ACK and len(raw) >= 2:
+        seq = struct.unpack_from("<H", raw, 0)[0]
+        return f"AckedSeq={seq}"
+    elif ptype == PTYPE_PING:
+        return f"echo={raw.decode('utf-8', errors='replace')}" if raw else "(empty)"
+    return f"({len(raw)} payload bytes)"
 
 def send(sock, packet, server):
     sock.sendto(packet, server)
@@ -92,12 +101,18 @@ def receive_loop(sock, server):
                 ptype = header["type"]
                 ptype_name = PTYPE_NAMES.get(ptype, f"Unknown({ptype})")
                 payload_str = decode_payload(ptype, data)
-                print(f"\n  << {ptype_name} from {sender} | room={header['room_id']} flags={header['flags']:#04x} | {payload_str}")
+                print(f"\n  << {ptype_name} from {sender} | room={header['room_id']} | {payload_str}")
 
-                if ptype in RELIABLE_PTYPES and len(data) >= HEADER_SIZE + SEQ_SIZE:
+                if len(data) >= HEADER_SIZE + SEQ_SIZE:
                     seq = struct.unpack_from("<H", data, HEADER_SIZE)[0]
-                    ack = build_packet(PTYPE_ACK, header["room_id"], struct.pack("<H", seq))
-                    send(sock, ack, server)
+                    if ptype == PTYPE_CONNECT_ACK:
+                        syn_ack = build_packet(PTYPE_CONNECT_SYN_ACK, header["room_id"], struct.pack("<H", seq))
+                        send(sock, syn_ack, server)
+                    elif ptype in SERVER_RELIABLE_PTYPES:
+                        ack = build_packet(PTYPE_ACK, header["room_id"], struct.pack("<H", seq))
+                        send(sock, ack, server)
+                        if ptype == PTYPE_DISCONNECT:
+                            print("\n  !! disconnected from room by server")
             else:
                 print(f"\n  << {len(data)} bytes from {sender} (unrecognised) | {data.hex(' ')}")
             print("> ", end="", flush=True)
@@ -106,15 +121,18 @@ def receive_loop(sock, server):
 
 # --- packet builders ---
 
-def packet_join_room():
+def packet_connect():
     room_id = int(input("room id: "))
     name = input("player name: ").encode("utf-8")
+    if not (1 <= len(name) <= 30):
+        print(f"  name must be 1–30 bytes (got {len(name)})")
+        return None
     payload = bytes([len(name)]) + name
-    return build_packet(ptype=PTYPE_JOIN_ROOM, room_id=room_id, payload=payload)
+    return build_packet(ptype=PTYPE_CONNECT, room_id=room_id, payload=payload)
 
-def packet_leave_room():
+def packet_disconnect():
     room_id = int(input("room id: "))
-    return build_packet(ptype=PTYPE_LEAVE_ROOM, room_id=room_id)
+    return build_packet(ptype=PTYPE_DISCONNECT, room_id=room_id)
 
 def packet_player_input():
     room_id = int(input("room id: "))
@@ -141,12 +159,12 @@ def spam_player_input(sock, server):
 # --- menu ---
 
 PACKETS = [
-    ("join room",           packet_join_room),
-    ("leave room",          packet_leave_room),
-    ("player input",        packet_player_input),
-    ("health check",        packet_health_check),
-    ("ping",                packet_ping),
-    ("spam player input",   None),
+    ("connect",           packet_connect),
+    ("disconnect",        packet_disconnect),
+    ("player input",      packet_player_input),
+    ("health check",      packet_health_check),
+    ("ping",              packet_ping),
+    ("spam player input", None),
 ]
 
 def main():
@@ -172,11 +190,14 @@ def main():
         if not choice.isdigit() or not (1 <= int(choice) <= len(PACKETS)):
             print(f"enter a number between 1 and {len(PACKETS)}")
             continue
-        name, builder = PACKETS[int(choice) - 1]
+        idx = int(choice) - 1
+        name, builder = PACKETS[idx]
         if builder is None:
             spam_player_input(sock, server)
         else:
-            send(sock, builder(), server)
+            packet = builder()
+            if packet is not None:
+                send(sock, packet, server)
 
     sock.close()
 

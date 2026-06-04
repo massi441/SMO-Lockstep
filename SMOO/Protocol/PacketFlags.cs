@@ -1,5 +1,5 @@
 ﻿
-namespace Lockstep.Protocol;
+namespace SMOO.Protocol;
 
 [Flags]
 internal enum PacketFlags : byte

@@ -1,29 +1,34 @@
-﻿using Lockstep.Client;
-using Lockstep.Protocol;
-using Lockstep.Server;
-using Lockstep.Util;
+﻿using SMOO.Client;
+using SMOO.Protocol;
+using SMOO.Server;
+using SMOO.Util;
 using Microsoft.Extensions.Logging;
 
-namespace Lockstep.Net;
+namespace SMOO.Handle;
 
-internal class PacketLeaveRoomHandler : IPacketHandler
+internal class PacketDisconnectHandler : IPacketHandler
 {
     private readonly ServerContext _context;
     public uint MinPayloadSize => 0;
 
-    public PacketLeaveRoomHandler(ServerContext context)
+    public PacketDisconnectHandler(ServerContext context)
     {
         _context = context;
     }
 
-    public void Handle(Packet packet, Room room)
+    public void Handle(Packet packet, Room room, Player? player)
     {
-        Player? player = room.PlayerHolder.FindPlayerByHost(packet.Sender)!;
+        if (player == null)
+        {
+            _context.Logger.LogWarning("Player was null in PacketDisconnect handler");
+            return;
+        }
 
         Result<Error> disconnectResult = _context.PlayerDisconnector.Disconnect(player);
         if (disconnectResult.IsFailed)
         {
             _context.Logger.LogError("Unable to disconnect {PlayerName} in room #{RoomId}", player.Name, room.Id);
+            return;
         }
 
         _context.Logger.LogWarning("Player {Name} left room {RoomId}", player.Name, room.Id);

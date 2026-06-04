@@ -1,13 +1,14 @@
 ﻿using System.Net;
-using Lockstep.Protocol;
-using Lockstep.Util;
+using SMOO.Protocol;
+using SMOO.Util;
 
-namespace Lockstep.Client;
+namespace SMOO.Client;
 
 internal class PlayerHolder : IPlayerHolder
 {
     private readonly Player[] _players;
 
+    public byte MaxSize => (byte)_players.Length;
     public IEnumerable<Player> Players => _players.Where(p => p != null);
     public byte PlayerCount => (byte)Players.Count();
 
@@ -16,14 +17,14 @@ internal class PlayerHolder : IPlayerHolder
         _players = new Player[Math.Min(size, Config.MaxRoomSize)];
     }
 
-    public Result<Player, Error> RegisterPlayer(PlayerInfo playerInfo)
+    public Result<Player, Error> RegisterPlayer(in PlayerInfo playerInfo)
     {
         if (ContainsPlayer(playerInfo))
         {
             return Result<Player, Error>.Failure(Error.PlayerAlreadyInRoom);
         }
 
-        if (!TryFindSlot(out int index, out byte playerPort))
+        if (!TryFindSlot(out byte index))
         {
             return Result<Player, Error>.Failure(Error.RoomFull);
         }
@@ -32,7 +33,6 @@ internal class PlayerHolder : IPlayerHolder
         {
             Endpoint = playerInfo.Endpoint,
             Name = playerInfo.Name,
-            PortNumber = playerPort,
             Room = playerInfo.Room,
         };
 
@@ -55,7 +55,7 @@ internal class PlayerHolder : IPlayerHolder
         return Result<Error>.Failure(Error.OperationFailed);
     }
 
-    public Player? FindPlayerByHost(IPEndPoint endpoint)
+    public Player? FindPlayerByIp(IPEndPoint endpoint)
     {
         foreach (Player p in _players)
         {
@@ -64,7 +64,7 @@ internal class PlayerHolder : IPlayerHolder
                 continue;
             }
 
-            if (p.Endpoint.Equals(endpoint))
+            if (p.Endpoint.Address.Equals(endpoint.Address))
             {
                 return p;
             }
@@ -90,26 +90,18 @@ internal class PlayerHolder : IPlayerHolder
         }
     }
 
-    private bool TryFindSlot(out int index, out byte playerPort)
+    private bool TryFindSlot(out byte index)
     {
         index = 0;
-        playerPort = 0;
 
         while (index < _players.Length)
         {
-            if (IsReservedPort(playerPort))
-            {
-                playerPort++;
-                continue;
-            }
-
             if (_players[index] == null)
             {
                 return true;
             }
 
             index++;
-            playerPort++;
         }
 
         return false;
@@ -117,12 +109,6 @@ internal class PlayerHolder : IPlayerHolder
 
     private bool ContainsPlayer(PlayerInfo playerInfo)
     {
-        return FindPlayerByHost(playerInfo.Endpoint) != null;
-    }
-
-    private static bool IsReservedPort(int port)
-    {
-        // 0 is for the debug controller, 2 is for cappy
-        return port == 0 || port == 2;
+        return FindPlayerByIp(playerInfo.Endpoint) != null;
     }
 }

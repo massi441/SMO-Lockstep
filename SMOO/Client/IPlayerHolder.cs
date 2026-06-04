@@ -1,15 +1,17 @@
 ﻿using System.Net;
-using Lockstep.Protocol;
-using Lockstep.Util;
+using SMOO.Protocol;
+using SMOO.Util;
 
-namespace Lockstep.Client;
+namespace SMOO.Client;
 
 internal interface IPlayerHolder
 {
-    Result<Player, Error> RegisterPlayer(PlayerInfo playerInfo);
-    Result<Error> UnregisterPlayer(Player player);
-    Player? FindPlayerByHost(IPEndPoint endpoint);
     IEnumerable<Player> Players { get; }
+    byte MaxSize { get; }
     byte PlayerCount { get; }
     byte OtherPlayerCount => (byte)(PlayerCount - 1);
+
+    Result<Player, Error> RegisterPlayer(in PlayerInfo playerInfo);
+    Result<Error> UnregisterPlayer(Player player);
+    Player? FindPlayerByIp(IPEndPoint endpoint);
 }

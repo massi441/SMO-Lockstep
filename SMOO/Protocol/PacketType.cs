@@ -1,11 +1,12 @@
-﻿namespace Lockstep.Protocol;
+﻿namespace SMOO.Protocol;
 
 internal enum PacketType : byte
 {
-    RequestJoinRoom,
-    PlayerJoinRoomSelf,
-    PlayerJoinRoomBroadcast,
-    PlayerLeaveRoom,
+    Connect,
+    ConnectAck,
+    ConnectSynAck,
+    Disconnect,
+    PlayerJoinRoom,
     PlayerInput,
     HealthCheck,
     Ping,

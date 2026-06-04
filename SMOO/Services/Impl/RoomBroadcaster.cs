@@ -1,22 +1,23 @@
 ﻿using System.Net;
-using Lockstep.Client;
-using Lockstep.Net;
-using Lockstep.Protocol;
-using Lockstep.Util;
+using SMOO.Client;
+using SMOO.Protocol;
+using SMOO.Util;
 using Microsoft.Extensions.Logging;
+using SMOO.Server;
+using SMOO.Services.Interface;
 
-namespace Lockstep.Server;
+namespace SMOO.Services.Impl;
 
 internal class RoomBroadcaster : IRoomBroadcaster
 {
     private readonly ServerContext _context;
-    private readonly IPacketPendingStore _resendStore;
+    private readonly IReliablePacketStore _resendStore;
     private readonly CancellationTokenSource _resendToken;
     private readonly Task _resendTask;
 
-    public IPacketPendingStore AckPacketStore => _resendStore;
+    public IReliablePacketStore ReliablePacketStore => _resendStore;
 
-    public RoomBroadcaster(ServerContext context, IPacketPendingStore resendStore)
+    public RoomBroadcaster(ServerContext context, IReliablePacketStore resendStore)
     {
         _context = context;
         _resendStore = resendStore;
@@ -39,7 +40,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
         _context.Logger.LogInformation("Room Broadcaster was shutdown successfully");
     }
 
-    private void ProcessAckPacket(PacketPending pendingPacket)
+    private void ProcessAckPacket(ReliablePacket pendingPacket)
     {
         if (pendingPacket.IsAlive)
         {
@@ -48,7 +49,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
                 return;
             }
 
-            Result<Error> sendResult = _context.PacketSender.Send(pendingPacket.Player.Endpoint, pendingPacket.Payload);
+            Result<Error> sendResult = _context.PacketSender.Send(pendingPacket.Player.Endpoint, pendingPacket.RentedPayload.Span);
             if (sendResult.IsSuccess)
             {
                 pendingPacket.DecrementTries();
@@ -58,17 +59,25 @@ internal class RoomBroadcaster : IRoomBroadcaster
                 _context.Logger.LogError("An error occured while trying to resend the packet");
             }
 
-            pendingPacket.RefreshTime();
+            pendingPacket.RefreshLastSent();
         }
         else
         {
-            _resendStore.RemovePacket(pendingPacket.SequenceNumber);
+            PacketType packetType = pendingPacket.Header.Type; // need to capture here as packet store frees the rented buffer
+
+            ReliablePacket? expiredPacket = _resendStore.RemovePacket(pendingPacket.SequenceNumber);
+            if (expiredPacket == null)
+            {
+                _context.Logger.LogWarning("Expired packet already removed");
+                return;
+            }
+
             pendingPacket.Player.Room.UploadCommand(() =>
             {
                 Result<Error> disconnectResult = _context.PlayerDisconnector.Disconnect(pendingPacket.Player);
                 if (disconnectResult.IsSuccess)
                 {
-                    _context.Logger.LogWarning("Disconnected player {PlayerName} for not Acking packet #{PacketId} in room #{RoomId}", pendingPacket.Player.Name, pendingPacket.SequenceNumber, pendingPacket.Player.Room.Id);
+                    _context.Logger.LogWarning("Disconnected player {PlayerName} for not Acking {PacketType} packet (#{SequenceNumber}) in room #{RoomId}", pendingPacket.Player.Name, packetType, pendingPacket.SequenceNumber, pendingPacket.Player.Room.Id);
                 }
                 else
                 {
@@ -88,11 +97,11 @@ internal class RoomBroadcaster : IRoomBroadcaster
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastAck(Room room, in PacketAckBroadcastRequest request)
+    public Result<Error> BroadcastReliably(Room room, ReliablePacketBroadcastRequest request)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
-            SendPlayerAckPacket(player, in request);
+            SendPlayerAckPacket(player, request);
         }
 
         return Result<Error>.Success();
@@ -113,13 +122,13 @@ internal class RoomBroadcaster : IRoomBroadcaster
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastAckExcept(Room room, Player sender, in PacketAckBroadcastRequest request)
+    public Result<Error> BroadcastReliablyExcept(Room room, Player sender, ReliablePacketBroadcastRequest request)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
             if (player != sender)
             {
-                SendPlayerAckPacket(player, in request);
+                SendPlayerAckPacket(player, request);
             }
         }
 
@@ -142,36 +151,36 @@ internal class RoomBroadcaster : IRoomBroadcaster
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastAckExceptWith(Room room, Player sender, in PacketAckBroadcastRequest playerRequest, in PacketAckBroadcastRequest request)
+    public Result<Error> BroadcastReliablyExceptWith(Room room, Player sender, ReliablePacketBroadcastRequest playerRequest, ReliablePacketBroadcastRequest request)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
             if (player == sender)
             {
-                SendPlayerAckPacket(sender, in playerRequest);
+                SendPlayerAckPacket(sender, playerRequest);
             }
             else
             {
-                SendPlayerAckPacket(player, in request);
+                SendPlayerAckPacket(player, request);
             }
         }
 
         return Result<Error>.Success();
     }
 
-    private void SendPlayerAckPacket(Player player, in PacketAckBroadcastRequest ackRequest)
+    private void SendPlayerAckPacket(Player player, ReliablePacketBroadcastRequest ackRequest)
     {
-        PacketPendingRequest request = new PacketPendingRequest()
+        ReliablePacketRequest request = new ReliablePacketRequest()
         {
             Receiver = player,
-            Payload = ackRequest.Payload,
+            RentedPayload = ackRequest.RentedPayload,
             MaxRetries = ackRequest.MaxRetries
         };
 
-        Result<Error> uploadResult = _resendStore.UploadPacket(in request);
+        Result<Error> uploadResult = _resendStore.UploadPacket(request);
         if (uploadResult.IsSuccess)
         {
-            _context.PacketSender.Send(player.Endpoint, request.Payload);
+            _context.PacketSender.Send(player.Endpoint, request.RentedPayload.Span);
         }
     }
 

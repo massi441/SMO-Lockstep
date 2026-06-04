@@ -1,8 +1,8 @@
 ﻿using System.Net;
-using Lockstep.Protocol;
-using Lockstep.Util;
+using SMOO.Protocol;
+using SMOO.Util;
 
-namespace Lockstep.Services;
+namespace SMOO.Services.Interface;
 
 internal interface IPacketSender
 {

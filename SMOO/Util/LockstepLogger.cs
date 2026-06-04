@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace Lockstep.Util;
+namespace SMOO.Util;
 
 internal static class LockstepLogger
 {

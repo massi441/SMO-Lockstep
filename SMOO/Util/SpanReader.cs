@@ -1,7 +1,7 @@
 ﻿using System.Buffers.Binary;
 using System.Text;
 
-namespace Lockstep.Util;
+namespace SMOO.Util;
 
 internal ref struct SpanReader
 {
