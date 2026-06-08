@@ -179,7 +179,7 @@ def packet_chat_message():
     if len(message) == 0:
         print("  message cannot be empty")
         return None
-    return build_packet(ptype=PTYPE_CHAT_MESSAGE, room_id=room_id, payload=message)
+    return build_packet(ptype=PTYPE_CHAT_MESSAGE, room_id=room_id, payload=b"\x00\x00" + message)
 
 def spam_player_input(sock, server):
     room_id = _require_room()
