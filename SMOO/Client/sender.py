@@ -40,7 +40,7 @@ HEADER_SIZE   = struct.calcsize(HEADER_FORMAT)
 SEQ_SIZE      = 2  # ushort sequence number prepended to server-reliable payloads
 
 # Types the server sends reliably (each has a leading seq ushort in the payload)
-SERVER_RELIABLE_PTYPES = {PTYPE_CONNECT_ACK, PTYPE_PLAYER_JOIN_ROOM, PTYPE_DISCONNECT}
+SERVER_RELIABLE_PTYPES = {PTYPE_CONNECT_ACK, PTYPE_PLAYER_JOIN_ROOM, PTYPE_DISCONNECT, PTYPE_CHAT_MESSAGE}
 
 _room_id = None  # None means not connected
 

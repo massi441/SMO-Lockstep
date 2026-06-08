@@ -1,5 +1,4 @@
-﻿using System.Net;
-using SMOO.Client;
+﻿using SMOO.Client;
 using SMOO.Protocol;
 using SMOO.Util;
 using Microsoft.Extensions.Logging;
