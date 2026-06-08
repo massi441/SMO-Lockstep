@@ -1,4 +1,4 @@
-﻿namespace SMOO.Protocol;
+﻿namespace SMOO.Util;
 
 internal interface ISerializableStruct
 {

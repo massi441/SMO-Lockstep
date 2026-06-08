@@ -11,6 +11,7 @@ internal enum PacketType : byte
     HealthCheck,
     Ping,
     Ack,
+    Chat,
 
     /// <summary>
     /// A reserved packet type for server side validation
