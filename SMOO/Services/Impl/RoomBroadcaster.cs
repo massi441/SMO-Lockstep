@@ -104,11 +104,11 @@ internal class RoomBroadcaster : IRoomBroadcaster
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastExcept(Room room, IPEndPoint sender, ReadOnlySpan<byte> payload)
+    public Result<Error> BroadcastExcept(Room room, Player sender, ReadOnlySpan<byte> payload)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
-            if (player.Endpoint.Equals(sender))
+            if (player == sender)
             {
                 continue;
             }
@@ -132,11 +132,11 @@ internal class RoomBroadcaster : IRoomBroadcaster
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastExceptWith(Room room, IPEndPoint sender, ReadOnlySpan<byte> senderPayload, ReadOnlySpan<byte> payload)
+    public Result<Error> BroadcastExceptWith(Room room, Player sender, ReadOnlySpan<byte> senderPayload, ReadOnlySpan<byte> payload)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
-            if (player.Endpoint.Equals(sender))
+            if (player == sender)
             {
                 _context.PacketSender.Send(player.Endpoint, senderPayload);
                 continue;
