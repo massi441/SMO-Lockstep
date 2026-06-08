@@ -54,8 +54,7 @@ internal class PacketConnectHandler : IPacketHandler
     {
         public required PacketHeader Header;
         public ushort SequenceNumber;
-        public required byte RoomSize;
-        public required Guid SessionId;
+        public required ClientInfo ClientInfo;
 
         public static ushort SizeOf()
         {
@@ -116,8 +115,12 @@ internal class PacketConnectHandler : IPacketHandler
         PacketConnectAck ackPacket = new PacketConnectAck()
         {
             Header = packet.Header.WithSizeType(MemoryUtil.PayloadSize<PacketConnectAck>(), PacketType.ConnectAck),
-            RoomSize = room.PlayerHolder.MaxSize,
-            SessionId = newPlayer.Id.SessionId
+            ClientInfo = new ClientInfo()
+            {
+                RoomSize = room.PlayerHolder.MaxSize,
+                SessionId = newPlayer.Id.SessionId,
+                ActivePlayerCount = room.PlayerHolder.ActivePlayerCount
+            }
         };
 
         ackPacket.Serialize(ackBuffer.Span);
