@@ -20,6 +20,7 @@ PTYPE_PLAYER_INPUT     = 5
 PTYPE_HEALTH_CHECK     = 6
 PTYPE_PING             = 7
 PTYPE_ACK              = 8
+PTYPE_CHAT_MESSAGE     = 9
 
 PTYPE_NAMES = {
     PTYPE_CONNECT:          "Connect",
@@ -31,6 +32,7 @@ PTYPE_NAMES = {
     PTYPE_HEALTH_CHECK:     "HealthCheck",
     PTYPE_PING:             "Ping",
     PTYPE_ACK:              "Ack",
+    PTYPE_CHAT_MESSAGE:     "ChatMessage",
 }
 
 HEADER_FORMAT = "<IBBBHH"   # Magic(4) Type(1) Flags(1) Version(1) RoomId(2) PayloadSize(2)
@@ -39,6 +41,14 @@ SEQ_SIZE      = 2  # ushort sequence number prepended to server-reliable payload
 
 # Types the server sends reliably (each has a leading seq ushort in the payload)
 SERVER_RELIABLE_PTYPES = {PTYPE_CONNECT_ACK, PTYPE_PLAYER_JOIN_ROOM, PTYPE_DISCONNECT}
+
+_room_id = None  # None means not connected
+
+def _require_room():
+    if _room_id is None:
+        print("  connect first")
+        return None
+    return _room_id
 
 def build_packet(ptype, room_id, payload=b""):
     header = struct.pack(HEADER_FORMAT, MAGIC, ptype, FLAGS, VERSION, room_id, len(payload))
@@ -83,6 +93,8 @@ def decode_payload(ptype, data):
         return f"AckedSeq={seq}"
     elif ptype == PTYPE_PING:
         return f"echo={raw.decode('utf-8', errors='replace')}" if raw else "(empty)"
+    elif ptype == PTYPE_CHAT_MESSAGE:
+        return f"msg={raw.decode('utf-8', errors='replace')!r}" if raw else "(empty)"
     return f"({len(raw)} payload bytes)"
 
 def send(sock, packet, server):
@@ -95,6 +107,7 @@ def send(sock, packet, server):
         print(f"  >> {len(packet)} bytes to {server}")
 
 def receive_loop(sock, server):
+    global _room_id
     while True:
         try:
             data, sender = sock.recvfrom(1024)
@@ -108,12 +121,14 @@ def receive_loop(sock, server):
                 if len(data) >= HEADER_SIZE + SEQ_SIZE:
                     seq = struct.unpack_from("<H", data, HEADER_SIZE)[0]
                     if ptype == PTYPE_CONNECT_ACK:
-                        syn_ack = build_packet(PTYPE_CONNECT_SYN_ACK, header["room_id"], struct.pack("<H", seq))
+                        _room_id = header["room_id"]
+                        syn_ack = build_packet(PTYPE_CONNECT_SYN_ACK, _room_id, struct.pack("<H", seq))
                         send(sock, syn_ack, server)
                     elif ptype in SERVER_RELIABLE_PTYPES:
                         ack = build_packet(PTYPE_ACK, header["room_id"], struct.pack("<H", seq))
                         send(sock, ack, server)
                         if ptype == PTYPE_DISCONNECT:
+                            _room_id = None
                             print("\n  !! disconnected from room by server")
             else:
                 print(f"\n  << {len(data)} bytes from {sender} (unrecognised) | {data.hex(' ')}")
@@ -133,23 +148,43 @@ def packet_connect():
     return build_packet(ptype=PTYPE_CONNECT, room_id=room_id, payload=payload)
 
 def packet_disconnect():
-    room_id = int(input("room id: "))
+    global _room_id
+    room_id = _require_room()
+    if room_id is None:
+        return None
+    _room_id = None
     return build_packet(ptype=PTYPE_DISCONNECT, room_id=room_id)
 
 def packet_player_input():
-    room_id = int(input("room id: "))
+    room_id = _require_room()
+    if room_id is None:
+        return None
     return build_packet(ptype=PTYPE_PLAYER_INPUT, room_id=room_id)
 
 def packet_health_check():
-    room_id = int(input("room id: "))
+    room_id = _require_room()
+    if room_id is None:
+        return None
     payload = input("payload: ").encode("utf-8")
     return build_packet(ptype=PTYPE_HEALTH_CHECK, room_id=room_id, payload=payload)
 
 def packet_ping():
     return build_packet(ptype=PTYPE_PING, room_id=0)
 
+def packet_chat_message():
+    room_id = _require_room()
+    if room_id is None:
+        return None
+    message = input("message: ").encode("utf-8")
+    if len(message) == 0:
+        print("  message cannot be empty")
+        return None
+    return build_packet(ptype=PTYPE_CHAT_MESSAGE, room_id=room_id, payload=message)
+
 def spam_player_input(sock, server):
-    room_id = int(input("room id: "))
+    room_id = _require_room()
+    if room_id is None:
+        return
     count = int(input("packet count: "))
     packet = build_packet(ptype=PTYPE_PLAYER_INPUT, room_id=room_id)
     print(f"  sending {count} PlayerInput packets at 60fps...")
@@ -166,6 +201,7 @@ PACKETS = [
     ("player input",      packet_player_input),
     ("health check",      packet_health_check),
     ("ping",              packet_ping),
+    ("chat message",      packet_chat_message),
     ("spam player input", None),
 ]
 

@@ -32,5 +32,5 @@ internal readonly struct Packet
     /// <summary>
     /// The Length of the packet
     /// </summary>
-    public int Length => RentedBuffer.UsedBytes;
+    public int FullSize => RentedBuffer.UsedBytes;
 }

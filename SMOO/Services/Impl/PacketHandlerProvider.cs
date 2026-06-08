@@ -12,6 +12,7 @@ internal class PacketHandlerProvider : IPacketHandlerProvider
     private PacketDisconnectHandler? _disconnectHandler;
     private PacketAckHandler? _ackHandler;
     private PacketHealthCheckHandler? _healthCheckHandler;
+    private PacketChatMessageHandler? _chatHandler;
 
     public IPacketHandler? GetShared(PacketType packetType, ServerContext context)
     {
@@ -22,6 +23,7 @@ internal class PacketHandlerProvider : IPacketHandlerProvider
             PacketType.Disconnect => _disconnectHandler ??= new PacketDisconnectHandler(context),
             PacketType.HealthCheck => _healthCheckHandler ??= new PacketHealthCheckHandler(context),
             PacketType.Ack => _ackHandler ??= new PacketAckHandler(context),
+            PacketType.ChatMessage => _chatHandler ??= new PacketChatMessageHandler(context),
             _ => null
         };
     }
@@ -35,6 +37,7 @@ internal class PacketHandlerProvider : IPacketHandlerProvider
             PacketType.Disconnect => new PacketDisconnectHandler(context),
             PacketType.HealthCheck => new PacketHealthCheckHandler(context),
             PacketType.Ack => new PacketAckHandler(context),
+            PacketType.ChatMessage => new PacketChatMessageHandler(context),
             _ => null
         };
     }
