@@ -59,20 +59,7 @@ internal class ReliablePacketStore : IReliablePacketStore
 
     private bool IsFull()
     {
-        if (_nextSequenceNumber > 0)
-        {
-            return false;
-        }
-
-        for (ushort i = 0; i < ushort.MaxValue; i++)
-        {
-            if (!_pendingPackets.ContainsKey(i))
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return _pendingPackets.Count > ushort.MaxValue;
     }
 
     private static void WriteSequence(byte[] payload, ushort sequenceNumber)
