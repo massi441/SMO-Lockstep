@@ -94,7 +94,7 @@ def decode_payload(ptype, data):
     elif ptype == PTYPE_PING:
         return f"echo={raw.decode('utf-8', errors='replace')}" if raw else "(empty)"
     elif ptype == PTYPE_CHAT_MESSAGE:
-        return f"msg={raw.decode('utf-8', errors='replace')!r}" if raw else "(empty)"
+        return f"{seq_str}msg={rest.decode('utf-8', errors='replace')!r}" if rest else "(empty)"
     return f"({len(raw)} payload bytes)"
 
 def send(sock, packet, server):
