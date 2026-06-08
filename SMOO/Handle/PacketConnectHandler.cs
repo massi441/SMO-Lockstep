@@ -72,7 +72,7 @@ internal class PacketConnectHandler : IPacketHandler
         if (IsInOtherRoom(packet.SenderIp, out Player? takenPlayer, out Room takenRoom))
         {
             _context.Logger.LogWarning("Player {Name} ({Address}:{Port}) is already in room {RoomId}", takenPlayer.Name, takenPlayer.Endpoint.Address, takenPlayer.Endpoint.Port, takenRoom.Id);
-            return;
+            goto cleanup;
         }
 
         PacketConnectPayload connectPayload = PacketSerializer.Deserialize<PacketConnectPayload>(packet.Payload);
@@ -80,7 +80,7 @@ internal class PacketConnectHandler : IPacketHandler
         if (!IsValidNameLength(connectPayload.NameLength))
         {
             _context.Logger.LogWarning("Invalid player name length {Length}", connectPayload.NameLength);
-            return;
+            goto cleanup;
         }
 
         PlayerInfo playerInfo = new PlayerInfo()
@@ -94,18 +94,21 @@ internal class PacketConnectHandler : IPacketHandler
         if (newPlayerResult.IsFailed)
         {
             _context.Logger.LogError("Failed to register {PlayerName} in Room #{RoomId}", playerInfo.Name, room.Id);
-            return;
+            goto cleanup;
         }
 
         Player newPlayer = newPlayerResult.Data!;
 
-        if (!AckConnect(newPlayer, ref packet, room))
+        if (AckConnect(newPlayer, ref packet, room)) // ownership of buffer gets transferred to reliable store
         {
-            _context.Logger.LogError("Failed to upload connect ACK packet, new player will be ignored");
+            _context.Logger.LogTrace("Player {Name} joined Room #{RoomId}, waiting for a confirmation...", newPlayer.Name, packet.Header.RoomId);
             return;
         }
 
-        _context.Logger.LogTrace("Player {Name} joined Room #{RoomId}, waiting for a confirmation...", newPlayer.Name, packet.Header.RoomId);
+         _context.Logger.LogError("Failed to upload connect ACK packet, new player will be ignored");
+
+        cleanup:
+        packet.RentedBuffer.Return();
     }
 
     private bool AckConnect(Player newPlayer, ref ParsedPacket packet, Room room)

@@ -46,11 +46,11 @@ internal readonly struct RentedBuffer
 
     public void Return()
     {
-        ArrayPool<byte>.Shared.Return(RentRef);
-    }
+        if (RentRef == null)
+        {
+            return;
+        } 
 
-    public void Write<T>(in T structure) where T : struct
-    {
-        MemoryMarshal.Write(RentRef, in structure);
+        ArrayPool<byte>.Shared.Return(RentRef);
     }
 }

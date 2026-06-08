@@ -12,14 +12,14 @@ internal interface IRoomBroadcaster
     /// </summary>
     IReliablePacketStore ReliablePacketStore { get; }
 
-    Result<Error> Broadcast(Room room, ReadOnlySpan<byte> payload);
-    Result<Error> BroadcastReliably(Room room, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries);
+    void Broadcast(Room room, ReadOnlySpan<byte> payload);
+    void BroadcastReliably(Room room, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries);
 
-    Result<Error> BroadcastExcept(Room room, Player ignoredPlayer, ReadOnlySpan<byte> payload);
-    Result<Error> BroadcastReliablyExcept(Room room, Player ignoredPlayer, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries);
+    void BroadcastExcept(Room room, Player ignoredPlayer, ReadOnlySpan<byte> payload);
+    void BroadcastReliablyExcept(Room room, Player ignoredPlayer, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries);
 
-    Result<Error> BroadcastExceptWith(Room room, ReadOnlySpan<byte> roomPayload, Player ignoredPlayer, ReadOnlySpan<byte> ignoredPlayerPayload);
-    Result<Error> BroadcastReliablyExceptWith(Room room, RentedBuffer roomPayload, Player ignoredPlayer, RentedBuffer ignoredPlayerPayload, byte maxRetries = Config.MaxRetries);
+    void BroadcastExceptWith(Room room, ReadOnlySpan<byte> roomPayload, Player ignoredPlayer, ReadOnlySpan<byte> ignoredPlayerPayload);
+    void BroadcastReliablyExceptWith(Room room, RentedBuffer roomPayload, Player ignoredPlayer, RentedBuffer ignoredPlayerPayload, byte maxRetries = Config.MaxRetries);
 
     Task Shutdown();
 }

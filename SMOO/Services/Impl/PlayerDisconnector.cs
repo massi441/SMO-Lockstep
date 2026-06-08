@@ -10,7 +10,7 @@ namespace SMOO.Services.Impl;
 internal class PlayerDisconnector : IPlayerDisconnector
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct PacketDisconnect
+    private struct PacketDisconnect : ISerializableStruct
     {
         public required PacketHeader Header;
         public ushort SequenceNumber;
@@ -24,13 +24,23 @@ internal class PlayerDisconnector : IPlayerDisconnector
         {
             return sizeof(byte);
         }
+
+        public void Serialize(Span<byte> destination)
+        {
+            MemoryMarshal.Write(destination, this);
+        }
     }
 
     public Result<Error> Disconnect(Player player)
     {
-        RentedBuffer broadcastBuffer = MemoryUtil.Rent<PacketDisconnect>();
+        Result<Error> unregisterResult = player.Room.PlayerHolder.UnregisterPlayer(player);
+        if (unregisterResult.IsFailed)
+        {
+            return unregisterResult;
+        }
 
-        broadcastBuffer.Write(new PacketDisconnect()
+        RentedBuffer broadcastBuffer = MemoryUtil.Rent<PacketDisconnect>();
+        PacketDisconnect disconnectPacket = new PacketDisconnect()
         {
             Header = new PacketHeader()
             {
@@ -40,14 +50,12 @@ internal class PlayerDisconnector : IPlayerDisconnector
                 RoomId = player.Room.Id,
                 PayloadSize = PacketDisconnect.SizeOfPayload()
             }
-        });
+        };
 
-        Result<Error> unregisterResult = player.Room.PlayerHolder.UnregisterPlayer(player);
-        if (unregisterResult.IsFailed)
-        {
-            return unregisterResult;
-        }
+        PacketSerializer.Serialize(broadcastBuffer.UsedSpan, disconnectPacket);
 
-        return player.Room.Broadcaster.BroadcastReliably(player.Room, broadcastBuffer);
+        player.Room.Broadcaster.BroadcastReliably(player.Room, broadcastBuffer);
+
+        return Result<Error>.Success();
     }
 }

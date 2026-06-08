@@ -50,8 +50,8 @@ internal class ReliablePacketStore : IReliablePacketStore
     {
         if (_pendingPackets.TryRemove(sequenceNumber, out ReliablePacket? pendingPacket))
         {
-            _context.Logger.LogTrace("Removing and freeing buffer used by reliable packet #{SequenceNumber}", sequenceNumber);
             pendingPacket.RentedBuffer.Return();
+            _context.Logger.LogTrace("Removed and free'd buffer used by reliable packet #{SequenceNumber}", sequenceNumber);
             return pendingPacket;
         }
 

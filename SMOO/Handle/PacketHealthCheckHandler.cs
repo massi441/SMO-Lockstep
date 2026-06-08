@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using SMOO.Client;
 using SMOO.Protocol;
 using SMOO.Server;
 
@@ -20,5 +19,7 @@ internal class PacketHealthCheckHandler : IPacketHandler
     {
         _context.Logger.LogTrace("Health check accepted");
         _context.PacketSender.Send(packet.SenderIp, packet.RentedBuffer.UsedSpan);
+
+        packet.RentedBuffer.Return();
     }
 }

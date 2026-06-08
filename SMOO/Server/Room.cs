@@ -80,8 +80,6 @@ internal class Room
                 };
 
                 packetHandler.Handle(parsedPacket, this);
-
-                packet.RentedBuffer.Return();
             }
         } 
         catch (Exception ex)

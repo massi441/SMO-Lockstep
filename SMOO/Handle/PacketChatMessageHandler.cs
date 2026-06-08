@@ -26,6 +26,7 @@ internal class PacketChatMessageHandler : IPacketHandler
     {
         if (packet.Payload.Length == 0)
         {
+            packet.RentedBuffer.Return();
             _context.Logger.LogTrace("Empty Message received in room #{RoomId}, skipping broadcast", room.Id);
             return;
         }
@@ -33,6 +34,6 @@ internal class PacketChatMessageHandler : IPacketHandler
         string message = Encoding.UTF8.GetString(packet.Payload);
         _context.Logger.LogTrace("{PlayerName} sent a message in room #{RoomId}: {Message}", packet.SenderPlayer!.Name, room.Id, message);
 
-        room.Broadcaster.BroadcastReliablyExcept(room, packet.SenderPlayer, packet.RentedBuffer, Config.MaxRetries);
+        room.Broadcaster.BroadcastReliablyExcept(room, packet.SenderPlayer, packet.RentedBuffer, Config.MaxRetries); // transfers ownership of the buffer to the reliable packet store
     }
 }

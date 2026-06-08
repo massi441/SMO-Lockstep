@@ -42,9 +42,12 @@ internal class PacketAckHandler : IPacketHandler
         ReliablePacket? pendingPacket = room.Broadcaster.ReliablePacketStore.RemovePacket(payload.SequenceNumber);
         if (pendingPacket == null)
         {
+            packet.RentedBuffer.Return();
             _context.Logger.LogError("The packet #{SequenceNumber} was not found in room #{RoomId}", payload.SequenceNumber, room.Id);
             return;
         }
+
+        packet.RentedBuffer.Return();
 
         _context.Logger.LogTrace("Successfully Acked {PacketType} packet #{PacketNumber} from {PlayerName} in Room #{RoomId}", packet.Header.Type, pendingPacket.SequenceNumber, pendingPacket.Receiver.Name, room.Id);
     }

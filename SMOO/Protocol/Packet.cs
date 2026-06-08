@@ -30,7 +30,7 @@ internal readonly struct Packet
     public ReadOnlySpan<byte> Payload => RentedBuffer.RentRef.AsSpan(PacketHeader.SizeOf(), Header.PayloadSize);
 
     /// <summary>
-    /// The Length of the packet
+    /// The full size of the packet
     /// </summary>
     public int FullSize => RentedBuffer.UsedBytes;
 }

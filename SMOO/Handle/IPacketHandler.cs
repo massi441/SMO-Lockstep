@@ -1,5 +1,4 @@
-﻿using SMOO.Client;
-using SMOO.Protocol;
+﻿using SMOO.Protocol;
 using SMOO.Server;
 
 namespace SMOO.Handle;
@@ -13,6 +12,7 @@ internal interface IPacketHandler
 
     /// <summary>
     /// Handles an incoming packet for the given room.
+    /// The packet handler is responsible for managing the lifetime of the rented buffer.
     /// </summary>
     /// <param name="packet">The incoming packet to handle</param>
     /// <param name="room">The room the packet was for</param>
