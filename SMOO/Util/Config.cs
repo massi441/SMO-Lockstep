@@ -9,6 +9,6 @@ internal class Config
     public const byte MaxPlayerNameLength = 30;
     public const byte DefaultRoomSize = 4;
     public const byte MaxRoomSize = 10;
-    public static readonly TimeSpan ResendTick = TimeSpan.FromMilliseconds(30);
-    public static readonly TimeSpan MinimumResendSpan = TimeSpan.FromMilliseconds(350);
+    public static readonly TimeSpan ResendThreadTick = TimeSpan.FromMilliseconds(250);
+    public static readonly TimeSpan MinimumResendDelay = TimeSpan.FromMilliseconds(350); // ideally store that on the packet itself, based on RTT
 }

@@ -34,7 +34,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
                 ProcessAckPacket(pair.Value);
             }
 
-            await Task.Delay(Config.ResendTick);
+            await Task.Delay(Config.ResendThreadTick);
         }
 
         _context.Logger.LogInformation("Room Broadcaster was shutdown successfully");
@@ -50,15 +50,12 @@ internal class RoomBroadcaster : IRoomBroadcaster
             }
 
             Result<Error> sendResult = _context.PacketSender.Send(pendingPacket.Player.Endpoint, pendingPacket.RentedPayload.Span);
-            if (sendResult.IsSuccess)
-            {
-                pendingPacket.DecrementTries();
-            }
-            else
+            if (!sendResult.IsSuccess)
             {
                 _context.Logger.LogError("An error occured while trying to resend the packet");
             }
 
+            pendingPacket.DecrementTries();
             pendingPacket.RefreshLastSent();
         }
         else

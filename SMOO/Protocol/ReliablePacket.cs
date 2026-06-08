@@ -24,7 +24,7 @@ internal class ReliablePacket
     public DateTime LastSent { get; private set; } = DateTime.UtcNow;
     public bool IsAlive => _tries > 0;
     public bool IsDead => _tries <= 0;
-    public bool IsResendTime => (DateTime.UtcNow - LastSent).TotalMilliseconds > Config.MinimumResendSpan.TotalMilliseconds;
+    public bool IsResendTime => (DateTime.UtcNow - LastSent).TotalMilliseconds > Config.MinimumResendDelay.TotalMilliseconds;
 
     public void RefreshLastSent()
     {

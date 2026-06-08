@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using SMOO.Server;
+﻿using SMOO.Server;
 using SMOO.Util;
 
 namespace SMOO.Protocol;
