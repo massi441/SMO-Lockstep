@@ -16,8 +16,10 @@ internal class PacketDisconnectHandler : IPacketHandler
         _context = context;
     }
 
-    public void Handle(Packet packet, Room room, Player? player)
+    public void Handle(ParsedPacket packet, Room room)
     {
+        Player? player = packet.SenderPlayer;
+
         if (player == null)
         {
             _context.Logger.LogWarning("Player was null in PacketDisconnect handler");

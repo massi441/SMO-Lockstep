@@ -7,7 +7,7 @@ internal static class PacketParser
 {
     internal static Result<Error> ParseHeader(Packet packet, ServerContext context)
     {
-        if (!IsValidHeaderSize(packet.RentedBuffer.Span))
+        if (!IsValidHeaderSize(packet.RentedBuffer.UsedSpan))
         {
             return Result<Error>.Failure(Error.InvalidHeaderSize);
         }

@@ -16,9 +16,9 @@ internal class PacketHealthCheckHandler : IPacketHandler
 
     public uint MinPayloadSize => 0;
 
-    public void Handle(Packet packet, Room room, Player? player)
+    public void Handle(ParsedPacket packet, Room room)
     {
         _context.Logger.LogTrace("Health check accepted");
-        _context.PacketSender.Send(packet.Sender, packet.RentedBuffer.Span);
+        _context.PacketSender.Send(packet.SenderIp, packet.RentedBuffer.UsedSpan);
     }
 }

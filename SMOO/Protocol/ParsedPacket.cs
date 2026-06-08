@@ -1,23 +1,18 @@
 ﻿using System.Net;
 using System.Runtime.InteropServices;
+using SMOO.Client;
 using SMOO.Util;
 
 namespace SMOO.Protocol;
 
 /// <summary>
-/// Represents a network packet ready to be processed by the server
+/// Represents a network packet with a parsed header, ready to be handled by a server handler
 /// </summary>
-internal readonly struct Packet
+internal readonly struct ParsedPacket
 {
-    /// <summary>
-    /// The sender of the packet
-    /// </summary>
-    public required IPEndPoint Sender { get; init; }
-
-    /// <summary>
-    /// The rented buffer of the packet
-    /// </summary>
+    public required IPEndPoint SenderIp { get; init; }
     public required RentedBuffer RentedBuffer { get; init; }
+    public Player? SenderPlayer { get; init; }
 
     /// <summary>
     /// Returns a view of the header inside the packet's payload
@@ -29,8 +24,5 @@ internal readonly struct Packet
     /// </summary>
     public ReadOnlySpan<byte> Payload => RentedBuffer.RentRef.AsSpan(PacketHeader.SizeOf(), Header.PayloadSize);
 
-    /// <summary>
-    /// The Length of the packet
-    /// </summary>
     public int FullSize => RentedBuffer.UsedBytes;
 }

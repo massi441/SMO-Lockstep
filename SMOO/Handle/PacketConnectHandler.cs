@@ -67,11 +67,11 @@ internal class PacketConnectHandler : IPacketHandler
         }
     }
 
-    public void Handle(Packet packet, Room room, Player? player)
+    public void Handle(ParsedPacket packet, Room room)
     {
-        if (IsInOtherRoom(packet.Sender, out player, out Room takenRoom))
+        if (IsInOtherRoom(packet.SenderIp, out Player? takenPlayer, out Room takenRoom))
         {
-            _context.Logger.LogWarning("Player {Name} ({Address}:{Port}) is already in room {RoomId}", player.Name, player.Endpoint.Address, player.Endpoint.Port, takenRoom.Id);
+            _context.Logger.LogWarning("Player {Name} ({Address}:{Port}) is already in room {RoomId}", takenPlayer.Name, takenPlayer.Endpoint.Address, takenPlayer.Endpoint.Port, takenRoom.Id);
             return;
         }
 
@@ -85,7 +85,7 @@ internal class PacketConnectHandler : IPacketHandler
 
         PlayerInfo playerInfo = new PlayerInfo()
         {
-            Endpoint = packet.Sender,
+            Endpoint = packet.SenderIp,
             Name = connectPayload.Name,
             Room = room,
         };
@@ -99,7 +99,7 @@ internal class PacketConnectHandler : IPacketHandler
 
         Player newPlayer = newPlayerResult.Data!;
 
-        if (!AckConnect(newPlayer, packet, room))
+        if (!AckConnect(newPlayer, ref packet, room))
         {
             _context.Logger.LogError("Failed to upload connect ACK packet, new player will be ignored");
             return;
@@ -108,10 +108,8 @@ internal class PacketConnectHandler : IPacketHandler
         _context.Logger.LogTrace("Player {Name} joined Room #{RoomId}, waiting for a confirmation...", newPlayer.Name, packet.Header.RoomId);
     }
 
-    private bool AckConnect(Player newPlayer, Packet packet, Room room)
+    private bool AckConnect(Player newPlayer, ref ParsedPacket packet, Room room)
     {
-        RentedBuffer ackBuffer = MemoryUtil.Rent<PacketConnectAck>();
-
         PacketConnectAck ackPacket = new PacketConnectAck()
         {
             Header = packet.Header.WithSizeType(MemoryUtil.PayloadSize<PacketConnectAck>(), PacketType.ConnectAck),
@@ -123,22 +121,16 @@ internal class PacketConnectHandler : IPacketHandler
             }
         };
 
-        ackPacket.Serialize(ackBuffer.Span);
+        RentedBuffer ackBuffer = MemoryUtil.Rent<PacketConnectAck>();
+        ackPacket.Serialize(ackBuffer.UsedSpan);
 
-        ReliablePacketRequest ackRequest = new ReliablePacketRequest()
-        {
-            Receiver = newPlayer,
-            RentedPayload = ackBuffer,
-            MaxRetries = Config.MaxRetries
-        };
-
-        Result<Error> uploadResult = room.Broadcaster.ReliablePacketStore.UploadPacket(ackRequest);
+        Result<Error> uploadResult = room.Broadcaster.ReliablePacketStore.UploadPacket(ackBuffer, newPlayer);
         if (uploadResult.IsFailed)
         {
             return false;
         }
 
-        _context.PacketSender.Send(newPlayer.Endpoint, ackBuffer.Span);
+        _context.PacketSender.Send(newPlayer.Endpoint, ackBuffer.UsedSpan);
 
         return true;
     }

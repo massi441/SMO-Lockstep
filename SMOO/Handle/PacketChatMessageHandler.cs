@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using System.Text;
+﻿using System.Text;
 using Microsoft.Extensions.Logging;
 using SMOO.Client;
 using SMOO.Protocol;
@@ -8,6 +7,7 @@ using SMOO.Util;
 
 namespace SMOO.Handle;
 
+// will add proper features later {message length, sender, scope...}
 internal class PacketChatMessageHandler : IPacketHandler
 {
     private readonly ServerContext _context;
@@ -22,7 +22,7 @@ internal class PacketChatMessageHandler : IPacketHandler
     /// </summary>
     public uint MinPayloadSize => 0;
 
-    public void Handle(Packet packet, Room room, Player? player)
+    public void Handle(ParsedPacket packet, Room room)
     {
         if (packet.Payload.Length == 0)
         {
@@ -31,12 +31,8 @@ internal class PacketChatMessageHandler : IPacketHandler
         }
 
         string message = Encoding.UTF8.GetString(packet.Payload);
-        _context.Logger.LogTrace("{PlayerName} sent a message in room #{RoomId}: {Message}", player!.Name, room.Id, message);
+        _context.Logger.LogTrace("{PlayerName} sent a message in room #{RoomId}: {Message}", packet.SenderPlayer!.Name, room.Id, message);
 
-        room.Broadcaster.BroadcastReliablyExcept(room, player, new ReliablePacketBroadcastRequest()
-        {
-            MaxRetries = Config.MaxRetries,
-            RentedPayload = packet.RentedBuffer
-        });
+        room.Broadcaster.BroadcastReliablyExcept(room, packet.SenderPlayer, packet.RentedBuffer, Config.MaxRetries);
     }
 }

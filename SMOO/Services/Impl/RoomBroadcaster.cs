@@ -39,45 +39,47 @@ internal class RoomBroadcaster : IRoomBroadcaster
         _context.Logger.LogInformation("Room Broadcaster was shutdown successfully");
     }
 
-    private void ProcessAckPacket(ReliablePacket pendingPacket)
+    private void ProcessAckPacket(ReliablePacket reliablePacket)
     {
-        if (pendingPacket.IsAlive)
+        if (reliablePacket.IsAlive)
         {
-            if (!pendingPacket.IsResendTime)
+            if (!reliablePacket.IsResendTime)
             {
                 return;
             }
 
-            Result<Error> sendResult = _context.PacketSender.Send(pendingPacket.Player.Endpoint, pendingPacket.RentedPayload.Span);
+            _context.Logger.LogTrace("Resending reliable packet #{Id} to {PlayerName} in room {#RoomdId}", reliablePacket.SequenceNumber, reliablePacket.Receiver.Name, reliablePacket.Receiver.Room.Id);
+
+            Result<Error> sendResult = _context.PacketSender.Send(reliablePacket.Receiver.Endpoint, reliablePacket.RentedBuffer.UsedSpan);
             if (!sendResult.IsSuccess)
             {
                 _context.Logger.LogError("An error occured while trying to resend the packet");
             }
 
-            pendingPacket.DecrementTries();
-            pendingPacket.RefreshLastSent();
+            reliablePacket.DecrementTries();
+            reliablePacket.RefreshLastSent();
         }
         else
         {
-            PacketType packetType = pendingPacket.Header.Type; // need to capture here as packet store frees the rented buffer
+            PacketType packetType = reliablePacket.Header.Type; // need to capture here as packet store frees the rented buffer
 
-            ReliablePacket? expiredPacket = _resendStore.RemovePacket(pendingPacket.SequenceNumber);
+            ReliablePacket? expiredPacket = _resendStore.RemovePacket(reliablePacket.SequenceNumber);
             if (expiredPacket == null)
             {
                 _context.Logger.LogWarning("Expired packet already removed");
                 return;
             }
 
-            pendingPacket.Player.Room.UploadCommand(() =>
+            reliablePacket.Receiver.Room.UploadCommand(() =>
             {
-                Result<Error> disconnectResult = _context.PlayerDisconnector.Disconnect(pendingPacket.Player);
+                Result<Error> disconnectResult = _context.PlayerDisconnector.Disconnect(reliablePacket.Receiver);
                 if (disconnectResult.IsSuccess)
                 {
-                    _context.Logger.LogWarning("Disconnected player {PlayerName} for not Acking {PacketType} packet (#{SequenceNumber}) in room #{RoomId}", pendingPacket.Player.Name, packetType, pendingPacket.SequenceNumber, pendingPacket.Player.Room.Id);
+                    _context.Logger.LogWarning("Disconnected player {PlayerName} for not Acking {PacketType} packet (#{SequenceNumber}) in room #{RoomId}", reliablePacket.Receiver.Name, packetType, reliablePacket.SequenceNumber, reliablePacket.Receiver.Room.Id);
                 }
                 else
                 {
-                    _context.Logger.LogError("Failed to disconnect player {PlayerName} for no Acking packet #{PacketId} in room #{RoomId}", pendingPacket.Player.Name, pendingPacket.SequenceNumber, pendingPacket.Player.Room.Id);
+                    _context.Logger.LogError("Failed to disconnect player {PlayerName} for no Acking packet #{PacketId} in room #{RoomId}", reliablePacket.Receiver.Name, reliablePacket.SequenceNumber, reliablePacket.Receiver.Room.Id);
                 }
             });
         }
@@ -93,21 +95,21 @@ internal class RoomBroadcaster : IRoomBroadcaster
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastReliably(Room room, ReliablePacketBroadcastRequest request)
+    public Result<Error> BroadcastReliably(Room room, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
-            SendPlayerAckPacket(player, request);
+            UploadAndSendAckPacket(roomPayload, player, maxRetries);
         }
 
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastExcept(Room room, Player sender, ReadOnlySpan<byte> payload)
+    public Result<Error> BroadcastExcept(Room room, Player ignoredPlayer, ReadOnlySpan<byte> payload)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
-            if (player == sender)
+            if (player == ignoredPlayer)
             {
                 continue;
             }
@@ -118,65 +120,58 @@ internal class RoomBroadcaster : IRoomBroadcaster
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastReliablyExcept(Room room, Player sender, ReliablePacketBroadcastRequest request)
+    public Result<Error> BroadcastReliablyExcept(Room room, Player ignoredPlayer, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
-            if (player != sender)
+            if (player != ignoredPlayer)
             {
-                SendPlayerAckPacket(player, request);
+                UploadAndSendAckPacket(roomPayload, player, maxRetries);
             }
         }
 
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastExceptWith(Room room, Player sender, ReadOnlySpan<byte> senderPayload, ReadOnlySpan<byte> payload)
+    public Result<Error> BroadcastExceptWith(Room room, ReadOnlySpan<byte> roomPayload, Player ignoredPlayer, ReadOnlySpan<byte> ignoredPlayerPayload)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
-            if (player == sender)
+            if (player == ignoredPlayer)
             {
-                _context.PacketSender.Send(player.Endpoint, senderPayload);
+                _context.PacketSender.Send(player.Endpoint, ignoredPlayerPayload);
                 continue;
             }
 
-            _context.PacketSender.Send(player.Endpoint, payload);
+            _context.PacketSender.Send(player.Endpoint, roomPayload);
         }
 
         return Result<Error>.Success();
     }
 
-    public Result<Error> BroadcastReliablyExceptWith(Room room, Player sender, ReliablePacketBroadcastRequest playerRequest, ReliablePacketBroadcastRequest request)
+    public Result<Error> BroadcastReliablyExceptWith(Room room, RentedBuffer roomPayload, Player ignoredPlayer, RentedBuffer ignoredPlayerPayload, byte maxRetries = Config.MaxRetries)
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
-            if (player == sender)
+            if (player == ignoredPlayer)
             {
-                SendPlayerAckPacket(sender, playerRequest);
+                UploadAndSendAckPacket(ignoredPlayerPayload, player, maxRetries);
             }
             else
             {
-                SendPlayerAckPacket(player, request);
+                UploadAndSendAckPacket(roomPayload, player, maxRetries);
             }
         }
 
         return Result<Error>.Success();
     }
 
-    private void SendPlayerAckPacket(Player player, ReliablePacketBroadcastRequest ackRequest)
+    private void UploadAndSendAckPacket(RentedBuffer rentedBuffer, Player receiver, byte maxRetries)
     {
-        ReliablePacketRequest request = new ReliablePacketRequest()
-        {
-            Receiver = player,
-            RentedPayload = ackRequest.RentedPayload,
-            MaxRetries = ackRequest.MaxRetries
-        };
-
-        Result<Error> uploadResult = _resendStore.UploadPacket(request);
+        Result<Error> uploadResult = _resendStore.UploadPacket(rentedBuffer, receiver, maxRetries);
         if (uploadResult.IsSuccess)
         {
-            _context.PacketSender.Send(player.Endpoint, request.RentedPayload.Span);
+            _context.PacketSender.Send(receiver.Endpoint, rentedBuffer.UsedSpan);
         }
     }
 

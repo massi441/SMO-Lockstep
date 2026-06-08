@@ -1,9 +1,6 @@
 ﻿using System.Buffers.Binary;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using Microsoft.Extensions.Logging;
-using SMOO.Client;
 using SMOO.Protocol;
 using SMOO.Server;
 using SMOO.Util;
@@ -64,7 +61,7 @@ internal class PacketConnectSynAckHandler : IPacketHandler
         }
     }
 
-    public void Handle(Packet packet, Room room, Player? player)
+    public void Handle(ParsedPacket packet, Room room)
     {
         PacketConnectSynAckPayload synAckPayload = new PacketConnectSynAckPayload();
 
@@ -73,34 +70,28 @@ internal class PacketConnectSynAckHandler : IPacketHandler
         ReliablePacket? ackPacket = room.Broadcaster.ReliablePacketStore.RemovePacket(synAckPayload.SequenceNumber);
         if (ackPacket == null)
         {
-            _context.Logger.LogWarning("Invalid SYN ACK sequence number ({SequenceNumber}) received by {PlayerName} in Room #{RoomId}, broadcast will be skipped", synAckPayload.SequenceNumber, player?.Name, room.Id);
+            _context.Logger.LogWarning("Invalid SYN ACK sequence number ({SequenceNumber}) received by {PlayerName} in Room #{RoomId}, broadcast will be skipped", synAckPayload.SequenceNumber, packet.SenderPlayer?.Name, room.Id);
             return;
         }
 
         PacketPlayerJoinRoom joinPacket = new PacketPlayerJoinRoom()
         {
             Header = packet.Header.WithSizeType(MemoryUtil.PayloadSize<PacketPlayerJoinRoom>(), PacketType.PlayerJoinRoom),
-            PlayerNameLength = (byte)player!.Name.Length,
-            PlayerName = player!.Name,
+            PlayerNameLength = (byte)packet.SenderPlayer!.Name.Length,
+            PlayerName = packet.SenderPlayer!.Name,
         };
 
         RentedBuffer joinRoomBuffer = new RentedBuffer(joinPacket.SizeOf());
 
-        PacketSerializer.Serialize(joinRoomBuffer.Span, in joinPacket);
+        PacketSerializer.Serialize(joinRoomBuffer.UsedSpan, in joinPacket);
 
-        ReliablePacketBroadcastRequest request = new ReliablePacketBroadcastRequest()
-        {
-            RentedPayload = joinRoomBuffer,
-            MaxRetries = Config.MaxRetries
-        };
-
-        Result<Error> broadcastResult = room.Broadcaster.BroadcastReliablyExcept(room, player, request);
+        Result<Error> broadcastResult = room.Broadcaster.BroadcastReliablyExcept(room, packet.SenderPlayer, joinRoomBuffer);
         if (broadcastResult.IsFailed)
         {
             _context.Logger.LogError("Failed to broadcast new player in room");
             return;
         }
 
-        _context.Logger.LogInformation("Player {PlayerName} has confirmed their connection in Room #{RoomId}, room will be notified", player.Name, room.Id);
+        _context.Logger.LogInformation("Player {PlayerName} has confirmed their connection in Room #{RoomId}, room will be notified", packet.SenderPlayer.Name, room.Id);
     }
 }

@@ -11,7 +11,7 @@ internal readonly struct RentedBuffer
     /// <summary>
     /// The reference to the rented array
     /// </summary>
-    public byte[] Ref { get; init; }
+    public byte[] RentRef { get; init; }
 
     /// <summary>
     /// The actual amount of bytes used in the buffer, as a rented Array can be bigger than the capacity requested
@@ -21,16 +21,16 @@ internal readonly struct RentedBuffer
     /// <summary>
     /// A span pointing at the start of the rented buffer, with the size of the used bytes in the rented buffer
     /// </summary>
-    public readonly Span<byte> Span => Ref.AsSpan(0, UsedBytes);
+    public readonly Span<byte> UsedSpan => RentRef.AsSpan(0, UsedBytes);
 
     /// <summary>
     /// A memory view pointing at the start of the rented buffer, with the size of the used bytes in the rented buffer
     /// </summary>
-    public readonly Memory<byte> Memory => Ref.AsMemory(0, UsedBytes);
+    public readonly Memory<byte> UsedMemory => RentRef.AsMemory(0, UsedBytes);
 
     public RentedBuffer(byte[] rentRef, int size)
     {
-        Ref = rentRef;
+        RentRef = rentRef;
         UsedBytes = size;
     }
 
@@ -41,16 +41,16 @@ internal readonly struct RentedBuffer
 
     public Span<byte> SpanAt(int offset)
     {
-        return Ref.AsSpan(offset, UsedBytes - offset);
+        return RentRef.AsSpan(offset, UsedBytes - offset);
     }
 
     public void Return()
     {
-        ArrayPool<byte>.Shared.Return(Ref);
+        ArrayPool<byte>.Shared.Return(RentRef);
     }
 
     public void Write<T>(in T structure) where T : struct
     {
-        MemoryMarshal.Write(Ref, in structure);
+        MemoryMarshal.Write(RentRef, in structure);
     }
 }

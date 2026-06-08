@@ -13,13 +13,13 @@ internal class ReliablePacket
         init => _tries = value;
     }
     public required ushort SequenceNumber { get; init; }
-    public required RentedBuffer RentedPayload { get; init; }
-    public required Player Player { get; init; }
+    public required RentedBuffer RentedBuffer {  get; init; }
+    public required Player Receiver { get; init; }
 
     /// <summary>
     /// Returns a view of the header inside the packet's payload
     /// </summary>
-    public ref PacketHeader Header => ref MemoryMarshal.AsRef<PacketHeader>(RentedPayload.Span);
+    public ref PacketHeader Header => ref MemoryMarshal.AsRef<PacketHeader>(RentedBuffer.UsedSpan);
 
     public DateTime LastSent { get; private set; } = DateTime.UtcNow;
     public bool IsAlive => _tries > 0;

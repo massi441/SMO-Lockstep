@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using SMOO.Client;
 using SMOO.Protocol;
 using SMOO.Server;
 using SMOO.Services.Interface;
@@ -20,27 +21,27 @@ internal class ReliablePacketStore : IReliablePacketStore
         _context = context;
     }
 
-    public Result<Error> UploadPacket(ReliablePacketRequest request)
+    public Result<Error> UploadPacket(RentedBuffer rentedBuffer, Player receiver, byte maxRetries)
     {
         if (IsFull())
         {
             return Result<Error>.Failure(Error.PendingPacketStoreFull);
         }
 
-        ReliablePacket pendingPacket = new ReliablePacket()
+        ReliablePacket reliablePacket = new ReliablePacket()
         {
-            Player = request.Receiver,
-            RentedPayload = request.RentedPayload,
-            Tries = request.MaxRetries,
+            RentedBuffer = rentedBuffer,
+            Receiver = receiver,
+            Tries = maxRetries,
             SequenceNumber = _nextSequenceNumber
         };
 
-        WriteSequence(pendingPacket.RentedPayload.Ref, pendingPacket.SequenceNumber);
+        WriteSequence(reliablePacket.RentedBuffer.RentRef, reliablePacket.SequenceNumber);
 
-        _pendingPackets[_nextSequenceNumber] = pendingPacket;
+        _pendingPackets[_nextSequenceNumber] = reliablePacket;
         _nextSequenceNumber++;
 
-        _context.Logger.LogTrace("Uploaded reliable packet with sequence number #{SequenceNumber}, and {Tries} tries", pendingPacket.SequenceNumber, pendingPacket.Tries);
+        _context.Logger.LogTrace("Uploaded reliable packet with sequence number #{SequenceNumber}, and {Tries} tries", reliablePacket.SequenceNumber, reliablePacket.Tries);
 
         return Result<Error>.Success();
     }
@@ -50,7 +51,7 @@ internal class ReliablePacketStore : IReliablePacketStore
         if (_pendingPackets.TryRemove(sequenceNumber, out ReliablePacket? pendingPacket))
         {
             _context.Logger.LogTrace("Removing and freeing buffer used by reliable packet #{SequenceNumber}", sequenceNumber);
-            pendingPacket.RentedPayload.Return();
+            pendingPacket.RentedBuffer.Return();
             return pendingPacket;
         }
 

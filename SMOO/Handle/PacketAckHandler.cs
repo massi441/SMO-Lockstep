@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using SMOO.Protocol;
 using SMOO.Server;
 using Microsoft.Extensions.Logging;
-using SMOO.Client;
 using SMOO.Util;
 
 namespace SMOO.Handle;
@@ -36,7 +35,7 @@ internal class PacketAckHandler : IPacketHandler
         }
     }
 
-    public void Handle(Packet packet, Room room, Player? player)
+    public void Handle(ParsedPacket packet, Room room)
     {
         PacketAckPayload payload = PacketSerializer.Deserialize<PacketAckPayload>(packet.Payload);
 
@@ -47,6 +46,6 @@ internal class PacketAckHandler : IPacketHandler
             return;
         }
 
-        _context.Logger.LogTrace("Successfully Acked {PacketType} packet #{PacketNumber} from {PlayerName} in Room #{RoomId}", packet.Header.Type, pendingPacket.SequenceNumber, pendingPacket.Player.Name, room.Id);
+        _context.Logger.LogTrace("Successfully Acked {PacketType} packet #{PacketNumber} from {PlayerName} in Room #{RoomId}", packet.Header.Type, pendingPacket.SequenceNumber, pendingPacket.Receiver.Name, room.Id);
     }
 }

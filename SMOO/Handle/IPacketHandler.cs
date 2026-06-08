@@ -16,6 +16,5 @@ internal interface IPacketHandler
     /// </summary>
     /// <param name="packet">The incoming packet to handle</param>
     /// <param name="room">The room the packet was for</param>
-    /// <param name="player">The player that sent the packet</param>
-    void Handle(Packet packet, Room room, Player? player);
+    void Handle(ParsedPacket packet, Room room);
 }

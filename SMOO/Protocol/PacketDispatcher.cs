@@ -19,7 +19,7 @@ internal static class PacketDispatcher
         if (header.Type == PacketType.Ping)
         {
             context.Logger.LogTrace("Ping received from {Address}:{Port}", packet.Sender.Address, packet.Sender.Port);
-            return context.PacketSender.Send(packet.Sender, packet.RentedBuffer.Span);
+            return context.PacketSender.Send(packet.Sender, packet.RentedBuffer.UsedSpan);
         }
 
         Room? room = context.RoomHolder.GetRoom(header.RoomId);

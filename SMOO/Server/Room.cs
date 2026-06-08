@@ -72,7 +72,14 @@ internal class Room
                     continue;
                 }
 
-                packetHandler.Handle(packet, this, player);
+                ParsedPacket parsedPacket = new ParsedPacket()
+                {
+                    SenderPlayer = player,
+                    RentedBuffer = packet.RentedBuffer,
+                    SenderIp = packet.Sender
+                };
+
+                packetHandler.Handle(parsedPacket, this);
 
                 packet.RentedBuffer.Return();
             }
