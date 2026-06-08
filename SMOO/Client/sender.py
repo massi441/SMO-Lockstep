@@ -93,8 +93,10 @@ def decode_payload(ptype, data):
         return f"AckedSeq={seq}"
     elif ptype == PTYPE_PING:
         return f"echo={raw.decode('utf-8', errors='replace')}" if raw else "(empty)"
-    elif ptype == PTYPE_CHAT_MESSAGE:
-        return f"{seq_str}msg={rest.decode('utf-8', errors='replace')!r}" if rest else "(empty)"
+    elif ptype == PTYPE_CHAT_MESSAGE and len(rest) >= 2:
+        msg_len = struct.unpack_from("<H", rest, 0)[0]
+        msg = rest[2:2 + msg_len].decode("utf-8", errors="replace")
+        return f"{seq_str}msg={msg!r}"
     return f"({len(raw)} payload bytes)"
 
 def send(sock, packet, server):
@@ -179,7 +181,7 @@ def packet_chat_message():
     if len(message) == 0:
         print("  message cannot be empty")
         return None
-    return build_packet(ptype=PTYPE_CHAT_MESSAGE, room_id=room_id, payload=b"\x00\x00" + message)
+    return build_packet(ptype=PTYPE_CHAT_MESSAGE, room_id=room_id, payload=b"\x00\x00" + struct.pack("<H", len(message)) + message)
 
 def spam_player_input(sock, server):
     room_id = _require_room()

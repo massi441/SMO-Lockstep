@@ -28,7 +28,7 @@ internal ref struct SpanReader
         _offset = 0;
     }
 
-    public void Jump(int bytes)
+    public void Skip(int bytes)
     {
         _offset += bytes;
     }

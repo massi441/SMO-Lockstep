@@ -67,7 +67,7 @@ internal class ReliablePacketStore : IReliablePacketStore
     {
         SpanWriter writer = new SpanWriter(payload);
 
-        writer.Jump(PacketHeader.SizeOf());
+        writer.Skip(PacketHeader.SizeOf());
 
         writer.Write(sequenceNumber);
     }
