@@ -97,7 +97,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
 
     public void BroadcastReliably(Room room, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries)
     {
-        AtomicCounter counter = new AtomicCounter();
+        RefCounter counter = new RefCounter();
         foreach (Player player in room.PlayerHolder.Players)
         {
             UploadAndSendAckPacket(roomPayload, counter, player, maxRetries);
@@ -119,7 +119,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
 
     public void BroadcastReliablyExcept(Room room, Player ignoredPlayer, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries)
     {
-        AtomicCounter counter = new AtomicCounter();
+        RefCounter counter = new RefCounter();
         foreach (Player player in room.PlayerHolder.Players)
         {
             if (player != ignoredPlayer)
@@ -145,8 +145,8 @@ internal class RoomBroadcaster : IRoomBroadcaster
 
     public void BroadcastReliablyExceptWith(Room room, RentedBuffer roomPayload, Player ignoredPlayer, RentedBuffer ignoredPlayerPayload, byte maxRetries = Config.MaxRetries)
     {
-        AtomicCounter roomCounter = new AtomicCounter();
-        AtomicCounter playerCounter = new AtomicCounter();
+        RefCounter roomCounter = new RefCounter();
+        RefCounter playerCounter = new RefCounter();
         foreach (Player player in room.PlayerHolder.Players)
         {
             if (player == ignoredPlayer)
@@ -161,7 +161,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
     }
 
     // TODO: Check success of upload, keep track of which packets have been successfully uploaded
-    private void UploadAndSendAckPacket(RentedBuffer rentedBuffer, AtomicCounter refCounter, Player receiver, byte maxRetries)
+    private void UploadAndSendAckPacket(RentedBuffer rentedBuffer, RefCounter refCounter, Player receiver, byte maxRetries)
     {
         Result<Error> uploadResult = _resendStore.UploadPacket(rentedBuffer, refCounter, receiver, maxRetries);
         if (uploadResult.IsSuccess)

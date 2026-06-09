@@ -21,7 +21,7 @@ internal class ReliablePacketStore : IReliablePacketStore
         _context = context;
     }
 
-    public Result<Error> UploadPacket(RentedBuffer rentedBuffer, AtomicCounter refCounter, Player receiver, byte maxRetries)
+    public Result<Error> UploadPacket(RentedBuffer rentedBuffer, RefCounter refCounter, Player receiver, byte maxRetries)
     {
         if (IsFull())
         {

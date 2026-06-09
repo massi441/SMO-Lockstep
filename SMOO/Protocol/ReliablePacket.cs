@@ -19,7 +19,7 @@ internal class ReliablePacket
     /// <summary>
     /// The reference counter to the rented buffer, as a single buffer can be shared by many reliable packets
     /// </summary>
-    public required AtomicCounter RefCounter { get; init; }
+    public required RefCounter RefCounter { get; init; }
 
     /// <summary>
     /// Returns a view of the header inside the packet's payload

@@ -1,6 +1,6 @@
 ﻿namespace SMOO.Util;
 
-internal class AtomicCounter
+internal class RefCounter
 {
     private int _count = 0;
 
@@ -8,7 +8,7 @@ internal class AtomicCounter
 
     public int Increment()
     {
-        return Interlocked.Increment(ref _count);
+        return ++_count;
     }
 
     public int Decrement()
@@ -18,6 +18,6 @@ internal class AtomicCounter
             return _count;
         }
 
-        return Interlocked.Decrement(ref _count);
+        return --_count;
     }
 }
