@@ -115,7 +115,6 @@ internal class UdpServer
             RoomHolder = new RoomHolder(),
             PacketSender = new PacketSenderUdp(socket),
             PlayerDisconnector = new PlayerDisconnector(),
-            PacketHandlerProvider = new PacketHandlerProvider(),
             CancellationToken = cancellationToken
         };
 
