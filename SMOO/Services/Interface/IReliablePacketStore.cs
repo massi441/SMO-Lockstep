@@ -9,7 +9,7 @@ internal interface IReliablePacketStore
 {
     public ConcurrentDictionary<ushort, ReliablePacket> PendingPackets { get; }
 
-    public Result<Error> UploadPacket(RentedBuffer rentedBuffer, Player receiver, byte maxRetries = Config.MaxRetries);
+    public Result<Error> UploadPacket(RentedBuffer rentedBuffer, AtomicCounter refCounter, Player receiver, byte maxRetries = Config.MaxRetries);
 
     /// <summary>
     /// Removes a reliable packet, and returns its rented buffer to the array pool.

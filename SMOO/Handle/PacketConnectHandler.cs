@@ -120,7 +120,7 @@ internal static class PacketConnectHandler
         RentedBuffer ackBuffer = MemoryUtil.Rent<PacketConnectAck>();
         ackPacket.Serialize(ackBuffer.UsedSpan);
 
-        Result<Error> uploadResult = room.Broadcaster.ReliablePacketStore.UploadPacket(ackBuffer, newPlayer);
+        Result<Error> uploadResult = room.Broadcaster.ReliablePacketStore.UploadPacket(ackBuffer, new AtomicCounter(), newPlayer);
         if (uploadResult.IsFailed)
         {
             return false;

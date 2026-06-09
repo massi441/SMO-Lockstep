@@ -6,17 +6,17 @@ namespace SMOO.Util;
 /// <summary>
 /// Represents a byte buffer that was rented from the array pool.
 /// </summary>
-internal readonly struct RentedBuffer
+internal struct RentedBuffer
 {
     /// <summary>
     /// The reference to the rented array
     /// </summary>
-    public byte[] RentRef { get; init; }
+    public byte[] RentRef { get; private set; }
 
     /// <summary>
     /// The actual amount of bytes used in the buffer, as a rented Array can be bigger than the capacity requested
     /// </summary>
-    public int UsedBytes { get; init; }
+    public int UsedBytes { get; private set; }
 
     /// <summary>
     /// A span pointing at the start of the rented buffer, with the size of the used bytes in the rented buffer
@@ -39,12 +39,12 @@ internal readonly struct RentedBuffer
 
     }
 
-    public Span<byte> SpanAt(int offset)
+    public readonly Span<byte> SpanAt(int offset)
     {
         return RentRef.AsSpan(offset, UsedBytes - offset);
     }
 
-    public void Return()
+    public readonly void Return()
     {
         if (RentRef == null)
         {
@@ -52,5 +52,29 @@ internal readonly struct RentedBuffer
         } 
 
         ArrayPool<byte>.Shared.Return(RentRef);
+    }
+
+    public static RentedBuffer Move(ref RentedBuffer other)
+    {
+        RentedBuffer newBuffer = new RentedBuffer()
+        {
+            RentRef = other.RentRef,
+            UsedBytes = other.UsedBytes,
+        };
+
+        other.RentRef = null!;
+        other.UsedBytes = newBuffer.UsedBytes;
+
+        return newBuffer;
+    }
+
+    public void Dispose()
+    {
+        if (RentRef != null)
+        {
+            ArrayPool<byte>.Shared.Return(RentRef);
+            RentRef = null!;
+            UsedBytes = 0;
+        }
     }
 }

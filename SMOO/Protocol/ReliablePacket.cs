@@ -17,6 +17,11 @@ internal class ReliablePacket
     public required Player Receiver { get; init; }
 
     /// <summary>
+    /// The reference counter to the rented buffer, as a single buffer can be shared by many reliable packets
+    /// </summary>
+    public required AtomicCounter RefCounter { get; init; }
+
+    /// <summary>
     /// Returns a view of the header inside the packet's payload
     /// </summary>
     public ref PacketHeader Header => ref MemoryMarshal.AsRef<PacketHeader>(RentedBuffer.UsedSpan);
@@ -37,5 +42,17 @@ internal class ReliablePacket
         {
             _tries--;
         }
+    }
+
+    /// <summary>
+    /// Writes the sequence number of the packet into the buffer
+    /// </summary>
+    public void WriteSequenceNumber()
+    {
+        SpanWriter writer = new SpanWriter(RentedBuffer.UsedSpan);
+
+        writer.Skip(PacketHeader.SizeOf());
+
+        writer.Write(SequenceNumber);
     }
 }

@@ -21,7 +21,7 @@ internal class ReliablePacketStore : IReliablePacketStore
         _context = context;
     }
 
-    public Result<Error> UploadPacket(RentedBuffer rentedBuffer, Player receiver, byte maxRetries)
+    public Result<Error> UploadPacket(RentedBuffer rentedBuffer, AtomicCounter refCounter, Player receiver, byte maxRetries)
     {
         if (IsFull())
         {
@@ -31,17 +31,19 @@ internal class ReliablePacketStore : IReliablePacketStore
         ReliablePacket reliablePacket = new ReliablePacket()
         {
             RentedBuffer = rentedBuffer,
+            RefCounter = refCounter,
             Receiver = receiver,
             Tries = maxRetries,
             SequenceNumber = _nextSequenceNumber
         };
 
-        WriteSequence(reliablePacket.RentedBuffer.RentRef, reliablePacket.SequenceNumber);
+        reliablePacket.WriteSequenceNumber();
+        reliablePacket.RefCounter.Increment();
 
         _pendingPackets[_nextSequenceNumber] = reliablePacket;
         _nextSequenceNumber++;
 
-        _context.Logger.LogTrace("Uploaded reliable packet with sequence number #{SequenceNumber}, and {Tries} tries", reliablePacket.SequenceNumber, reliablePacket.Tries);
+        _context.Logger.LogTrace("Uploaded reliable {PacketType} packet with sequence number #{SequenceNumber}, and {Tries} tries", reliablePacket.Header.Type, reliablePacket.SequenceNumber, reliablePacket.Tries);
 
         return Result<Error>.Success();
     }
@@ -50,8 +52,16 @@ internal class ReliablePacketStore : IReliablePacketStore
     {
         if (_pendingPackets.TryRemove(sequenceNumber, out ReliablePacket? pendingPacket))
         {
-            pendingPacket.RentedBuffer.Return();
-            _context.Logger.LogTrace("Removed and free'd buffer used by reliable packet #{SequenceNumber}", sequenceNumber);
+            if (pendingPacket.RefCounter.Decrement() == 0)
+            {
+                pendingPacket.RentedBuffer.Return();
+                _context.Logger.LogTrace("Removed and free'd buffer used by reliable packet #{SequenceNumber}", sequenceNumber);
+            }
+            else
+            {
+                _context.Logger.LogTrace("Decremented ref count after removing reliable packet #{SequenceNumber}, new ref count: {RefCount}", sequenceNumber, pendingPacket.RefCounter.Count);
+            }
+            
             return pendingPacket;
         }
 
@@ -61,14 +71,5 @@ internal class ReliablePacketStore : IReliablePacketStore
     private bool IsFull()
     {
         return _pendingPackets.Count > ushort.MaxValue;
-    }
-
-    private static void WriteSequence(byte[] payload, ushort sequenceNumber)
-    {
-        SpanWriter writer = new SpanWriter(payload);
-
-        writer.Skip(PacketHeader.SizeOf());
-
-        writer.Write(sequenceNumber);
     }
 }

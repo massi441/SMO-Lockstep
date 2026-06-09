@@ -1,5 +1,4 @@
 ﻿using SMOO.Client;
-using SMOO.Protocol;
 using SMOO.Server;
 using SMOO.Util;
 

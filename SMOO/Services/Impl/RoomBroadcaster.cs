@@ -50,6 +50,8 @@ internal class RoomBroadcaster : IRoomBroadcaster
 
             _context.Logger.LogTrace("Resending {Type} packet #{Id} to {PlayerName} in room {#RoomdId}", reliablePacket.Header.Type, reliablePacket.SequenceNumber, reliablePacket.Receiver.Name, reliablePacket.Receiver.Room.Id);
 
+            reliablePacket.WriteSequenceNumber(); // write the packet's sequence number into the payload in case the buffer is shared
+
             Result<Error> sendResult = _context.PacketSender.Send(reliablePacket.Receiver.Endpoint, reliablePacket.RentedBuffer.UsedSpan);
             if (!sendResult.IsSuccess)
             {
@@ -95,9 +97,10 @@ internal class RoomBroadcaster : IRoomBroadcaster
 
     public void BroadcastReliably(Room room, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries)
     {
+        AtomicCounter counter = new AtomicCounter();
         foreach (Player player in room.PlayerHolder.Players)
         {
-            UploadAndSendAckPacket(roomPayload, player, maxRetries);
+            UploadAndSendAckPacket(roomPayload, counter, player, maxRetries);
         }
     }
 
@@ -116,11 +119,12 @@ internal class RoomBroadcaster : IRoomBroadcaster
 
     public void BroadcastReliablyExcept(Room room, Player ignoredPlayer, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries)
     {
+        AtomicCounter counter = new AtomicCounter();
         foreach (Player player in room.PlayerHolder.Players)
         {
             if (player != ignoredPlayer)
             {
-                UploadAndSendAckPacket(roomPayload, player, maxRetries);
+                UploadAndSendAckPacket(roomPayload, counter, player, maxRetries);
             }
         }
     }
@@ -141,23 +145,25 @@ internal class RoomBroadcaster : IRoomBroadcaster
 
     public void BroadcastReliablyExceptWith(Room room, RentedBuffer roomPayload, Player ignoredPlayer, RentedBuffer ignoredPlayerPayload, byte maxRetries = Config.MaxRetries)
     {
+        AtomicCounter roomCounter = new AtomicCounter();
+        AtomicCounter playerCounter = new AtomicCounter();
         foreach (Player player in room.PlayerHolder.Players)
         {
             if (player == ignoredPlayer)
             {
-                UploadAndSendAckPacket(ignoredPlayerPayload, player, maxRetries);
+                UploadAndSendAckPacket(ignoredPlayerPayload, playerCounter, player, maxRetries);
             }
             else
             {
-                UploadAndSendAckPacket(roomPayload, player, maxRetries);
+                UploadAndSendAckPacket(roomPayload, roomCounter, player, maxRetries);
             }
         }
     }
 
     // TODO: Check success of upload, keep track of which packets have been successfully uploaded
-    private void UploadAndSendAckPacket(RentedBuffer rentedBuffer, Player receiver, byte maxRetries)
+    private void UploadAndSendAckPacket(RentedBuffer rentedBuffer, AtomicCounter refCounter, Player receiver, byte maxRetries)
     {
-        Result<Error> uploadResult = _resendStore.UploadPacket(rentedBuffer, receiver, maxRetries);
+        Result<Error> uploadResult = _resendStore.UploadPacket(rentedBuffer, refCounter, receiver, maxRetries);
         if (uploadResult.IsSuccess)
         {
             _context.PacketSender.Send(receiver.Endpoint, rentedBuffer.UsedSpan);
