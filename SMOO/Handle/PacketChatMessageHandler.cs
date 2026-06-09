@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using SMOO.Protocol;
 using SMOO.Server;
@@ -7,23 +7,16 @@ using SMOO.Util;
 namespace SMOO.Handle;
 
 // will add proper features later {message length, sender, scope...}
-internal class PacketChatMessageHandler : IPacketHandler
+internal static class PacketChatMessageHandler
 {
-    private readonly ServerContext _context;
-
-    public PacketChatMessageHandler(ServerContext context)
-    {
-        _context = context;
-    }
-
     /// <summary>
     /// Requires the size of the chat message to be provided
     /// </summary>
-    public uint MinPayloadSize => 2;
+    public static ushort MinPayloadSize => 2;
 
     private struct PacketChatMessagePayload : IDeserializableStruct
     {
-        public ushort Reserved;
+        public ushort SequenceNumber;
         public ushort MessageLength;
         public string Message;
 
@@ -38,11 +31,11 @@ internal class PacketChatMessageHandler : IPacketHandler
         }
     }
 
-    public void Handle(ParsedPacket packet, Room room)
+    public static void Handle(ParsedPacket packet, Room room, ServerContext context)
     {
         PacketChatMessagePayload payload = PacketSerializer.Deserialize<PacketChatMessagePayload>(packet.Payload);
 
-        _context.Logger.LogTrace("{PlayerName} sent a message in room #{RoomId}: {Message}", packet.SenderPlayer!.Name, room.Id, payload.Message);
+        context.Logger.LogTrace("{PlayerName} sent a message in room #{RoomId}: {Message}", packet.SenderPlayer!.Name, room.Id, payload.Message);
 
         // TODO: Copy message into new buffer post sanitization
 

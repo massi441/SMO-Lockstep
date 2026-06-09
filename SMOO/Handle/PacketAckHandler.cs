@@ -7,19 +7,13 @@ using SMOO.Util;
 
 namespace SMOO.Handle;
 
-internal class PacketAckHandler : IPacketHandler
+internal static class PacketAckHandler
 {
-    private readonly ServerContext _context;
 
     /// <summary>
     /// Requires at least one UInt16 for the sequence number of the acknowledged packet
     /// </summary>
-    public uint MinPayloadSize => sizeof(ushort);
-
-    public PacketAckHandler(ServerContext context)
-    {
-        _context = context;
-    }
+    public static ushort MinPayloadSize => sizeof(ushort);
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private ref struct PacketAckPayload : IDeserializableStruct
@@ -35,7 +29,7 @@ internal class PacketAckHandler : IPacketHandler
         }
     }
 
-    public void Handle(ParsedPacket packet, Room room)
+    public static void Handle(ParsedPacket packet, Room room, ServerContext context)
     {
         PacketAckPayload payload = PacketSerializer.Deserialize<PacketAckPayload>(packet.Payload);
 
@@ -43,12 +37,12 @@ internal class PacketAckHandler : IPacketHandler
         if (pendingPacket == null)
         {
             packet.RentedBuffer.Return();
-            _context.Logger.LogError("The packet #{SequenceNumber} was not found in room #{RoomId}", payload.SequenceNumber, room.Id);
+            context.Logger.LogError("The packet #{SequenceNumber} was not found in room #{RoomId}", payload.SequenceNumber, room.Id);
             return;
         }
 
         packet.RentedBuffer.Return();
 
-        _context.Logger.LogTrace("Successfully Acked {PacketType} packet #{PacketNumber} from {PlayerName} in Room #{RoomId}", packet.Header.Type, pendingPacket.SequenceNumber, pendingPacket.Receiver.Name, room.Id);
+        context.Logger.LogTrace("Successfully Acked {PacketType} packet #{PacketNumber} from {PlayerName} in Room #{RoomId}", packet.Header.Type, pendingPacket.SequenceNumber, pendingPacket.Receiver.Name, room.Id);
     }
 }

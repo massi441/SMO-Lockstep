@@ -59,16 +59,16 @@ internal class Room
 
                 player?.RefreshLastSeen();
 
-                IPacketHandler? packetHandler = _context.PacketHandlerProvider.GetShared(packet.Header.Type, _context);
+                PacketHandler? packetHandler = PacketHandlerProvider.GetHandler(packet.Header.Type);
                 if (packetHandler == null)
                 {
                     _context.Logger.LogWarning("No handler found for packet type {PacketType}", packet.Header.Type);
                     continue;
                 }
 
-                if (packet.Payload.Length < packetHandler.MinPayloadSize)
+                if (packet.Payload.Length < packetHandler.Value.MinPayloadSize)
                 {
-                    _context.Logger.LogWarning("{PacketType} packet of invalid size ({PacketSize}) was requested. Minimum required: {Minimum}", packet.Header.Type, packet.Payload.Length, packetHandler.MinPayloadSize);
+                    _context.Logger.LogWarning("{PacketType} packet of invalid size ({PacketSize}) was requested. Minimum required: {Minimum}", packet.Header.Type, packet.Payload.Length, packetHandler.Value.MinPayloadSize);
                     continue;
                 }
 
@@ -79,7 +79,10 @@ internal class Room
                     SenderIp = packet.Sender
                 };
 
-                packetHandler.Handle(parsedPacket, this);
+                unsafe
+                {
+                    packetHandler.Value.Handler(parsedPacket, this, _context);
+                }
             }
         } 
         catch (Exception ex)

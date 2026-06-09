@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -10,19 +10,12 @@ using SMOO.Util;
 
 namespace SMOO.Handle;
 
-internal class PacketConnectHandler : IPacketHandler
+internal static class PacketConnectHandler
 {
-    private readonly ServerContext _context;
-
     /// <summary>
     /// Requires at least one UInt16 for the length of the Player's name
     /// </summary>
-    public uint MinPayloadSize => 2;
-
-    public PacketConnectHandler(ServerContext context)
-    {
-        _context = context;
-    }
+    public static ushort MinPayloadSize => 2;
 
     /// <summary>
     /// The payload sent by a client who requests to connect to a room
@@ -67,11 +60,11 @@ internal class PacketConnectHandler : IPacketHandler
         }
     }
 
-    public void Handle(ParsedPacket packet, Room room)
+    public static void Handle(ParsedPacket packet, Room room, ServerContext context)
     {
-        if (IsInOtherRoom(packet.SenderIp, out Player? takenPlayer, out Room takenRoom))
+        if (IsInOtherRoom(packet.SenderIp, context, out Player? takenPlayer, out Room takenRoom))
         {
-            _context.Logger.LogWarning("Player {Name} ({Address}:{Port}) is already in room {RoomId}", takenPlayer.Name, takenPlayer.Endpoint.Address, takenPlayer.Endpoint.Port, takenRoom.Id);
+            context.Logger.LogWarning("Player {Name} ({Address}:{Port}) is already in room {RoomId}", takenPlayer.Name, takenPlayer.Endpoint.Address, takenPlayer.Endpoint.Port, takenRoom.Id);
             goto cleanup;
         }
 
@@ -79,7 +72,7 @@ internal class PacketConnectHandler : IPacketHandler
 
         if (!IsValidNameLength(connectPayload.NameLength))
         {
-            _context.Logger.LogWarning("Invalid player name length {Length}", connectPayload.NameLength);
+            context.Logger.LogWarning("Invalid player name length {Length}", connectPayload.NameLength);
             goto cleanup;
         }
 
@@ -93,25 +86,25 @@ internal class PacketConnectHandler : IPacketHandler
         Result<Player, Error> newPlayerResult = room.PlayerHolder.RegisterPlayer(in playerInfo);
         if (newPlayerResult.IsFailed)
         {
-            _context.Logger.LogError("Failed to register {PlayerName} in Room #{RoomId}", playerInfo.Name, room.Id);
+            context.Logger.LogError("Failed to register {PlayerName} in Room #{RoomId}", playerInfo.Name, room.Id);
             goto cleanup;
         }
 
         Player newPlayer = newPlayerResult.Data!;
 
-        if (AckConnect(newPlayer, ref packet, room)) // ownership of buffer gets transferred to reliable store
+        if (AckConnect(newPlayer, ref packet, room, context)) // ownership of buffer gets transferred to reliable store
         {
-            _context.Logger.LogTrace("Player {Name} joined Room #{RoomId}, waiting for a confirmation...", newPlayer.Name, packet.Header.RoomId);
+            context.Logger.LogTrace("Player {Name} joined Room #{RoomId}, waiting for a confirmation...", newPlayer.Name, packet.Header.RoomId);
             return;
         }
 
-         _context.Logger.LogError("Failed to upload connect ACK packet, new player will be ignored");
+        context.Logger.LogError("Failed to upload connect ACK packet, new player will be ignored");
 
         cleanup:
         packet.RentedBuffer.Return();
     }
 
-    private bool AckConnect(Player newPlayer, ref ParsedPacket packet, Room room)
+    private static bool AckConnect(Player newPlayer, ref ParsedPacket packet, Room room, ServerContext context)
     {
         PacketConnectAck ackPacket = new PacketConnectAck()
         {
@@ -133,14 +126,14 @@ internal class PacketConnectHandler : IPacketHandler
             return false;
         }
 
-        _context.PacketSender.Send(newPlayer.Endpoint, ackBuffer.UsedSpan);
+        context.PacketSender.Send(newPlayer.Endpoint, ackBuffer.UsedSpan);
 
         return true;
     }
 
-    private bool IsInOtherRoom(IPEndPoint sender, out Player player, out Room takenRoom)
+    private static bool IsInOtherRoom(IPEndPoint sender, ServerContext context, out Player player, out Room takenRoom)
     {
-        foreach (Room room in _context.RoomHolder.GetRooms())
+        foreach (Room room in context.RoomHolder.GetRooms())
         {
             Player? p = room.PlayerHolder.FindPlayerByHost(sender);
             if (p != null)

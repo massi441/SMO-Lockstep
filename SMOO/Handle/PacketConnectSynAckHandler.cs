@@ -1,4 +1,4 @@
-﻿using System.Buffers.Binary;
+using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using SMOO.Protocol;
@@ -7,16 +7,9 @@ using SMOO.Util;
 
 namespace SMOO.Handle;
 
-internal class PacketConnectSynAckHandler : IPacketHandler
+internal static class PacketConnectSynAckHandler
 {
-    private readonly ServerContext _context;
-
-    public PacketConnectSynAckHandler(ServerContext context)
-    {
-        _context = context;
-    }
-
-    public uint MinPayloadSize => 0;
+    public static ushort MinPayloadSize => 0;
 
     /// <summary>
     /// The payload sent by a new player, to confirm that they have joined a room
@@ -61,7 +54,7 @@ internal class PacketConnectSynAckHandler : IPacketHandler
         }
     }
 
-    public void Handle(ParsedPacket packet, Room room)
+    public static void Handle(ParsedPacket packet, Room room, ServerContext context)
     {
         PacketConnectSynAckPayload synAckPayload = new PacketConnectSynAckPayload();
 
@@ -71,7 +64,7 @@ internal class PacketConnectSynAckHandler : IPacketHandler
         if (ackPacket == null)
         {
             packet.RentedBuffer.Return();
-            _context.Logger.LogWarning("Invalid SYN ACK sequence number ({SequenceNumber}) received by {PlayerName} in Room #{RoomId}, broadcast will be skipped", synAckPayload.SequenceNumber, packet.SenderPlayer?.Name, room.Id);
+            context.Logger.LogWarning("Invalid SYN ACK sequence number ({SequenceNumber}) received by {PlayerName} in Room #{RoomId}, broadcast will be skipped", synAckPayload.SequenceNumber, packet.SenderPlayer?.Name, room.Id);
             return;
         }
 
@@ -86,7 +79,7 @@ internal class PacketConnectSynAckHandler : IPacketHandler
 
         PacketSerializer.Serialize(joinRoomBuffer.UsedSpan, in joinPacket);
 
-        _context.Logger.LogInformation("Player {PlayerName} has confirmed their connection in Room #{RoomId}, room will be notified", packet.SenderPlayer.Name, room.Id);
+        context.Logger.LogInformation("Player {PlayerName} has confirmed their connection in Room #{RoomId}, room will be notified", packet.SenderPlayer.Name, room.Id);
 
         room.Broadcaster.BroadcastReliablyExcept(room, packet.SenderPlayer, joinRoomBuffer); // transfers ownership of the rented buffer to the reliable store
     }

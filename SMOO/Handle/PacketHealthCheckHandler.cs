@@ -1,24 +1,17 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using SMOO.Protocol;
 using SMOO.Server;
 
 namespace SMOO.Handle;
 
-internal class PacketHealthCheckHandler : IPacketHandler
+internal static class PacketHealthCheckHandler
 {
-    private readonly ServerContext _context;
+    public static ushort MinPayloadSize => 0;
 
-    public PacketHealthCheckHandler(ServerContext context)
+    public static void Handle(ParsedPacket packet, Room room, ServerContext context)
     {
-        _context = context;
-    }
-
-    public uint MinPayloadSize => 0;
-
-    public void Handle(ParsedPacket packet, Room room)
-    {
-        _context.Logger.LogTrace("Health check accepted");
-        _context.PacketSender.Send(packet.SenderIp, packet.RentedBuffer.UsedSpan);
+        context.Logger.LogTrace("Health check accepted");
+        context.PacketSender.Send(packet.SenderIp, packet.RentedBuffer.UsedSpan);
 
         packet.RentedBuffer.Return();
     }
