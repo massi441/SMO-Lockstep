@@ -48,7 +48,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
                 return;
             }
 
-            _context.Logger.LogTrace("Resending reliable packet #{Id} to {PlayerName} in room {#RoomdId}", reliablePacket.SequenceNumber, reliablePacket.Receiver.Name, reliablePacket.Receiver.Room.Id);
+            _context.Logger.LogTrace("Resending {Type} packet #{Id} to {PlayerName} in room {#RoomdId}", reliablePacket.Header.Type, reliablePacket.SequenceNumber, reliablePacket.Receiver.Name, reliablePacket.Receiver.Room.Id);
 
             Result<Error> sendResult = _context.PacketSender.Send(reliablePacket.Receiver.Endpoint, reliablePacket.RentedBuffer.UsedSpan);
             if (!sendResult.IsSuccess)
