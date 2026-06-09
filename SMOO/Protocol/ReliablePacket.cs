@@ -27,8 +27,7 @@ internal class ReliablePacket
     public ref PacketHeader Header => ref MemoryMarshal.AsRef<PacketHeader>(RentedBuffer.UsedSpan);
 
     public DateTime LastSent { get; private set; } = DateTime.UtcNow;
-    public bool IsAlive => _tries > 0;
-    public bool IsDead => _tries <= 0;
+    public bool HasTriesLeft => _tries > 0;
     public bool IsResendTime => (DateTime.UtcNow - LastSent).TotalMilliseconds > Config.MinimumResendDelay.TotalMilliseconds;
 
     public void RefreshLastSent()

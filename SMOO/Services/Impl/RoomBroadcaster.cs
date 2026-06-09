@@ -41,7 +41,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
 
     private void ProcessAckPacket(ReliablePacket reliablePacket)
     {
-        if (reliablePacket.IsAlive)
+        if (reliablePacket.HasTriesLeft)
         {
             if (!reliablePacket.IsResendTime)
             {
