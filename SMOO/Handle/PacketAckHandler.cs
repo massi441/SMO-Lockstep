@@ -1,5 +1,4 @@
 ﻿using System.Buffers.Binary;
-using System.Runtime.InteropServices;
 using SMOO.Protocol;
 using SMOO.Server;
 using Microsoft.Extensions.Logging;

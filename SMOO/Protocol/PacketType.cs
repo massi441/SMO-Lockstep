@@ -13,6 +13,9 @@ internal enum PacketType : byte
     Ack,
     ChatMessage,
     ChatMessageRequest,
+    JoinStage,
+    QuitStage,
+    PlayerState,
 
     /// <summary>
     /// A reserved packet type for server side validation

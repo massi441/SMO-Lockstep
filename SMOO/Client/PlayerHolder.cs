@@ -39,6 +39,7 @@ internal class PlayerHolder : IPlayerHolder
             Slot = index,
             Name = playerInfo.Name,
             Room = playerInfo.Room,
+            WorldInfo = new PlayerWorldInfo()
         };
 
         _players[index] = player;

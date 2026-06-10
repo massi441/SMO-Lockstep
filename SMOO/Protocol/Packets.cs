@@ -17,6 +17,11 @@ internal struct PacketConnectAck : ISerializableStruct
     public required IPlayerHolder PlayerHolder;
     public required Player IgnoredPlayer;
 
+    public PacketConnectAck()
+    {
+        SequenceNumber = 0;
+    }
+
     public ushort FinalizeSize()
     {
         SizeStream stream = new SizeStream();
@@ -81,6 +86,11 @@ internal struct PacketPlayerJoinRoom : ISerializableStruct
     public required byte PlayerNameLength;
     public required string PlayerName;
 
+    public PacketPlayerJoinRoom()
+    {
+        SequenceNumber = 0;
+    }
+
     public readonly int Size()
     {
         SizeStream stream = new SizeStream();
@@ -116,6 +126,11 @@ internal struct PacketChatMessage : ISerializableStruct
     public required byte PlayerSlot;
     public required ushort MessageLength;
     public required string Message;
+
+    public PacketChatMessage()
+    {
+        SequenceNumber = 0;
+    }
 
     public readonly int Size()
     {
