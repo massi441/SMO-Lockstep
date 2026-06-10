@@ -16,12 +16,12 @@ PTYPE_CONNECT_ACK      = 1
 PTYPE_CONNECT_SYN_ACK  = 2
 PTYPE_DISCONNECT       = 3
 PTYPE_PLAYER_JOIN_ROOM = 4
-PTYPE_PLAYER_INPUT     = 5
-PTYPE_HEALTH_CHECK     = 6
-PTYPE_PING             = 7
-PTYPE_ACK              = 8
-PTYPE_CHAT_MESSAGE         = 9
-PTYPE_CHAT_MESSAGE_REQUEST = 10
+PTYPE_HEALTH_CHECK     = 5
+PTYPE_PING             = 6
+PTYPE_ACK              = 7
+PTYPE_CHAT_MESSAGE         = 8
+PTYPE_CHAT_MESSAGE_REQUEST = 9
+PTYPE_EVENT                = 10
 
 PTYPE_NAMES = {
     PTYPE_CONNECT:          "Connect",
@@ -29,12 +29,12 @@ PTYPE_NAMES = {
     PTYPE_CONNECT_SYN_ACK:  "ConnectSynAck",
     PTYPE_DISCONNECT:       "Disconnect",
     PTYPE_PLAYER_JOIN_ROOM: "PlayerJoinRoom",
-    PTYPE_PLAYER_INPUT:     "PlayerInput",
     PTYPE_HEALTH_CHECK:     "HealthCheck",
     PTYPE_PING:             "Ping",
     PTYPE_ACK:              "Ack",
     PTYPE_CHAT_MESSAGE:         "ChatMessage",
     PTYPE_CHAT_MESSAGE_REQUEST: "ChatMessageRequest",
+    PTYPE_EVENT:                "Event",
 }
 
 HEADER_FORMAT = "<IBBBHH"   # Magic(4) Type(1) Flags(1) Version(1) RoomId(2) PayloadSize(2)
@@ -172,12 +172,6 @@ def packet_disconnect():
     _room_id = None
     return build_packet(ptype=PTYPE_DISCONNECT, room_id=room_id)
 
-def packet_player_input():
-    room_id = _require_room()
-    if room_id is None:
-        return None
-    return build_packet(ptype=PTYPE_PLAYER_INPUT, room_id=room_id)
-
 def packet_health_check():
     room_id = _require_room()
     if room_id is None:
@@ -198,13 +192,13 @@ def packet_chat_message():
         return None
     return build_packet(ptype=PTYPE_CHAT_MESSAGE_REQUEST, room_id=room_id, payload=struct.pack("<H", len(message)) + message)
 
-def spam_player_input(sock, server):
+def spam_event(sock, server):
     room_id = _require_room()
     if room_id is None:
         return
     count = int(input("packet count: "))
-    packet = build_packet(ptype=PTYPE_PLAYER_INPUT, room_id=room_id)
-    print(f"  sending {count} PlayerInput packets at 60fps...")
+    packet = build_packet(ptype=PTYPE_EVENT, room_id=room_id)
+    print(f"  sending {count} Event packets at 60fps...")
     for i in range(count):
         send(sock, packet, server)
         time.sleep(1 / 60)
@@ -213,13 +207,12 @@ def spam_player_input(sock, server):
 # --- menu ---
 
 PACKETS = [
-    ("connect",           packet_connect),
-    ("disconnect",        packet_disconnect),
-    ("player input",      packet_player_input),
-    ("health check",      packet_health_check),
-    ("ping",              packet_ping),
-    ("chat message",      packet_chat_message),
-    ("spam player input", None),
+    ("connect",      packet_connect),
+    ("disconnect",   packet_disconnect),
+    ("health check", packet_health_check),
+    ("ping",         packet_ping),
+    ("chat message", packet_chat_message),
+    ("spam event",   None),
 ]
 
 def main():
@@ -248,7 +241,7 @@ def main():
         idx = int(choice) - 1
         name, builder = PACKETS[idx]
         if builder is None:
-            spam_player_input(sock, server)
+            spam_event(sock, server)
         else:
             packet = builder()
             if packet is not None:

@@ -6,7 +6,7 @@ using SMOO.Util;
 
 namespace SMOO.Handle;
 
-internal static class PacketChatMessageHandler
+internal class PacketChatMessageHandler : IPacketHandler
 {
     /// <summary>
     /// Requires one UInt16 for the length of the message

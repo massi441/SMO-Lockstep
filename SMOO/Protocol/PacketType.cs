@@ -7,15 +7,12 @@ internal enum PacketType : byte
     ConnectSynAck,
     Disconnect,
     PlayerJoinRoom,
-    PlayerInput,
     HealthCheck,
     Ping,
     Ack,
     ChatMessage,
     ChatMessageRequest,
-    JoinStage,
-    QuitStage,
-    PlayerState,
+    Event,
 
     /// <summary>
     /// A reserved packet type for server side validation

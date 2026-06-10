@@ -8,7 +8,7 @@ using SMOO.Util;
 
 namespace SMOO.Handle;
 
-internal static class PacketConnectHandler
+internal class PacketConnectHandler : IPacketHandler
 {
     /// <summary>
     /// Requires at least one UInt16 for the length of the Player's name

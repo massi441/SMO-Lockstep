@@ -6,7 +6,7 @@ using SMOO.Util;
 
 namespace SMOO.Handle;
 
-internal static class PacketAckHandler
+internal class PacketAckHandler : IPacketHandler
 {
 
     /// <summary>

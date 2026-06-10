@@ -25,6 +25,6 @@ internal struct SizeStream
 
     public void WriteString(string str)
     {
-        _size += (ushort)Encoding.UTF8.GetByteCount(str);
+        _size += (ushort)Encoding.UTF8.GetByteCount(str.AsSpan());
     }
 }

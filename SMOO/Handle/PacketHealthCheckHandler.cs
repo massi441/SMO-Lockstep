@@ -4,7 +4,7 @@ using SMOO.Server;
 
 namespace SMOO.Handle;
 
-internal static class PacketHealthCheckHandler
+internal class PacketHealthCheckHandler : IPacketHandler
 {
     public static ushort MinPayloadSize => 0;
 

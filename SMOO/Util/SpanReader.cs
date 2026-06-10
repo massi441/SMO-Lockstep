@@ -8,9 +8,8 @@ internal ref struct SpanReader
     private int _offset;
     private readonly ReadOnlySpan<byte> _span;
 
-    public readonly int Offset => _offset;
-    public readonly bool IsEnd => _offset >= _span.Length;
     public readonly int Remaining => _span.Length - _offset;
+    public readonly ReadOnlySpan<byte> RemainingSpan => _span[_offset..];
 
     public SpanReader(ReadOnlySpan<byte> span)
     {

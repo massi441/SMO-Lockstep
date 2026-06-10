@@ -12,7 +12,7 @@ internal readonly struct PlayerInRoomInfo
     public PlayerInRoomInfo(Player player)
     {
         PlayerIndex = player.Slot;
-        PlayerNameLength = (byte)Encoding.UTF8.GetByteCount(player.Name);
+        PlayerNameLength = (byte)Encoding.UTF8.GetByteCount(player.Name.AsSpan());
         Name = player.Name;
     }
 

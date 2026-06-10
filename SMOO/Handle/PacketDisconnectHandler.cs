@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace SMOO.Handle;
 
-internal static class PacketDisconnectHandler
+internal class PacketDisconnectHandler : IPacketHandler
 {
     public static ushort MinPayloadSize => 0;
 
