@@ -18,9 +18,8 @@ internal class PacketChatMessageHandler : IPacketHandler
         public ushort MessageLength;
         public string Message;
 
-        public void Deserialize(ReadOnlySpan<byte> source)
+        public void Deserialize(ref SpanReader reader)
         {
-            SpanReader reader = new SpanReader(source);
             MessageLength = reader.ReadUInt16LittleEndian();
             Message = Encoding.UTF8.GetString(reader.ReadBytes(MessageLength));
         }

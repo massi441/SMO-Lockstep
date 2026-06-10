@@ -18,9 +18,9 @@ internal class PacketAckHandler : IPacketHandler
     {
         public ushort SequenceNumber;
 
-        public void Deserialize(ReadOnlySpan<byte> source)
+        public void Deserialize(ref SpanReader reader)
         {
-            SequenceNumber = BinaryPrimitives.ReadUInt16LittleEndian(source);
+            SequenceNumber = reader.ReadUInt16LittleEndian();
         }
     }
 

@@ -20,10 +20,10 @@ internal class PacketConnectHandler : IPacketHandler
         public byte NameLength { get; private set; }
         public string Name { get; private set; }
 
-        public void Deserialize(ReadOnlySpan<byte> source)
+        public void Deserialize(ref SpanReader reader)
         {
-            NameLength = source[0];
-            Name = Encoding.UTF8.GetString(source.Slice(0x1, NameLength));
+            NameLength = reader.ReadByte();
+            Name = Encoding.UTF8.GetString(reader.RemainingSpan);
         }
     }
 

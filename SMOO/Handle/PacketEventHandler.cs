@@ -14,22 +14,23 @@ internal class PacketEventHandler : IPacketHandler
     {
         public EventType EventType;
 
-        public void Deserialize(ReadOnlySpan<byte> source)
+        public void Deserialize(ref SpanReader reader)
         {
-            SpanReader reader = new SpanReader(source);
             EventType = (EventType)reader.ReadUInt16LittleEndian();
         }
     }
 
     public static void Handle(ParsedPacket packet, Room room, ServerContext context)
     {
-        PacketEventPayload payload = PacketSerializer.Deserialize<PacketEventPayload>(packet.Payload);
+        SpanReader reader = new SpanReader(packet.Payload);
+
+        PacketEventPayload payload = PacketSerializer.Deserialize<PacketEventPayload>(ref reader);
 
         context.Logger.LogTrace("Dispatching event {EventType} from {PlayerName}", payload.EventType, packet.SenderPlayer?.Name);
 
         Event.EventHandler handler = EventHandlerProvider.GetHandler(payload.EventType);
 
-        ReadOnlySpan<byte> eventData = packet.Payload[sizeof(ushort)..];
+        ReadOnlySpan<byte> eventData = reader.RemainingSpan;
 
         if (eventData.Length < handler.MinPayloadSize)
         {

@@ -2,5 +2,5 @@
 
 internal interface IDeserializableStruct
 {
-    void Deserialize(ReadOnlySpan<byte> source);
+    void Deserialize(ref SpanReader reader);
 }

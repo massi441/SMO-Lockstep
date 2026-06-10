@@ -17,17 +17,15 @@ internal class PacketConnectSynAckHandler : IPacketHandler
     {
         public ushort SequenceNumber { get; private set; }
 
-        public void Deserialize(ReadOnlySpan<byte> source)
+        public void Deserialize(ref SpanReader reader)
         {
-            SequenceNumber = BinaryPrimitives.ReadUInt16LittleEndian(source);
+            SequenceNumber = reader.ReadUInt16LittleEndian();
         }
     }
 
     public static void Handle(ParsedPacket packet, Room room, ServerContext context)
     {
-        PacketConnectSynAckPayload synAckPayload = new PacketConnectSynAckPayload();
-
-        synAckPayload.Deserialize(packet.Payload);
+        PacketConnectSynAckPayload synAckPayload = PacketSerializer.Deserialize<PacketConnectSynAckPayload>(packet.Payload);
 
         ReliablePacket? ackPacket = room.Broadcaster.ReliablePacketStore.RemovePacket(synAckPayload.SequenceNumber);
         if (ackPacket == null)
