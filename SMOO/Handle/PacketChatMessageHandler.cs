@@ -8,6 +8,9 @@ namespace SMOO.Handle;
 
 internal static class PacketChatMessageHandler
 {
+    /// <summary>
+    /// Requires one UInt16 for the length of the message
+    /// </summary>
     public static ushort MinPayloadSize => sizeof(ushort);
 
     private struct PacketChatMessageRequest : IDeserializableStruct
@@ -23,9 +26,6 @@ internal static class PacketChatMessageHandler
         }
     }
 
-    
-
-    // TODO: Copy message into new buffer post sanitization
     public static void Handle(ParsedPacket packet, Room room, ServerContext context)
     {
         PacketChatMessageRequest request = PacketSerializer.Deserialize<PacketChatMessageRequest>(packet.Payload);

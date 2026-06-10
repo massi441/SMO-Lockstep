@@ -15,12 +15,8 @@ internal static class PacketAckHandler
     /// </summary>
     public static ushort MinPayloadSize => sizeof(ushort);
 
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private ref struct PacketAckPayload : IDeserializableStruct
     {
-        /// <summary>
-        /// The UInt16 sequence number of the ack packet, starting at offset 0x0
-        /// </summary>
         public ushort SequenceNumber;
 
         public void Deserialize(ReadOnlySpan<byte> source)

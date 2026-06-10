@@ -15,19 +15,9 @@ internal static class PacketConnectHandler
     /// </summary>
     public static ushort MinPayloadSize => 2;
 
-    /// <summary>
-    /// The payload sent by a client who requests to connect to a room
-    /// </summary>
     private struct PacketConnectPayload : IDeserializableStruct
     {
-        /// <summary>
-        /// The length of the player's name, starting at offset 0x0
-        /// </summary>
         public byte NameLength { get; private set; }
-
-        /// <summary>
-        /// The name of the player, starting at offset 0x1
-        /// </summary>
         public string Name { get; private set; }
 
         public void Deserialize(ReadOnlySpan<byte> source)

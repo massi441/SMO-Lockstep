@@ -1,5 +1,4 @@
 using System.Buffers.Binary;
-using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using SMOO.Protocol;
 using SMOO.Server;
@@ -16,9 +15,6 @@ internal static class PacketConnectSynAckHandler
     /// </summary>
     private ref struct PacketConnectSynAckPayload : IDeserializableStruct
     {
-        /// <summary>
-        /// The sequence number of the SynAck packet, starting at offset 0x0
-        /// </summary>
         public ushort SequenceNumber { get; private set; }
 
         public void Deserialize(ReadOnlySpan<byte> source)
