@@ -73,10 +73,11 @@ def decode_payload(ptype, data):
         seq_str = f"seq={seq} "
         rest = raw[SEQ_SIZE:]
 
-    if ptype == PTYPE_CONNECT_ACK and len(rest) >= 17:
-        room_size = rest[0]
-        session_id = uuid.UUID(bytes_le=bytes(rest[1:17]))
-        return f"{seq_str}RoomSize={room_size} SessionId={session_id}"
+    if ptype == PTYPE_CONNECT_ACK and len(rest) >= 18:
+        session_id = uuid.UUID(bytes_le=bytes(rest[0:16]))
+        room_size = rest[16]
+        active_players = rest[17]
+        return f"{seq_str}RoomSize={room_size} ActivePlayers={active_players} SessionId={session_id}"
     elif ptype == PTYPE_PLAYER_JOIN_ROOM and len(rest) >= 1:
         name_len = rest[0]
         name = rest[1:1 + name_len].decode("utf-8", errors="replace") if name_len > 0 else ""
