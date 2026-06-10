@@ -6,7 +6,7 @@ namespace SMOO.Client;
 
 internal interface IPlayerHolder
 {
-    IEnumerable<Player> Players { get; }
+    Player[] Players { get; }
     byte MaxSize { get; }
     byte ActivePlayerCount { get; }
 

@@ -20,7 +20,8 @@ PTYPE_PLAYER_INPUT     = 5
 PTYPE_HEALTH_CHECK     = 6
 PTYPE_PING             = 7
 PTYPE_ACK              = 8
-PTYPE_CHAT_MESSAGE     = 9
+PTYPE_CHAT_MESSAGE         = 9
+PTYPE_CHAT_MESSAGE_REQUEST = 10
 
 PTYPE_NAMES = {
     PTYPE_CONNECT:          "Connect",
@@ -32,7 +33,8 @@ PTYPE_NAMES = {
     PTYPE_HEALTH_CHECK:     "HealthCheck",
     PTYPE_PING:             "Ping",
     PTYPE_ACK:              "Ack",
-    PTYPE_CHAT_MESSAGE:     "ChatMessage",
+    PTYPE_CHAT_MESSAGE:         "ChatMessage",
+    PTYPE_CHAT_MESSAGE_REQUEST: "ChatMessageRequest",
 }
 
 HEADER_FORMAT = "<IBBBHH"   # Magic(4) Type(1) Flags(1) Version(1) RoomId(2) PayloadSize(2)
@@ -77,11 +79,23 @@ def decode_payload(ptype, data):
         session_id = uuid.UUID(bytes_le=bytes(rest[0:16]))
         room_size = rest[16]
         active_players = rest[17]
-        return f"{seq_str}RoomSize={room_size} ActivePlayers={active_players} SessionId={session_id}"
-    elif ptype == PTYPE_PLAYER_JOIN_ROOM and len(rest) >= 1:
-        name_len = rest[0]
-        name = rest[1:1 + name_len].decode("utf-8", errors="replace") if name_len > 0 else ""
-        return f"{seq_str}Player={name!r}"
+        players = []
+        offset = 18
+        for _ in range(active_players):
+            if offset + 2 > len(rest):
+                break
+            player_index = rest[offset]
+            name_len = rest[offset + 1]
+            name = rest[offset + 2:offset + 2 + name_len].decode("utf-8", errors="replace")
+            players.append(f"[{player_index}]{name!r}")
+            offset += 2 + name_len
+        players_str = " players=" + ",".join(players) if players else ""
+        return f"{seq_str}RoomSize={room_size} OtherPlayers={active_players} SessionId={session_id}{players_str}"
+    elif ptype == PTYPE_PLAYER_JOIN_ROOM and len(rest) >= 2:
+        player_slot = rest[0]
+        name_len = rest[1]
+        name = rest[2:2 + name_len].decode("utf-8", errors="replace") if name_len > 0 else ""
+        return f"{seq_str}slot={player_slot} Player={name!r}"
     elif ptype == PTYPE_CONNECT and len(raw) >= 1:
         name_len = raw[0]
         name = raw[1:1 + name_len].decode("utf-8", errors="replace") if name_len > 0 else ""
@@ -92,12 +106,15 @@ def decode_payload(ptype, data):
     elif ptype == PTYPE_ACK and len(raw) >= 2:
         seq = struct.unpack_from("<H", raw, 0)[0]
         return f"AckedSeq={seq}"
+    elif ptype == PTYPE_DISCONNECT and len(rest) >= 1:
+        return f"{seq_str}slot={rest[0]} left"
     elif ptype == PTYPE_PING:
         return f"echo={raw.decode('utf-8', errors='replace')}" if raw else "(empty)"
-    elif ptype == PTYPE_CHAT_MESSAGE and len(rest) >= 2:
-        msg_len = struct.unpack_from("<H", rest, 0)[0]
-        msg = rest[2:2 + msg_len].decode("utf-8", errors="replace")
-        return f"{seq_str}msg={msg!r}"
+    elif ptype == PTYPE_CHAT_MESSAGE and len(rest) >= 3:
+        player_slot = rest[0]
+        msg_len = struct.unpack_from("<H", rest, 1)[0]
+        msg = rest[3:3 + msg_len].decode("utf-8", errors="replace")
+        return f"{seq_str}slot={player_slot} msg={msg!r}"
     return f"({len(raw)} payload bytes)"
 
 def send(sock, packet, server):
@@ -130,9 +147,6 @@ def receive_loop(sock, server):
                     elif ptype in SERVER_RELIABLE_PTYPES:
                         ack = build_packet(PTYPE_ACK, header["room_id"], struct.pack("<H", seq))
                         send(sock, ack, server)
-                        if ptype == PTYPE_DISCONNECT:
-                            _room_id = None
-                            print("\n  !! disconnected from room by server")
             else:
                 print(f"\n  << {len(data)} bytes from {sender} (unrecognised) | {data.hex(' ')}")
             print("> ", end="", flush=True)
@@ -182,7 +196,7 @@ def packet_chat_message():
     if len(message) == 0:
         print("  message cannot be empty")
         return None
-    return build_packet(ptype=PTYPE_CHAT_MESSAGE, room_id=room_id, payload=b"\x00\x00" + struct.pack("<H", len(message)) + message)
+    return build_packet(ptype=PTYPE_CHAT_MESSAGE_REQUEST, room_id=room_id, payload=struct.pack("<H", len(message)) + message)
 
 def spam_player_input(sock, server):
     room_id = _require_room()

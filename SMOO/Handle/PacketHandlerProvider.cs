@@ -28,6 +28,7 @@ internal static unsafe class PacketHandlerProvider
         new PacketHandler(PacketHealthCheckHandler.MinPayloadSize, &PacketHealthCheckHandler.Handle),
         null,
         new PacketHandler(PacketAckHandler.MinPayloadSize, &PacketAckHandler.Handle),
+        null,
         new PacketHandler(PacketChatMessageHandler.MinPayloadSize, &PacketChatMessageHandler.Handle),
         null,
     ];

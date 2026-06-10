@@ -1,6 +1,5 @@
 using System.Net;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using SMOO.Client;
@@ -42,21 +41,66 @@ internal static class PacketConnectHandler
     /// <summary>
     /// The packet sent to a player that just connected to a room
     /// </summary>
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct PacketConnectAck : ISerializableStruct
     {
         public required PacketHeader Header;
         public ushort SequenceNumber;
-        public required ClientInfo ClientInfo;
+        public required Guid SessionId;
+        public required byte RoomSize;
+        public required byte OtherPlayersCount;
+        public required IPlayerHolder PlayerHolder;
+        public required Player IgnoredPlayer;
 
-        public static ushort SizeOf()
+        public ushort FinalizeSize()
         {
-            return (ushort)Unsafe.SizeOf<PacketConnectAck>();
+            SizeStream stream = new SizeStream();
+
+            stream.Write<PacketHeader>();
+            stream.Write<ushort>();
+            stream.Write<Guid>();
+            stream.Write<byte>();
+            stream.Write<byte>();
+
+            foreach (Player player in PlayerHolder.Players)
+            {
+                if (player == IgnoredPlayer)
+                {
+                    continue;
+                }
+
+                PlayerInRoomInfo playerInfo = new PlayerInRoomInfo(player);
+
+                stream.WriteBytes(playerInfo.Size());
+            }
+
+            ushort fullsize = stream.Size;
+
+            Header.PayloadSize = (ushort)(fullsize - Unsafe.SizeOf<PacketHeader>());
+
+            return fullsize;
         }
 
         public readonly void Serialize(Span<byte> destination)
         {
-            MemoryMarshal.Write(destination, this);
+            SpanWriter writer = new SpanWriter(destination);
+
+            writer.Write(Header);
+            writer.Write(SequenceNumber);
+            writer.Write(SessionId);
+            writer.Write(RoomSize);
+            writer.Write(OtherPlayersCount);
+
+            foreach (Player player in PlayerHolder.Players)
+            {
+                if (player == IgnoredPlayer)
+                {
+                    continue;
+                }
+
+                PlayerInRoomInfo playerInfo = new PlayerInRoomInfo(player);
+
+                playerInfo.Serialize(ref writer);
+            }
         }
     }
 
@@ -106,18 +150,20 @@ internal static class PacketConnectHandler
 
     private static bool AckConnect(Player newPlayer, ref ParsedPacket packet, Room room, ServerContext context)
     {
+        PacketHeader header = packet.Header.WithType(PacketType.ConnectAck);
+
         PacketConnectAck ackPacket = new PacketConnectAck()
         {
-            Header = packet.Header.WithSizeType(MemoryUtil.PayloadSize<PacketConnectAck>(), PacketType.ConnectAck),
-            ClientInfo = new ClientInfo()
-            {
-                RoomSize = room.PlayerHolder.MaxSize,
-                SessionId = newPlayer.Id.SessionId,
-                ActivePlayerCount = room.PlayerHolder.ActivePlayerCount
-            }
+            Header = header,
+            RoomSize = room.PlayerHolder.MaxSize,
+            SessionId = newPlayer.Id.SessionId,
+            OtherPlayersCount = (byte)(room.PlayerHolder.ActivePlayerCount - 1),
+            PlayerHolder = room.PlayerHolder,
+            IgnoredPlayer = newPlayer,
         };
 
-        RentedBuffer ackBuffer = MemoryUtil.Rent<PacketConnectAck>();
+        RentedBuffer ackBuffer = new RentedBuffer(ackPacket.FinalizeSize());
+
         ackPacket.Serialize(ackBuffer.UsedSpan);
 
         Result<Error> uploadResult = room.Broadcaster.ReliablePacketStore.UploadPacket(ackBuffer, new RefCounter(), newPlayer);

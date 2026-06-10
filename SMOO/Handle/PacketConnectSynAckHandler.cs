@@ -35,12 +35,21 @@ internal static class PacketConnectSynAckHandler
     {
         public required PacketHeader Header;
         public ushort SequenceNumber;
+        public required byte PlayerSlot;
         public required byte PlayerNameLength;
         public required string PlayerName;
 
-        public readonly int SizeOf()
+        public readonly int Size()
         {
-            return PacketHeader.SizeOf() + sizeof(ushort) + sizeof(byte) + (sizeof(byte) * PlayerNameLength);
+            SizeStream stream = new SizeStream();
+
+            stream.Write<PacketHeader>();
+            stream.Write<ushort>();
+            stream.Write<byte>();
+            stream.Write<byte>();
+            stream.WriteString(PlayerName);
+
+            return stream.Size;
         }
 
         public readonly void Serialize(Span<byte> destination)
@@ -49,6 +58,7 @@ internal static class PacketConnectSynAckHandler
 
             writer.Write(Header);
             writer.Write(SequenceNumber);
+            writer.Write(PlayerSlot);
             writer.Write(PlayerNameLength);
             writer.WriteString(PlayerName);
         }
@@ -71,11 +81,12 @@ internal static class PacketConnectSynAckHandler
         PacketPlayerJoinRoom joinPacket = new PacketPlayerJoinRoom()
         {
             Header = packet.Header.WithSizeType(MemoryUtil.PayloadSize<PacketPlayerJoinRoom>(), PacketType.PlayerJoinRoom),
+            PlayerSlot = packet.SenderPlayer!.Slot,
             PlayerNameLength = (byte)packet.SenderPlayer!.Name.Length,
             PlayerName = packet.SenderPlayer!.Name,
         };
 
-        RentedBuffer joinRoomBuffer = new RentedBuffer(joinPacket.SizeOf());
+        RentedBuffer joinRoomBuffer = new RentedBuffer(joinPacket.Size());
 
         PacketSerializer.Serialize(joinRoomBuffer.UsedSpan, in joinPacket);
 

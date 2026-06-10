@@ -12,6 +12,7 @@ internal enum PacketType : byte
     Ping,
     Ack,
     ChatMessage,
+    ChatMessageRequest,
 
     /// <summary>
     /// A reserved packet type for server side validation

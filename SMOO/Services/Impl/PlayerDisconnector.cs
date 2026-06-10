@@ -14,6 +14,7 @@ internal class PlayerDisconnector : IPlayerDisconnector
     {
         public required PacketHeader Header;
         public ushort SequenceNumber;
+        public required byte PlayerSlot;
 
         public static int SizeOf()
         {
@@ -25,7 +26,7 @@ internal class PlayerDisconnector : IPlayerDisconnector
             return sizeof(byte);
         }
 
-        public void Serialize(Span<byte> destination)
+        public readonly void Serialize(Span<byte> destination)
         {
             MemoryMarshal.Write(destination, this);
         }
@@ -49,7 +50,8 @@ internal class PlayerDisconnector : IPlayerDisconnector
                 Version = Config.Version,
                 RoomId = player.Room.Id,
                 PayloadSize = PacketDisconnect.SizeOfPayload()
-            }
+            },
+            PlayerSlot = player.Slot
         };
 
         PacketSerializer.Serialize(broadcastBuffer.UsedSpan, disconnectPacket);

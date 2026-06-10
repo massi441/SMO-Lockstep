@@ -9,7 +9,7 @@ internal class PlayerHolder : IPlayerHolder
     private readonly Player[] _players;
 
     public byte MaxSize => (byte)_players.Length;
-    public IEnumerable<Player> Players => _players.Where(p => p != null);
+    public Player[] Players => [.. _players.Where(p => p != null)];
     public byte ActivePlayerCount => (byte)Players.Count();
 
     public PlayerHolder(byte size = Config.DefaultRoomSize)
@@ -36,6 +36,7 @@ internal class PlayerHolder : IPlayerHolder
                 Endpoint = playerInfo.Endpoint,
                 SessionId = Guid.NewGuid(),
             },
+            Slot = index,
             Name = playerInfo.Name,
             Room = playerInfo.Room,
         };
