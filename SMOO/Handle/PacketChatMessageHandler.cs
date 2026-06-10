@@ -23,35 +23,7 @@ internal static class PacketChatMessageHandler
         }
     }
 
-    private struct PacketChatMessage : ISerializableStruct
-    {
-        public required PacketHeader Header;
-        public ushort SequenceNumber;
-        public required byte PlayerSlot;
-        public required ushort MessageLength;
-        public required string Message;
-
-        public readonly int Size()
-        {
-            SizeStream stream = new SizeStream();
-            stream.Write<PacketHeader>();
-            stream.Write<ushort>();
-            stream.Write<byte>();
-            stream.Write<ushort>();
-            stream.WriteString(Message);
-            return stream.Size;
-        }
-
-        public readonly void Serialize(Span<byte> destination)
-        {
-            SpanWriter writer = new SpanWriter(destination);
-            writer.Write(Header);
-            writer.Skip(sizeof(ushort)); // sequence number written at send time
-            writer.Write(PlayerSlot);
-            writer.Write(MessageLength);
-            writer.WriteString(Message);
-        }
-    }
+    
 
     // TODO: Copy message into new buffer post sanitization
     public static void Handle(ParsedPacket packet, Room room, ServerContext context)

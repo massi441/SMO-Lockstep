@@ -27,43 +27,6 @@ internal static class PacketConnectSynAckHandler
         }
     }
 
-    /// <summary>
-    /// The packet sent to a room, to notify that a new player has joined
-    /// </summary>
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct PacketPlayerJoinRoom : ISerializableStruct
-    {
-        public required PacketHeader Header;
-        public ushort SequenceNumber;
-        public required byte PlayerSlot;
-        public required byte PlayerNameLength;
-        public required string PlayerName;
-
-        public readonly int Size()
-        {
-            SizeStream stream = new SizeStream();
-
-            stream.Write<PacketHeader>();
-            stream.Write<ushort>();
-            stream.Write<byte>();
-            stream.Write<byte>();
-            stream.WriteString(PlayerName);
-
-            return stream.Size;
-        }
-
-        public readonly void Serialize(Span<byte> destination)
-        {
-            SpanWriter writer = new SpanWriter(destination);
-
-            writer.Write(Header);
-            writer.Write(SequenceNumber);
-            writer.Write(PlayerSlot);
-            writer.Write(PlayerNameLength);
-            writer.WriteString(PlayerName);
-        }
-    }
-
     public static void Handle(ParsedPacket packet, Room room, ServerContext context)
     {
         PacketConnectSynAckPayload synAckPayload = new PacketConnectSynAckPayload();

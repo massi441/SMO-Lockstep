@@ -1,5 +1,4 @@
 using System.Net;
-using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using SMOO.Client;
@@ -35,72 +34,6 @@ internal static class PacketConnectHandler
         {
             NameLength = source[0];
             Name = Encoding.UTF8.GetString(source.Slice(0x1, NameLength));
-        }
-    }
-
-    /// <summary>
-    /// The packet sent to a player that just connected to a room
-    /// </summary>
-    private struct PacketConnectAck : ISerializableStruct
-    {
-        public required PacketHeader Header;
-        public ushort SequenceNumber;
-        public required Guid SessionId;
-        public required byte RoomSize;
-        public required byte OtherPlayersCount;
-        public required IPlayerHolder PlayerHolder;
-        public required Player IgnoredPlayer;
-
-        public ushort FinalizeSize()
-        {
-            SizeStream stream = new SizeStream();
-
-            stream.Write<PacketHeader>();
-            stream.Write<ushort>();
-            stream.Write<Guid>();
-            stream.Write<byte>();
-            stream.Write<byte>();
-
-            foreach (Player player in PlayerHolder.Players)
-            {
-                if (player == IgnoredPlayer)
-                {
-                    continue;
-                }
-
-                PlayerInRoomInfo playerInfo = new PlayerInRoomInfo(player);
-
-                stream.WriteBytes(playerInfo.Size());
-            }
-
-            ushort fullsize = stream.Size;
-
-            Header.PayloadSize = (ushort)(fullsize - Unsafe.SizeOf<PacketHeader>());
-
-            return fullsize;
-        }
-
-        public readonly void Serialize(Span<byte> destination)
-        {
-            SpanWriter writer = new SpanWriter(destination);
-
-            writer.Write(Header);
-            writer.Write(SequenceNumber);
-            writer.Write(SessionId);
-            writer.Write(RoomSize);
-            writer.Write(OtherPlayersCount);
-
-            foreach (Player player in PlayerHolder.Players)
-            {
-                if (player == IgnoredPlayer)
-                {
-                    continue;
-                }
-
-                PlayerInRoomInfo playerInfo = new PlayerInRoomInfo(player);
-
-                playerInfo.Serialize(ref writer);
-            }
         }
     }
 

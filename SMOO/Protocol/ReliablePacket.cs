@@ -13,7 +13,7 @@ internal class ReliablePacket
         init => _tries = value;
     }
     public required ushort SequenceNumber { get; init; }
-    public required RentedBuffer RentedBuffer {  get; init; }
+    public required RentedBuffer RentedBuffer { get; init; }
     public required Player Receiver { get; init; }
 
     /// <summary>
