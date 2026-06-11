@@ -67,24 +67,25 @@ internal struct PacketPlayerJoinRoom : ISerializableStruct
 {
     public required PacketHeader Header;
     public ushort SequenceNumber;
-    public required byte PlayerSlot;
-    public required byte PlayerNameLength;
-    public required string PlayerName;
+    public required PlayerInRoomInfo PlayerRoomInfo;
 
     public PacketPlayerJoinRoom()
     {
         SequenceNumber = 0;
+        PlayerRoomInfo = new PlayerInRoomInfo();
     }
 
-    public readonly int Size()
+    public int FinalizeSize()
     {
         SizeStream stream = new SizeStream();
 
         stream.Write<PacketHeader>();
         stream.Write<ushort>();
-        stream.Write<byte>();
-        stream.Write<byte>();
-        stream.WriteString(PlayerName);
+        stream.WriteBytes(PlayerRoomInfo.Size());
+
+        ushort fullsize = stream.Size;
+
+        Header.PayloadSize = (ushort)(fullsize - Unsafe.SizeOf<PacketHeader>());
 
         return stream.Size;
     }
@@ -95,9 +96,8 @@ internal struct PacketPlayerJoinRoom : ISerializableStruct
 
         writer.Write(Header);
         writer.Write(SequenceNumber);
-        writer.Write(PlayerSlot);
-        writer.Write(PlayerNameLength);
-        writer.WriteString(PlayerName);
+
+        PlayerRoomInfo.Serialize(ref writer);
     }
 }
 

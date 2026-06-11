@@ -1,5 +1,5 @@
-using System.Buffers.Binary;
 using Microsoft.Extensions.Logging;
+using SMOO.Client;
 using SMOO.Protocol;
 using SMOO.Server;
 using SMOO.Util;
@@ -37,17 +37,15 @@ internal class PacketConnectSynAckHandler : IPacketHandler
 
         PacketPlayerJoinRoom joinPacket = new PacketPlayerJoinRoom()
         {
-            Header = packet.Header.WithSizeType(MemoryUtil.PayloadSize<PacketPlayerJoinRoom>(), PacketType.PlayerJoinRoom),
-            PlayerSlot = packet.SenderPlayer!.Slot,
-            PlayerNameLength = (byte)packet.SenderPlayer!.Name.Length,
-            PlayerName = packet.SenderPlayer!.Name,
+            Header = packet.Header.WithType(PacketType.PlayerJoinRoom),
+            PlayerRoomInfo = new PlayerInRoomInfo(packet.SenderPlayer!)
         };
 
-        RentedBuffer joinRoomBuffer = new RentedBuffer(joinPacket.Size());
+        RentedBuffer joinRoomBuffer = new RentedBuffer(joinPacket.FinalizeSize());
 
         PacketSerializer.Serialize(joinRoomBuffer.UsedSpan, in joinPacket);
 
-        context.Logger.LogInformation("Player {PlayerName} has confirmed their connection in Room #{RoomId}, room will be notified", packet.SenderPlayer.Name, room.Id);
+        context.Logger.LogInformation("Player {PlayerName} has confirmed their connection in Room #{RoomId}, room will be notified", packet.SenderPlayer!.Name, room.Id);
 
         room.Broadcaster.BroadcastReliablyExcept(room, packet.SenderPlayer, joinRoomBuffer); // transfers ownership of the rented buffer to the reliable store
     }

@@ -100,8 +100,14 @@ def decode_payload(ptype, data):
     elif ptype == PTYPE_PLAYER_JOIN_ROOM and len(rest) >= 2:
         player_slot = rest[0]
         name_len = rest[1]
-        name = rest[2:2 + name_len].decode("utf-8", errors="replace") if name_len > 0 else ""
-        return f"{seq_str}slot={player_slot} Player={name!r}"
+        name = rest[2:2 + name_len].decode("utf-8", errors="replace")
+        offset = 2 + name_len
+        body_len = rest[offset]
+        body = rest[offset + 1:offset + 1 + body_len].decode("utf-8", errors="replace")
+        offset += 1 + body_len
+        cap_len = rest[offset]
+        cap = rest[offset + 1:offset + 1 + cap_len].decode("utf-8", errors="replace")
+        return f"{seq_str}slot={player_slot} name={name!r} body={body!r} cap={cap!r}"
     elif ptype == PTYPE_CONNECT and len(raw) >= 1:
         name_len = raw[0]
         name = raw[1:1 + name_len].decode("utf-8", errors="replace") if name_len > 0 else ""
