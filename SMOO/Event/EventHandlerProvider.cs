@@ -18,7 +18,7 @@ internal readonly unsafe struct EventHandler
 
 internal static unsafe class EventHandlerProvider
 {
-    private static readonly EventHandler DefaultHandler         = new EventHandler(DefaultEventHandler.MinPayloadSize, &DefaultEventHandler.Handle);
+    private static readonly EventHandler DefaultHandler         = new EventHandler(EventDefaultHandler.MinPayloadSize, &EventDefaultHandler.Handle);
     private static readonly EventHandler JoinStage              = DefaultHandler;
     private static readonly EventHandler LeaveStage             = DefaultHandler;
     private static readonly EventHandler ChangeCostume          = DefaultHandler;

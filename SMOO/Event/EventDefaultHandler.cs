@@ -4,7 +4,7 @@ using SMOO.Server;
 
 namespace SMOO.Event;
 
-internal class DefaultEventHandler : IEventHandler
+internal class EventDefaultHandler : IEventHandler
 {
     public static ushort MinPayloadSize => 0;
 
