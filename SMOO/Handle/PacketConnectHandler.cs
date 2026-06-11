@@ -75,14 +75,15 @@ internal class PacketConnectHandler : IPacketHandler
     {
         PacketHeader header = packet.Header.WithType(PacketType.ConnectAck);
 
+        PlayerInRoomInfo[] playerInfos = [.. room.PlayerHolder.Players.Select(p => new PlayerInRoomInfo(p))];
+
         PacketConnectAck ackPacket = new PacketConnectAck()
         {
             Header = header,
             RoomSize = room.PlayerHolder.MaxSize,
             SessionId = newPlayer.Id.SessionId,
             OtherPlayersCount = (byte)(room.PlayerHolder.ActivePlayerCount - 1),
-            PlayerHolder = room.PlayerHolder,
-            IgnoredPlayer = newPlayer,
+            PlayerInfos = playerInfos
         };
 
         RentedBuffer ackBuffer = new RentedBuffer(ackPacket.FinalizeSize());

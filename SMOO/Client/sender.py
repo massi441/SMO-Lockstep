@@ -87,8 +87,14 @@ def decode_payload(ptype, data):
             player_index = rest[offset]
             name_len = rest[offset + 1]
             name = rest[offset + 2:offset + 2 + name_len].decode("utf-8", errors="replace")
-            players.append(f"[{player_index}]{name!r}")
             offset += 2 + name_len
+            body_len = rest[offset]
+            body = rest[offset + 1:offset + 1 + body_len].decode("utf-8", errors="replace")
+            offset += 1 + body_len
+            cap_len = rest[offset]
+            cap = rest[offset + 1:offset + 1 + cap_len].decode("utf-8", errors="replace")
+            offset += 1 + cap_len
+            players.append(f"[{player_index}]{name!r} body={body!r} cap={cap!r}")
         players_str = " players=" + ",".join(players) if players else ""
         return f"{seq_str}RoomSize={room_size} OtherPlayers={active_players} SessionId={session_id}{players_str}"
     elif ptype == PTYPE_PLAYER_JOIN_ROOM and len(rest) >= 2:

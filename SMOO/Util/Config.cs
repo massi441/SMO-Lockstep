@@ -11,4 +11,5 @@ internal class Config
     public const byte MaxRoomSize = 10;
     public static readonly TimeSpan ResendThreadTick = TimeSpan.FromMilliseconds(250);
     public static readonly TimeSpan MinimumResendDelay = TimeSpan.FromMilliseconds(350); // ideally store that on the packet itself, based on RTT
+    public static readonly string DefaultCostumeName = "Mario";
 }

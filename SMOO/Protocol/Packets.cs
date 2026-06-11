@@ -7,15 +7,14 @@ namespace SMOO.Protocol;
 /// <summary>
 /// The packet sent to a player that just connected to a room
 /// </summary>
-internal struct PacketConnectAck : ISerializableStruct
+internal ref struct PacketConnectAck : ISerializableStruct
 {
     public required PacketHeader Header;
     public ushort SequenceNumber;
     public required Guid SessionId;
     public required byte RoomSize;
     public required byte OtherPlayersCount;
-    public required IPlayerHolder PlayerHolder;
-    public required Player IgnoredPlayer;
+    public required ReadOnlySpan<PlayerInRoomInfo> PlayerInfos;
 
     public PacketConnectAck()
     {
@@ -32,15 +31,8 @@ internal struct PacketConnectAck : ISerializableStruct
         stream.Write<byte>();
         stream.Write<byte>();
 
-        foreach (Player player in PlayerHolder.Players)
+        foreach (PlayerInRoomInfo playerInfo in PlayerInfos)
         {
-            if (player == IgnoredPlayer)
-            {
-                continue;
-            }
-
-            PlayerInRoomInfo playerInfo = new PlayerInRoomInfo(player);
-
             stream.WriteBytes(playerInfo.Size());
         }
 
@@ -61,15 +53,8 @@ internal struct PacketConnectAck : ISerializableStruct
         writer.Write(RoomSize);
         writer.Write(OtherPlayersCount);
 
-        foreach (Player player in PlayerHolder.Players)
+        foreach (PlayerInRoomInfo playerInfo in PlayerInfos)
         {
-            if (player == IgnoredPlayer)
-            {
-                continue;
-            }
-
-            PlayerInRoomInfo playerInfo = new PlayerInRoomInfo(player);
-
             playerInfo.Serialize(ref writer);
         }
     }

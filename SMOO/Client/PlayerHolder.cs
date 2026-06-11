@@ -40,6 +40,10 @@ internal class PlayerHolder : IPlayerHolder
             Name = playerInfo.Name,
             Room = playerInfo.Room,
             WorldInfo = new PlayerWorldInfo()
+            {
+                CostumeBody = Config.DefaultCostumeName,
+                CostumeCap = Config.DefaultCostumeName
+            }
         };
 
         _players[index] = player;
