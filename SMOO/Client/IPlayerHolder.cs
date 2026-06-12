@@ -6,12 +6,13 @@ namespace SMOO.Client;
 
 internal interface IPlayerHolder
 {
-    IEnumerable<Player> Players { get; }
+    Player[] Players { get; }
     byte MaxSize { get; }
-    byte PlayerCount { get; }
-    byte OtherPlayerCount => (byte)(PlayerCount - 1);
+    byte ActivePlayerCount { get; }
 
     Result<Player, Error> RegisterPlayer(in PlayerInfo playerInfo);
     Result<Error> UnregisterPlayer(Player player);
-    Player? FindPlayerByIp(IPEndPoint endpoint);
+
+    Player? FindPlayerByHost(IPEndPoint endpoint);
+    Player? FindPlayerById(PlayerId id);
 }

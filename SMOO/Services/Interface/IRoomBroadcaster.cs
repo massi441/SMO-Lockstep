@@ -1,6 +1,4 @@
-﻿using System.Net;
-using SMOO.Client;
-using SMOO.Protocol;
+﻿using SMOO.Client;
 using SMOO.Server;
 using SMOO.Util;
 
@@ -13,14 +11,14 @@ internal interface IRoomBroadcaster
     /// </summary>
     IReliablePacketStore ReliablePacketStore { get; }
 
-    Result<Error> Broadcast(Room room, ReadOnlySpan<byte> payload);
-    Result<Error> BroadcastReliably(Room room, ReliablePacketBroadcastRequest request);
+    void Broadcast(Room room, ReadOnlySpan<byte> payload);
+    void BroadcastReliably(Room room, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries);
 
-    Result<Error> BroadcastExcept(Room room, IPEndPoint sender, ReadOnlySpan<byte> payload);
-    Result<Error> BroadcastReliablyExcept(Room room, Player sender, ReliablePacketBroadcastRequest request);
+    void BroadcastExcept(Room room, Player ignoredPlayer, ReadOnlySpan<byte> payload);
+    void BroadcastReliablyExcept(Room room, Player ignoredPlayer, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries);
 
-    Result<Error> BroadcastExceptWith(Room room, IPEndPoint sender, ReadOnlySpan<byte> senderPayload, ReadOnlySpan<byte> broadcastPayload);
-    Result<Error> BroadcastReliablyExceptWith(Room room, Player sender, ReliablePacketBroadcastRequest playerRequest, ReliablePacketBroadcastRequest broadcastRequest);
+    void BroadcastExceptWith(Room room, ReadOnlySpan<byte> roomPayload, Player ignoredPlayer, ReadOnlySpan<byte> ignoredPlayerPayload);
+    void BroadcastReliablyExceptWith(Room room, RentedBuffer roomPayload, Player ignoredPlayer, RentedBuffer ignoredPlayerPayload, byte maxRetries = Config.MaxRetries);
 
     Task Shutdown();
 }

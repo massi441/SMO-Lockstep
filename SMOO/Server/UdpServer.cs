@@ -1,5 +1,4 @@
 ﻿using SMOO.Protocol;
-using SMOO.Services;
 using SMOO.Util;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
@@ -87,7 +86,7 @@ internal class UdpServer
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionReset)
             {
-                Logger.LogWarning("An error occured while trying to send a packet");
+                Logger.LogWarning("An error occured while trying to send a packet, host unreachable");
             }
             catch (SocketException ex)
             {
@@ -115,7 +114,6 @@ internal class UdpServer
             RoomHolder = new RoomHolder(),
             PacketSender = new PacketSenderUdp(socket),
             PlayerDisconnector = new PlayerDisconnector(),
-            PacketHandlerProvider = new PacketHandlerProvider(),
             CancellationToken = cancellationToken
         };
 

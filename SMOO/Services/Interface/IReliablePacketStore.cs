@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using SMOO.Client;
 using SMOO.Protocol;
 using SMOO.Util;
 
@@ -8,19 +9,12 @@ internal interface IReliablePacketStore
 {
     public ConcurrentDictionary<ushort, ReliablePacket> PendingPackets { get; }
 
-    /// <summary>
-    /// Uploads a pending packet in the store, and writes the sequence number into the payload if the operation was successful.
-    /// The payload request MUST have reserved room for a UInt16, where the sequence number is written
-    /// </summary>
-    /// <param name="uploadRequest">The packet and its metadata to upload.</param>
-    /// <returns>Success, or <see cref="Error.PendingPacketStoreFull"/> if the store is at capacity.</returns>
-    public Result<Error> UploadPacket(ReliablePacketRequest uploadRequest);
-
+    public Result<Error> UploadPacket(RentedBuffer rentedBuffer, RefCounter refCounter, Player receiver, byte maxRetries = Config.MaxRetries);
 
     /// <summary>
-    /// Removes and returns the pending packet with the given sequence number, or null if not found.
+    /// Removes a reliable packet, and returns its rented buffer to the array pool.
     /// </summary>
-    /// <param name="sequenceNumber">The sequence number of the packet to remove.</param>
-    /// <returns>The removed <see cref="ReliablePacket"/>, or null if no packet with that sequence number exists.</returns>
+    /// <param name="sequenceNumber">The sequence number of the packet to remove</param>
+    /// <returns>The removed packed</returns>
     public ReliablePacket? RemovePacket(ushort sequenceNumber);
 }

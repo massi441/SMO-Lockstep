@@ -1,4 +1,6 @@
-﻿namespace SMOO.Protocol;
+﻿using SMOO.Util;
+
+namespace SMOO.Protocol;
 
 internal static class PacketSerializer
 {
@@ -9,13 +11,22 @@ internal static class PacketSerializer
 
     public static void Deserialize<T>(ReadOnlySpan<byte> source, ref T packet) where T : struct, IDeserializableStruct, allows ref struct
     {
-        packet.Deserialize(source);
+        SpanReader reader = new SpanReader(source);
+        packet.Deserialize(ref reader);
+    }
+
+    public static T Deserialize<T>(ref SpanReader reader) where T : struct, IDeserializableStruct, allows ref struct
+    {
+        T t = new T();
+        t.Deserialize(ref reader);
+        return t;
     }
 
     public static T Deserialize<T>(ReadOnlySpan<byte> source) where T : struct, IDeserializableStruct, allows ref struct
     {
         T t = new T();
-        t.Deserialize(source);
+        SpanReader reader = new SpanReader(source);
+        t.Deserialize(ref reader);
         return t;
     }
 }

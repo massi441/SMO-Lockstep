@@ -1,4 +1,4 @@
-﻿using SMOO.Client;
+using SMOO.Client;
 using SMOO.Protocol;
 using SMOO.Server;
 using SMOO.Util;
@@ -8,29 +8,29 @@ namespace SMOO.Handle;
 
 internal class PacketDisconnectHandler : IPacketHandler
 {
-    private readonly ServerContext _context;
-    public uint MinPayloadSize => 0;
+    public static ushort MinPayloadSize => 0;
 
-    public PacketDisconnectHandler(ServerContext context)
+    public static void Handle(ParsedPacket packet, Room room, ServerContext context)
     {
-        _context = context;
-    }
+        Player? player = packet.SenderPlayer;
 
-    public void Handle(Packet packet, Room room, Player? player)
-    {
         if (player == null)
         {
-            _context.Logger.LogWarning("Player was null in PacketDisconnect handler");
+            packet.RentedBuffer.Return();
+            context.Logger.LogWarning("Player was null in PacketDisconnect handler");
             return;
         }
 
-        Result<Error> disconnectResult = _context.PlayerDisconnector.Disconnect(player);
+        Result<Error> disconnectResult = context.PlayerDisconnector.Disconnect(player);
         if (disconnectResult.IsFailed)
         {
-            _context.Logger.LogError("Unable to disconnect {PlayerName} in room #{RoomId}", player.Name, room.Id);
+            packet.RentedBuffer.Return();
+            context.Logger.LogError("Unable to disconnect {PlayerName} in room #{RoomId}", player.Name, room.Id);
             return;
         }
 
-        _context.Logger.LogWarning("Player {Name} left room {RoomId}", player.Name, room.Id);
+        packet.RentedBuffer.Return();
+
+        context.Logger.LogWarning("Player {Name} left room {RoomId}", player.Name, room.Id);
     }
 }

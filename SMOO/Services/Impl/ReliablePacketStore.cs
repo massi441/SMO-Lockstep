@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using SMOO.Client;
 using SMOO.Protocol;
 using SMOO.Server;
 using SMOO.Services.Interface;
@@ -20,27 +21,29 @@ internal class ReliablePacketStore : IReliablePacketStore
         _context = context;
     }
 
-    public Result<Error> UploadPacket(ReliablePacketRequest request)
+    public Result<Error> UploadPacket(RentedBuffer rentedBuffer, RefCounter refCounter, Player receiver, byte maxRetries)
     {
         if (IsFull())
         {
             return Result<Error>.Failure(Error.PendingPacketStoreFull);
         }
 
-        ReliablePacket pendingPacket = new ReliablePacket()
+        ReliablePacket reliablePacket = new ReliablePacket()
         {
-            Player = request.Receiver,
-            RentedPayload = request.RentedPayload,
-            Tries = request.MaxRetries,
+            RentedBuffer = rentedBuffer,
+            RefCounter = refCounter,
+            Receiver = receiver,
+            Tries = maxRetries,
             SequenceNumber = _nextSequenceNumber
         };
 
-        WriteSequence(pendingPacket.RentedPayload.Ref, pendingPacket.SequenceNumber);
+        reliablePacket.WriteSequenceNumber();
+        reliablePacket.RefCounter.Increment();
 
-        _pendingPackets[_nextSequenceNumber] = pendingPacket;
+        _pendingPackets[_nextSequenceNumber] = reliablePacket;
         _nextSequenceNumber++;
 
-        _context.Logger.LogTrace("Uploaded reliable packet with sequence number #{SequenceNumber}, and {Tries} tries", pendingPacket.SequenceNumber, pendingPacket.Tries);
+        _context.Logger.LogTrace("Uploaded reliable {PacketType} packet with sequence number #{SequenceNumber}, and {Tries} tries", reliablePacket.Header.Type, reliablePacket.SequenceNumber, reliablePacket.Tries);
 
         return Result<Error>.Success();
     }
@@ -49,8 +52,16 @@ internal class ReliablePacketStore : IReliablePacketStore
     {
         if (_pendingPackets.TryRemove(sequenceNumber, out ReliablePacket? pendingPacket))
         {
-            _context.Logger.LogTrace("Removing and freeing buffer used by reliable packet #{SequenceNumber}", sequenceNumber);
-            pendingPacket.RentedPayload.Return();
+            if (pendingPacket.RefCounter.Decrement() == 0)
+            {
+                pendingPacket.RentedBuffer.Return();
+                _context.Logger.LogTrace("Removed and free'd buffer used by reliable packet #{SequenceNumber}", sequenceNumber);
+            }
+            else
+            {
+                _context.Logger.LogTrace("Decremented ref count after removing reliable packet #{SequenceNumber}, new ref count: {RefCount}", sequenceNumber, pendingPacket.RefCounter.Count);
+            }
+            
             return pendingPacket;
         }
 
@@ -59,28 +70,6 @@ internal class ReliablePacketStore : IReliablePacketStore
 
     private bool IsFull()
     {
-        if (_nextSequenceNumber > 0)
-        {
-            return false;
-        }
-
-        for (ushort i = 0; i < ushort.MaxValue; i++)
-        {
-            if (!_pendingPackets.ContainsKey(i))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static void WriteSequence(byte[] payload, ushort sequenceNumber)
-    {
-        SpanWriter writer = new SpanWriter(payload);
-
-        writer.Jump(PacketHeader.SizeOf());
-
-        writer.Write(sequenceNumber);
+        return _pendingPackets.Count > ushort.MaxValue;
     }
 }

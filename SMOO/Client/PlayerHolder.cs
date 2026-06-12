@@ -9,10 +9,10 @@ internal class PlayerHolder : IPlayerHolder
     private readonly Player[] _players;
 
     public byte MaxSize => (byte)_players.Length;
-    public IEnumerable<Player> Players => _players.Where(p => p != null);
-    public byte PlayerCount => (byte)Players.Count();
+    public Player[] Players => [.. _players.Where(p => p != null)];
+    public byte ActivePlayerCount => (byte)Players.Count();
 
-    public PlayerHolder(byte size = 4)
+    public PlayerHolder(byte size = Config.DefaultRoomSize)
     {
         _players = new Player[Math.Min(size, Config.MaxRoomSize)];
     }
@@ -31,9 +31,19 @@ internal class PlayerHolder : IPlayerHolder
 
         Player player = new Player()
         {
-            Endpoint = playerInfo.Endpoint,
+            Id = new PlayerId()
+            {
+                Endpoint = playerInfo.Endpoint,
+                SessionId = Guid.NewGuid(),
+            },
+            Slot = index,
             Name = playerInfo.Name,
             Room = playerInfo.Room,
+            WorldInfo = new PlayerWorldInfo()
+            {
+                CostumeBody = Config.DefaultCostumeName,
+                CostumeCap = Config.DefaultCostumeName
+            }
         };
 
         _players[index] = player;
@@ -55,7 +65,7 @@ internal class PlayerHolder : IPlayerHolder
         return Result<Error>.Failure(Error.OperationFailed);
     }
 
-    public Player? FindPlayerByIp(IPEndPoint endpoint)
+    public Player? FindPlayerById(PlayerId id)
     {
         foreach (Player p in _players)
         {
@@ -64,7 +74,25 @@ internal class PlayerHolder : IPlayerHolder
                 continue;
             }
 
-            if (p.Endpoint.Address.Equals(endpoint.Address))
+            if (p.Id == id)
+            {
+                return p;
+            }
+        }
+
+        return null;
+    }
+
+    public Player? FindPlayerByHost(IPEndPoint endpoint)
+    {
+        foreach (Player p in _players)
+        {
+            if (p == null)
+            {
+                continue;
+            }
+
+            if (p.Endpoint.Equals(endpoint))
             {
                 return p;
             }
@@ -83,7 +111,7 @@ internal class PlayerHolder : IPlayerHolder
                 continue;
             }
 
-            if (p.Endpoint.Equals(player.Endpoint))
+            if (p.Id == player.Id)
             {
                 _players[i] = null!;
             }
@@ -109,6 +137,6 @@ internal class PlayerHolder : IPlayerHolder
 
     private bool ContainsPlayer(PlayerInfo playerInfo)
     {
-        return FindPlayerByIp(playerInfo.Endpoint) != null;
+        return FindPlayerByHost(playerInfo.Endpoint) != null;
     }
 }

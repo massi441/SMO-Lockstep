@@ -12,19 +12,22 @@ internal static class PacketDispatcher
         Result<Error> headerResult = PacketParser.ParseHeader(packet, context);
         if (headerResult.IsFailed)
         {
+            packet.RentedBuffer.Return();
             return Result<Error>.Failure(headerResult.Error!.Value);
         }
 
         ref PacketHeader header = ref packet.Header;
         if (header.Type == PacketType.Ping)
         {
+            packet.RentedBuffer.Return();
             context.Logger.LogTrace("Ping received from {Address}:{Port}", packet.Sender.Address, packet.Sender.Port);
-            return context.PacketSender.Send(packet.Sender, packet.RentedBuffer.Span);
+            return context.PacketSender.Send(packet.Sender, packet.RentedBuffer.UsedSpan);
         }
 
         Room? room = context.RoomHolder.GetRoom(header.RoomId);
         if (room == null)
         {
+            packet.RentedBuffer.Return();
             return Result<Error>.Failure(Error.RoomNotFound);
         }
 

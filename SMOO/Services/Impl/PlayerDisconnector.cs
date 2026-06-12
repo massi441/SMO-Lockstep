@@ -10,10 +10,11 @@ namespace SMOO.Services.Impl;
 internal class PlayerDisconnector : IPlayerDisconnector
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct PacketDisconnect
+    private struct PacketDisconnect : ISerializableStruct
     {
         public required PacketHeader Header;
         public ushort SequenceNumber;
+        public required byte PlayerSlot;
 
         public static int SizeOf()
         {
@@ -24,13 +25,23 @@ internal class PlayerDisconnector : IPlayerDisconnector
         {
             return sizeof(byte);
         }
+
+        public readonly void Serialize(Span<byte> destination)
+        {
+            MemoryMarshal.Write(destination, this);
+        }
     }
 
     public Result<Error> Disconnect(Player player)
     {
-        RentedBuffer broadcastBuffer = MemoryUtil.Rent<PacketDisconnect>();
+        Result<Error> unregisterResult = player.Room.PlayerHolder.UnregisterPlayer(player);
+        if (unregisterResult.IsFailed)
+        {
+            return unregisterResult;
+        }
 
-        broadcastBuffer.Write(new PacketDisconnect()
+        RentedBuffer broadcastBuffer = MemoryUtil.Rent<PacketDisconnect>();
+        PacketDisconnect disconnectPacket = new PacketDisconnect()
         {
             Header = new PacketHeader()
             {
@@ -39,19 +50,14 @@ internal class PlayerDisconnector : IPlayerDisconnector
                 Version = Config.Version,
                 RoomId = player.Room.Id,
                 PayloadSize = PacketDisconnect.SizeOfPayload()
-            }
-        });
+            },
+            PlayerSlot = player.Slot
+        };
 
-        Result<Error> unregisterResult = player.Room.PlayerHolder.UnregisterPlayer(player);
-        if (unregisterResult.IsFailed)
-        {
-            return unregisterResult;
-        }
+        PacketSerializer.Serialize(broadcastBuffer.UsedSpan, disconnectPacket);
 
-        return player.Room.Broadcaster.BroadcastReliably(player.Room, new ReliablePacketBroadcastRequest()
-        {
-            MaxRetries = Config.MaxRetries,
-            RentedPayload = broadcastBuffer
-        });
+        player.Room.Broadcaster.BroadcastReliably(player.Room, broadcastBuffer);
+
+        return Result<Error>.Success();
     }
 }

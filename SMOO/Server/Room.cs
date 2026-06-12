@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Net;
 using System.Threading.Channels;
 using SMOO.Client;
@@ -60,12 +59,7 @@ internal class Room
 
                 player?.RefreshLastSeen();
 
-                IPacketHandler? packetHandler = _context.PacketHandlerProvider.GetShared(packet.Header.Type, _context);
-                if (packetHandler == null)
-                {
-                    _context.Logger.LogWarning("No handler found for packet type {PacketType}", packet.Header.Type);
-                    continue;
-                }
+                PacketHandler packetHandler = PacketHandlerTable.GetHandler(packet.Header.Type);
 
                 if (packet.Payload.Length < packetHandler.MinPayloadSize)
                 {
@@ -73,11 +67,17 @@ internal class Room
                     continue;
                 }
 
-                long start = Stopwatch.GetTimestamp();
-                packetHandler.Handle(packet, this, player);
-                _context.Logger.LogTrace("Handled {PacketType} in {Elapsed}μs", packet.Header.Type, Stopwatch.GetElapsedTime(start).TotalMicroseconds);
+                ParsedPacket parsedPacket = new ParsedPacket()
+                {
+                    SenderPlayer = player,
+                    RentedBuffer = packet.RentedBuffer,
+                    SenderIp = packet.Sender
+                };
 
-                packet.RentedBuffer.Return();
+                unsafe
+                {
+                    packetHandler.Handler(parsedPacket, this, _context);
+                }
             }
         } 
         catch (Exception ex)
@@ -106,7 +106,7 @@ internal class Room
             return true;
         }
 
-        player = PlayerHolder.FindPlayerByIp(sender)!;
+        player = PlayerHolder.FindPlayerByHost(sender);
 
         return player != null;
     }
