@@ -55,11 +55,10 @@ PTYPE_NAMES = {
     PTYPE_EVENT:                "Event",
 }
 
-HEADER_FORMAT = "<IBBBHH"   # Magic(4) Type(1) Flags(1) Version(1) RoomId(2) PayloadSize(2)
+HEADER_FORMAT = "<IBBBHHH"   # Magic(4) Type(1) Flags(1) Version(1) RoomId(2) PayloadSize(2) Seq(2)
 HEADER_SIZE   = struct.calcsize(HEADER_FORMAT)
-SEQ_SIZE      = 2  # ushort sequence number prepended to server-reliable payloads
 
-# Types the server sends reliably (each has a leading seq ushort in the payload)
+# Types the server sends reliably (server expects an Ack back)
 SERVER_RELIABLE_PTYPES = {PTYPE_CONNECT_ACK, PTYPE_PLAYER_JOIN_ROOM, PTYPE_DISCONNECT, PTYPE_CHAT_MESSAGE}
 
 _room_id = None  # None means not connected
@@ -70,74 +69,67 @@ def _require_room():
         return None
     return _room_id
 
-def build_packet(ptype, room_id, payload=b""):
-    header = struct.pack(HEADER_FORMAT, MAGIC, ptype, FLAGS, VERSION, room_id, len(payload))
+def build_packet(ptype, room_id, payload=b"", seq=0):
+    header = struct.pack(HEADER_FORMAT, MAGIC, ptype, FLAGS, VERSION, room_id, len(payload), seq)
     return header + payload
 
 def parse_header(data):
     if len(data) < HEADER_SIZE:
         return None
-    magic, ptype, flags, version, room_id, payload_size = struct.unpack_from(HEADER_FORMAT, data)
+    magic, ptype, flags, version, room_id, payload_size, seq = struct.unpack_from(HEADER_FORMAT, data)
     if magic != MAGIC:
         return None
-    return {"type": ptype, "flags": flags, "version": version, "room_id": room_id, "payload_size": payload_size}
+    return {"type": ptype, "flags": flags, "version": version, "room_id": room_id, "payload_size": payload_size, "seq": seq}
 
-def decode_payload(ptype, data):
+def decode_payload(ptype, data, header):
     # Read everything after the header; don't trust PayloadSize for variable-length packets
     raw = data[HEADER_SIZE:]
 
-    seq_str = ""
-    rest = raw
-    if ptype in SERVER_RELIABLE_PTYPES and len(raw) >= SEQ_SIZE:
-        seq = struct.unpack_from("<H", raw, 0)[0]
-        seq_str = f"seq={seq} "
-        rest = raw[SEQ_SIZE:]
+    seq_str = f"seq={header['seq']} " if ptype in SERVER_RELIABLE_PTYPES else ""
 
-    if ptype == PTYPE_CONNECT_ACK and len(rest) >= 18:
-        session_id = uuid.UUID(bytes_le=bytes(rest[0:16]))
-        room_size = rest[16]
-        active_players = rest[17]
+    if ptype == PTYPE_CONNECT_ACK and len(raw) >= 18:
+        session_id = uuid.UUID(bytes_le=bytes(raw[0:16]))
+        room_size = raw[16]
+        active_players = raw[17]
         players = []
         offset = 18
         for _ in range(active_players):
-            if offset + 2 > len(rest):
+            if offset + 2 > len(raw):
                 break
-            player_index = rest[offset]
-            name_len = rest[offset + 1]
-            name = rest[offset + 2:offset + 2 + name_len].decode("utf-8", errors="replace")
+            player_index = raw[offset]
+            name_len = raw[offset + 1]
+            name = raw[offset + 2:offset + 2 + name_len].decode("utf-8", errors="replace")
             offset += 2 + name_len
-            body_len = rest[offset]
-            body = rest[offset + 1:offset + 1 + body_len].decode("utf-8", errors="replace")
+            body_len = raw[offset]
+            body = raw[offset + 1:offset + 1 + body_len].decode("utf-8", errors="replace")
             offset += 1 + body_len
-            cap_len = rest[offset]
-            cap = rest[offset + 1:offset + 1 + cap_len].decode("utf-8", errors="replace")
+            cap_len = raw[offset]
+            cap = raw[offset + 1:offset + 1 + cap_len].decode("utf-8", errors="replace")
             offset += 1 + cap_len
             players.append(f"[{player_index}]{name!r} body={body!r} cap={cap!r}")
         players_str = " players=" + ",".join(players) if players else ""
         return f"{seq_str}RoomSize={room_size} OtherPlayers={active_players} SessionId={session_id}{players_str}"
-    elif ptype == PTYPE_PLAYER_JOIN_ROOM and len(rest) >= 2:
-        player_slot = rest[0]
-        name_len = rest[1]
-        name = rest[2:2 + name_len].decode("utf-8", errors="replace")
+    elif ptype == PTYPE_PLAYER_JOIN_ROOM and len(raw) >= 2:
+        player_slot = raw[0]
+        name_len = raw[1]
+        name = raw[2:2 + name_len].decode("utf-8", errors="replace")
         offset = 2 + name_len
-        body_len = rest[offset]
-        body = rest[offset + 1:offset + 1 + body_len].decode("utf-8", errors="replace")
+        body_len = raw[offset]
+        body = raw[offset + 1:offset + 1 + body_len].decode("utf-8", errors="replace")
         offset += 1 + body_len
-        cap_len = rest[offset]
-        cap = rest[offset + 1:offset + 1 + cap_len].decode("utf-8", errors="replace")
+        cap_len = raw[offset]
+        cap = raw[offset + 1:offset + 1 + cap_len].decode("utf-8", errors="replace")
         return f"{seq_str}slot={player_slot} name={name!r} body={body!r} cap={cap!r}"
     elif ptype == PTYPE_CONNECT and len(raw) >= 1:
         name_len = raw[0]
         name = raw[1:1 + name_len].decode("utf-8", errors="replace") if name_len > 0 else ""
         return f"name={name!r}"
-    elif ptype == PTYPE_CONNECT_SYN_ACK and len(raw) >= 2:
-        seq = struct.unpack_from("<H", raw, 0)[0]
-        return f"AckedSeq={seq}"
-    elif ptype == PTYPE_ACK and len(raw) >= 2:
-        seq = struct.unpack_from("<H", raw, 0)[0]
-        return f"AckedSeq={seq}"
-    elif ptype == PTYPE_DISCONNECT and len(rest) >= 1:
-        return f"{seq_str}slot={rest[0]} left"
+    elif ptype == PTYPE_CONNECT_SYN_ACK:
+        return f"AckedSeq={header['seq']}"
+    elif ptype == PTYPE_ACK:
+        return f"AckedSeq={header['seq']}"
+    elif ptype == PTYPE_DISCONNECT and len(raw) >= 1:
+        return f"{seq_str}slot={raw[0]} left"
     elif ptype == PTYPE_EVENT and len(raw) >= EVENT_HEADER_SIZE:
         event_type, player_slot = struct.unpack_from(EVENT_HEADER_FORMAT, raw)
         event_data = raw[EVENT_HEADER_SIZE:]
@@ -147,10 +139,10 @@ def decode_payload(ptype, data):
         return f"{event_name} slot={player_slot} ({len(event_data)} data bytes)"
     elif ptype == PTYPE_PING:
         return f"echo={raw.decode('utf-8', errors='replace')}" if raw else "(empty)"
-    elif ptype == PTYPE_CHAT_MESSAGE and len(rest) >= 3:
-        player_slot = rest[0]
-        msg_len = struct.unpack_from("<H", rest, 1)[0]
-        msg = rest[3:3 + msg_len].decode("utf-8", errors="replace")
+    elif ptype == PTYPE_CHAT_MESSAGE and len(raw) >= 3:
+        player_slot = raw[0]
+        msg_len = struct.unpack_from("<H", raw, 1)[0]
+        msg = raw[3:3 + msg_len].decode("utf-8", errors="replace")
         return f"{seq_str}slot={player_slot} msg={msg!r}"
     return f"({len(raw)} payload bytes)"
 
@@ -172,20 +164,18 @@ def receive_loop(sock, server):
             if header:
                 ptype = header["type"]
                 ptype_name = PTYPE_NAMES.get(ptype, f"Unknown({ptype})")
-                payload_str = decode_payload(ptype, data)
+                payload_str = decode_payload(ptype, data, header)
                 if payload_str is not None:
                     print(f"\n  << {ptype_name} from {sender} | room={header['room_id']} | {payload_str}")
                     print("> ", end="", flush=True)
 
-                if len(data) >= HEADER_SIZE + SEQ_SIZE:
-                    seq = struct.unpack_from("<H", data, HEADER_SIZE)[0]
-                    if ptype == PTYPE_CONNECT_ACK:
-                        _room_id = header["room_id"]
-                        syn_ack = build_packet(PTYPE_CONNECT_SYN_ACK, _room_id, struct.pack("<H", seq))
-                        send(sock, syn_ack, server)
-                    elif ptype in SERVER_RELIABLE_PTYPES:
-                        ack = build_packet(PTYPE_ACK, header["room_id"], struct.pack("<H", seq))
-                        send(sock, ack, server)
+                if ptype == PTYPE_CONNECT_ACK:
+                    _room_id = header["room_id"]
+                    syn_ack = build_packet(PTYPE_CONNECT_SYN_ACK, _room_id, seq=header["seq"])
+                    send(sock, syn_ack, server)
+                elif ptype in SERVER_RELIABLE_PTYPES:
+                    ack = build_packet(PTYPE_ACK, header["room_id"], seq=header["seq"])
+                    send(sock, ack, server)
             else:
                 print(f"\n  << {len(data)} bytes from {sender} (unrecognised) | {data.hex(' ')}")
                 print("> ", end="", flush=True)

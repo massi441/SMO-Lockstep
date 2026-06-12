@@ -8,31 +8,17 @@ namespace SMOO.Handle;
 
 internal class PacketAckHandler : IPacketHandler
 {
-
-    /// <summary>
-    /// Requires at least one UInt16 for the sequence number of the acknowledged packet
-    /// </summary>
-    public static ushort MinPayloadSize => sizeof(ushort);
-
-    private ref struct PacketAckPayload : IDeserializableStruct
-    {
-        public ushort SequenceNumber;
-
-        public void Deserialize(ref SpanReader reader)
-        {
-            SequenceNumber = reader.ReadUInt16LittleEndian();
-        }
-    }
+    public static ushort MinPayloadSize => 0;
 
     public static void Handle(ParsedPacket packet, Room room, ServerContext context)
     {
-        PacketAckPayload payload = PacketSerializer.Deserialize<PacketAckPayload>(packet.Payload);
+        ushort sequenceNumber = packet.Header.SequenceNumber;
 
-        ReliablePacket? pendingPacket = room.Broadcaster.ReliablePacketStore.RemovePacket(payload.SequenceNumber);
+        ReliablePacket? pendingPacket = room.Broadcaster.ReliablePacketStore.RemovePacket(sequenceNumber);
         if (pendingPacket == null)
         {
             packet.RentedBuffer.Return();
-            context.Logger.LogError("The packet #{SequenceNumber} was not found in room #{RoomId}", payload.SequenceNumber, room.Id);
+            context.Logger.LogError("The packet #{SequenceNumber} was not found in room #{RoomId}", sequenceNumber, room.Id);
             return;
         }
 

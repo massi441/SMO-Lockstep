@@ -10,28 +10,15 @@ internal class PacketConnectSynAckHandler : IPacketHandler
 {
     public static ushort MinPayloadSize => 0;
 
-    /// <summary>
-    /// The payload sent by a new player, to confirm that they have joined a room
-    /// </summary>
-    private ref struct PacketConnectSynAckPayload : IDeserializableStruct
-    {
-        public ushort SequenceNumber { get; private set; }
-
-        public void Deserialize(ref SpanReader reader)
-        {
-            SequenceNumber = reader.ReadUInt16LittleEndian();
-        }
-    }
-
     public static void Handle(ParsedPacket packet, Room room, ServerContext context)
     {
-        PacketConnectSynAckPayload synAckPayload = PacketSerializer.Deserialize<PacketConnectSynAckPayload>(packet.Payload);
+        ushort sequenceNumber = packet.Header.SequenceNumber;
 
-        ReliablePacket? ackPacket = room.Broadcaster.ReliablePacketStore.RemovePacket(synAckPayload.SequenceNumber);
+        ReliablePacket? ackPacket = room.Broadcaster.ReliablePacketStore.RemovePacket(sequenceNumber);
         if (ackPacket == null)
         {
             packet.RentedBuffer.Return();
-            context.Logger.LogWarning("Invalid SYN ACK sequence number ({SequenceNumber}) received by {PlayerName} in Room #{RoomId}, broadcast will be skipped", synAckPayload.SequenceNumber, packet.SenderPlayer?.Name, room.Id);
+            context.Logger.LogWarning("Invalid SYN ACK sequence number ({SequenceNumber}) received by {PlayerName} in Room #{RoomId}, broadcast will be skipped", sequenceNumber, packet.SenderPlayer?.Name, room.Id);
             return;
         }
 
