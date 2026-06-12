@@ -5,6 +5,24 @@ import threading
 import time
 import uuid
 
+# A python client maintained by claude for rapid testing of new features added to the sever
+
+# EventType enum order (matches server's EventType enum)
+EVENT_JOIN_STAGE      = 0
+EVENT_LEAVE_STAGE     = 1
+EVENT_CHANGE_COSTUME  = 2
+EVENT_GAME_SYNC       = 3
+
+EVENT_NAMES = {
+    EVENT_JOIN_STAGE:     "JoinStage",
+    EVENT_LEAVE_STAGE:    "LeaveStage",
+    EVENT_CHANGE_COSTUME: "ChangeCostume",
+    EVENT_GAME_SYNC:      "GameSync",
+}
+
+EVENT_HEADER_FORMAT = "<HB"  # EventType(ushort) + PlayerSlot(byte)
+EVENT_HEADER_SIZE   = struct.calcsize(EVENT_HEADER_FORMAT)  # 3 bytes
+
 MAGIC   = 0x534D4F4F  # "SMOO"
 VERSION = 1
 FLAGS   = 0
@@ -120,6 +138,13 @@ def decode_payload(ptype, data):
         return f"AckedSeq={seq}"
     elif ptype == PTYPE_DISCONNECT and len(rest) >= 1:
         return f"{seq_str}slot={rest[0]} left"
+    elif ptype == PTYPE_EVENT and len(raw) >= EVENT_HEADER_SIZE:
+        event_type, player_slot = struct.unpack_from(EVENT_HEADER_FORMAT, raw)
+        event_data = raw[EVENT_HEADER_SIZE:]
+        event_name = EVENT_NAMES.get(event_type, f"Unknown({event_type})")
+        if event_type == EVENT_GAME_SYNC:
+            return None  # high-frequency, suppress real-time output
+        return f"{event_name} slot={player_slot} ({len(event_data)} data bytes)"
     elif ptype == PTYPE_PING:
         return f"echo={raw.decode('utf-8', errors='replace')}" if raw else "(empty)"
     elif ptype == PTYPE_CHAT_MESSAGE and len(rest) >= 3:
@@ -148,7 +173,9 @@ def receive_loop(sock, server):
                 ptype = header["type"]
                 ptype_name = PTYPE_NAMES.get(ptype, f"Unknown({ptype})")
                 payload_str = decode_payload(ptype, data)
-                print(f"\n  << {ptype_name} from {sender} | room={header['room_id']} | {payload_str}")
+                if payload_str is not None:
+                    print(f"\n  << {ptype_name} from {sender} | room={header['room_id']} | {payload_str}")
+                    print("> ", end="", flush=True)
 
                 if len(data) >= HEADER_SIZE + SEQ_SIZE:
                     seq = struct.unpack_from("<H", data, HEADER_SIZE)[0]
@@ -161,7 +188,7 @@ def receive_loop(sock, server):
                         send(sock, ack, server)
             else:
                 print(f"\n  << {len(data)} bytes from {sender} (unrecognised) | {data.hex(' ')}")
-            print("> ", end="", flush=True)
+                print("> ", end="", flush=True)
         except OSError:
             break
 
@@ -204,6 +231,22 @@ def packet_chat_message():
         return None
     return build_packet(ptype=PTYPE_CHAT_MESSAGE_REQUEST, room_id=room_id, payload=struct.pack("<H", len(message)) + message)
 
+def packet_game_sync():
+    room_id = _require_room()
+    if room_id is None:
+        return None
+    try:
+        x = float(input("x: "))
+        y = float(input("y: "))
+        z = float(input("z: "))
+    except ValueError:
+        print("  invalid float")
+        return None
+    event_header = struct.pack(EVENT_HEADER_FORMAT, EVENT_GAME_SYNC, 0)
+    position     = struct.pack("<fff", x, y, z)
+    quat_identity = struct.pack("<ffff", 0.0, 0.0, 0.0, 1.0)
+    return build_packet(ptype=PTYPE_EVENT, room_id=room_id, payload=event_header + position + quat_identity)
+
 def spam_event(sock, server):
     room_id = _require_room()
     if room_id is None:
@@ -219,12 +262,13 @@ def spam_event(sock, server):
 # --- menu ---
 
 PACKETS = [
-    ("connect",      packet_connect),
-    ("disconnect",   packet_disconnect),
-    ("health check", packet_health_check),
-    ("ping",         packet_ping),
-    ("chat message", packet_chat_message),
-    ("spam event",   None),
+    ("connect",        packet_connect),
+    ("disconnect",     packet_disconnect),
+    ("health check",   packet_health_check),
+    ("ping",           packet_ping),
+    ("chat message",   packet_chat_message),
+    ("send game sync", packet_game_sync),
+    ("spam event",     None),
 ]
 
 def main():

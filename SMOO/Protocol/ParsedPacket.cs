@@ -22,7 +22,7 @@ internal readonly struct ParsedPacket
     /// <summary>
     /// Returns a span of the payload of the packet
     /// </summary>
-    public ReadOnlySpan<byte> Payload => RentedBuffer.RentRef.AsSpan(PacketHeader.SizeOf(), Header.PayloadSize);
+    public Span<byte> Payload => RentedBuffer.RentRef.AsSpan(PacketHeader.SizeOf(), Header.PayloadSize);
 
     public int FullSize => RentedBuffer.UsedBytes;
 }

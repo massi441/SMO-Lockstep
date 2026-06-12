@@ -5,7 +5,7 @@ internal enum EventType : ushort
     JoinStage,
     LeaveStage,
     ChangeCostume,
-    GameSync,
+    PlayerSync,
 
     /// <summary>
     /// An reserved EventType for server side validation

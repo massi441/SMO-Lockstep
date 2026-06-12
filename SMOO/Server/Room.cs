@@ -59,7 +59,7 @@ internal class Room
 
                 player?.RefreshLastSeen();
 
-                PacketHandler packetHandler = PacketHandlerProvider.GetHandler(packet.Header.Type);
+                PacketHandler packetHandler = PacketHandlerTable.GetHandler(packet.Header.Type);
 
                 if (packet.Payload.Length < packetHandler.MinPayloadSize)
                 {

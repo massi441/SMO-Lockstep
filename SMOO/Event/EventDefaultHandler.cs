@@ -8,8 +8,8 @@ internal class EventDefaultHandler : IEventHandler
 {
     public static ushort MinPayloadSize => 0;
 
-    public static void Handle(ParsedPacket packet, Room room, ServerContext context, ReadOnlySpan<byte> eventData)
+    public static void Handle(ParsedEventPacket packet, Room room, ServerContext context)
     {
-        context.Logger.LogTrace("Default Event Handler invoked for unhandled event in packet from {PlayerName}", packet.SenderPlayer?.Name);
+        context.Logger.LogTrace("Default Event Handler invoked for unhandled event in packet from {PlayerName}", packet.BasePacket.SenderPlayer?.Name);
     }
 }

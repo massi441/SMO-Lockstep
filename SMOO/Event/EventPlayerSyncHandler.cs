@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using SMOO.Protocol;
 using SMOO.Server;
@@ -8,7 +9,7 @@ namespace SMOO.Event;
 
 internal class EventPlayerSyncHandler : IEventHandler
 {
-    public static ushort MinPayloadSize => throw new NotImplementedException();
+    public static ushort MinPayloadSize => (ushort)Unsafe.SizeOf<PlayerSyncData>();
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct PlayerSyncData : IDeserializableStruct
@@ -22,8 +23,10 @@ internal class EventPlayerSyncHandler : IEventHandler
         }
     }
 
-    public static void Handle(ParsedPacket packet, Room room, ServerContext context, ReadOnlySpan<byte> eventData)
+    public static void Handle(ParsedEventPacket eventPacket, Room room, ServerContext context)
     {
-        
+        room.Broadcaster.BroadcastExcept(room, eventPacket.BasePacket.SenderPlayer!, eventPacket.BasePacket.RentedBuffer.UsedSpan);
+
+        eventPacket.BasePacket.RentedBuffer.Return();
     }
 }

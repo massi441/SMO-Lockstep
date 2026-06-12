@@ -16,7 +16,7 @@ internal readonly unsafe struct PacketHandler
     }
 }
 
-internal static unsafe class PacketHandlerProvider
+internal static unsafe class PacketHandlerTable
 {
     private static readonly PacketHandler DefaultHandler        = new PacketHandler(PacketDefaultHandler.MinPayloadSize, &PacketDefaultHandler.Handle);
     private static readonly PacketHandler Connect               = new PacketHandler(PacketConnectHandler.MinPayloadSize, &PacketConnectHandler.Handle);
@@ -46,7 +46,7 @@ internal static unsafe class PacketHandlerProvider
         Event,
     ];
 
-    static PacketHandlerProvider()
+    static PacketHandlerTable()
     {
         Debug.Assert(Handlers.Length == (byte)PacketType.Invalid, "Handlers table is out of sync with PacketType enum");
     }
