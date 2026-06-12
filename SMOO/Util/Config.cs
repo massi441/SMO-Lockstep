@@ -9,7 +9,7 @@ internal class Config
     public const byte MaxPlayerNameLength = 50;
     public const byte DefaultRoomSize = 4;
     public const byte MaxRoomSize = 10;
-    public static readonly TimeSpan ResendThreadTick = TimeSpan.FromMilliseconds(250);
-    public static readonly TimeSpan MinimumResendDelay = TimeSpan.FromMilliseconds(350); // ideally store that on the packet itself, based on RTT
+    public static readonly TimeSpan ResendThreadTick = TimeSpan.FromMilliseconds(100);
+    public static readonly TimeSpan MinimumResendDelay = TimeSpan.FromMilliseconds(400); // ideally store that on the packet itself, based on RTT
     public static readonly string DefaultCostumeName = "Mario";
 }
