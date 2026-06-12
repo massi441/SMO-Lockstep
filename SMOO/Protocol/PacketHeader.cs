@@ -13,6 +13,7 @@ internal record struct PacketHeader
     public required byte Version;
     public required ushort RoomId;
     public required ushort PayloadSize;
+    public ushort SequenceNumber;
 
     public PacketHeader()
     {

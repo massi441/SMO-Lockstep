@@ -10,26 +10,19 @@ namespace SMOO.Protocol;
 internal ref struct PacketConnectAck : ISerializableStruct
 {
     public required PacketHeader Header;
-    public ushort SequenceNumber;
     public required Guid SessionId;
     public required byte RoomSize;
     public required byte OtherPlayersCount;
     public required ReadOnlySpan<PlayerInRoomInfo> PlayerInfos;
-
-    public PacketConnectAck()
-    {
-        SequenceNumber = 0;
-    }
 
     public ushort FinalizeSize()
     {
         SizeStream stream = new SizeStream();
 
         stream.Write<PacketHeader>();
-        stream.Write<ushort>();
-        stream.Write<Guid>();
-        stream.Write<byte>();
-        stream.Write<byte>();
+        stream.Write<Guid>(); // session id
+        stream.Write<byte>(); // room size
+        stream.Write<byte>(); // other player count
 
         foreach (PlayerInRoomInfo playerInfo in PlayerInfos)
         {
@@ -48,7 +41,6 @@ internal ref struct PacketConnectAck : ISerializableStruct
         SpanWriter writer = new SpanWriter(destination);
 
         writer.Write(Header);
-        writer.Write(SequenceNumber);
         writer.Write(SessionId);
         writer.Write(RoomSize);
         writer.Write(OtherPlayersCount);
@@ -66,12 +58,10 @@ internal ref struct PacketConnectAck : ISerializableStruct
 internal struct PacketPlayerJoinRoom : ISerializableStruct
 {
     public required PacketHeader Header;
-    public ushort SequenceNumber;
     public required PlayerInRoomInfo PlayerRoomInfo;
 
     public PacketPlayerJoinRoom()
     {
-        SequenceNumber = 0;
         PlayerRoomInfo = new PlayerInRoomInfo();
     }
 
@@ -80,7 +70,6 @@ internal struct PacketPlayerJoinRoom : ISerializableStruct
         SizeStream stream = new SizeStream();
 
         stream.Write<PacketHeader>();
-        stream.Write<ushort>();
         stream.WriteBytes(PlayerRoomInfo.Size());
 
         ushort fullsize = stream.Size;
@@ -95,7 +84,6 @@ internal struct PacketPlayerJoinRoom : ISerializableStruct
         SpanWriter writer = new SpanWriter(destination);
 
         writer.Write(Header);
-        writer.Write(SequenceNumber);
 
         PlayerRoomInfo.Serialize(ref writer);
     }
@@ -107,25 +95,18 @@ internal struct PacketPlayerJoinRoom : ISerializableStruct
 internal struct PacketChatMessage : ISerializableStruct
 {
     public required PacketHeader Header;
-    public ushort SequenceNumber;
     public required byte PlayerSlot;
     public required ushort MessageLength;
     public required string Message;
-
-    public PacketChatMessage()
-    {
-        SequenceNumber = 0;
-    }
 
     public readonly int Size()
     {
         SizeStream stream = new SizeStream();
 
         stream.Write<PacketHeader>();
-        stream.Write<ushort>();
-        stream.Write<byte>();
-        stream.Write<ushort>();
-        stream.WriteString(Message);
+        stream.Write<byte>(); // player slot
+        stream.Write<ushort>(); // message length
+        stream.WriteString(Message); // message
 
         return stream.Size;
     }
@@ -135,7 +116,6 @@ internal struct PacketChatMessage : ISerializableStruct
         SpanWriter writer = new SpanWriter(destination);
 
         writer.Write(Header);
-        writer.Skip(sizeof(ushort));
         writer.Write(PlayerSlot);
         writer.Write(MessageLength);
         writer.WriteString(Message);

@@ -50,7 +50,8 @@ internal class ReliablePacket
     {
         SpanWriter writer = new SpanWriter(RentedBuffer.UsedSpan);
 
-        writer.Skip(PacketHeader.SizeOf());
+        int sequenceOffset = (int)Marshal.OffsetOf<PacketHeader>(nameof(PacketHeader.SequenceNumber));
+        writer.Skip(sequenceOffset);
 
         writer.Write(SequenceNumber);
     }

@@ -13,7 +13,6 @@ internal class PlayerDisconnector : IPlayerDisconnector
     private struct PacketDisconnect : ISerializableStruct
     {
         public required PacketHeader Header;
-        public ushort SequenceNumber;
         public required byte PlayerSlot;
 
         public static int SizeOf()
