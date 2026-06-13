@@ -6,6 +6,6 @@ namespace SMOO.Services.Interface;
 
 internal interface IPacketSender
 {
-    Result<Error> Send(EndPoint destination, ReadOnlySpan<byte> data);
+    Result<Error> SendTo(EndPoint destination, ReadOnlySpan<byte> data);
     // SendReliably(...)
 }

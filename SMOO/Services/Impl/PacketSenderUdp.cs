@@ -15,7 +15,7 @@ internal class PacketSenderUdp : IPacketSender
         _socket = socket;
     }
 
-    public Result<Error> Send(EndPoint destination, ReadOnlySpan<byte> data)
+    public Result<Error> SendTo(EndPoint destination, ReadOnlySpan<byte> data)
     {
         int bytesSent = _socket.SendTo(data, destination);
         if (bytesSent != data.Length)

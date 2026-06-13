@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using SMOO.Client;
+using SMOO.Server;
 using SMOO.Util;
 
 namespace SMOO.Protocol;
@@ -43,16 +44,8 @@ internal class ReliablePacket
         }
     }
 
-    /// <summary>
-    /// Writes the sequence number of the packet into the buffer
-    /// </summary>
     public void WriteSequenceNumber()
     {
-        SpanWriter writer = new SpanWriter(RentedBuffer.UsedSpan);
-
-        int sequenceOffset = (int)Marshal.OffsetOf<PacketHeader>(nameof(PacketHeader.SequenceNumber));
-        writer.Skip(sequenceOffset);
-
-        writer.Write(SequenceNumber);
+        PacketUtil.WriteSequenceNumber(RentedBuffer.UsedSpan, SequenceNumber);
     }
 }

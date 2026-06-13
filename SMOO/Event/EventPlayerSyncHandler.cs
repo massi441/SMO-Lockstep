@@ -1,5 +1,4 @@
 ﻿using System.Numerics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using SMOO.Protocol;
 using SMOO.Server;
@@ -9,18 +8,14 @@ namespace SMOO.Event;
 
 internal class EventPlayerSyncHandler : IEventHandler
 {
-    public static ushort MinPayloadSize => (ushort)Unsafe.SizeOf<PlayerSyncData>();
+    // TODO: Add [Required] attribute on struct, to deduce minimum payload size
+    public static ushort MinPayloadSize => RequiredSize<PlayerSyncData>.Size;
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private struct PlayerSyncData : IDeserializableStruct
+    private struct PlayerSyncData
     {
-        public Vector3 Position;
-        public Quaternion Quaternion;
-
-        public void Deserialize(ref SpanReader reader)
-        {
-            reader.ReadInto(ref this);
-        }
+        [RequiredField] public Vector3 Position;
+        [RequiredField] public Quaternion Quat;
     }
 
     public static void Handle(ParsedEventPacket eventPacket, Room room, ServerContext context)

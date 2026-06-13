@@ -59,10 +59,10 @@ internal class PacketConnectHandler : IPacketHandler
 
         Player newPlayer = newPlayerResult.Data!;
 
-        if (AckConnect(newPlayer, ref packet, room, context)) // ownership of buffer gets transferred to reliable store
+        if (AckConnect(newPlayer, ref packet, room, context))
         {
-            context.Logger.LogTrace("Player {Name} joined Room #{RoomId}, waiting for a confirmation...", newPlayer.Name, packet.Header.RoomId);
-            return;
+            context.Logger.LogTrace("Player {Name} joined Room #{RoomId} in slot {Slot}, waiting for a confirmation...", newPlayer.Name, packet.Header.RoomId, newPlayer.Slot);
+            goto cleanup;
         }
 
         context.Logger.LogError("Failed to upload connect ACK packet, new player will be ignored");
@@ -96,7 +96,7 @@ internal class PacketConnectHandler : IPacketHandler
             return false;
         }
 
-        context.PacketSender.Send(newPlayer.Endpoint, ackBuffer.UsedSpan);
+        context.PacketSender.SendTo(newPlayer.Endpoint, ackBuffer.UsedSpan);
 
         return true;
     }

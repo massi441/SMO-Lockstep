@@ -20,5 +20,7 @@ internal interface IRoomBroadcaster
     void BroadcastExceptWith(Room room, ReadOnlySpan<byte> roomPayload, Player ignoredPlayer, ReadOnlySpan<byte> ignoredPlayerPayload);
     void BroadcastReliablyExceptWith(Room room, RentedBuffer roomPayload, Player ignoredPlayer, RentedBuffer ignoredPlayerPayload, byte maxRetries = Config.MaxRetries);
 
+    void BroadcastFiltered(Room room, ReadOnlySpan<byte> payload, Predicate<Player> playerFilter);
+
     Task Shutdown();
 }

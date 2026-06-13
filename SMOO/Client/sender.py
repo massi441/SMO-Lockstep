@@ -26,7 +26,7 @@ EVENT_HEADER_SIZE   = struct.calcsize(EVENT_HEADER_FORMAT)  # 3 bytes
 MAGIC   = 0x534D4F4F  # "SMOO"
 VERSION = 1
 FLAGS   = 0
-PORT    = 5001
+PORT    = 1027
 
 # PacketType enum order (matches server's PacketType enum)
 PTYPE_CONNECT          = 0

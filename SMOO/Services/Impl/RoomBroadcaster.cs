@@ -52,7 +52,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
 
             reliablePacket.WriteSequenceNumber(); // write the packet's sequence number into the payload in case the buffer is shared
 
-            Result<Error> sendResult = _context.PacketSender.Send(reliablePacket.Receiver.Endpoint, reliablePacket.RentedBuffer.UsedSpan);
+            Result<Error> sendResult = _context.PacketSender.SendTo(reliablePacket.Receiver.Endpoint, reliablePacket.RentedBuffer.UsedSpan);
             if (!sendResult.IsSuccess)
             {
                 _context.Logger.LogError("An error occured while trying to resend the packet");
@@ -91,7 +91,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
     {
         foreach (Player player in room.PlayerHolder.Players)
         {
-            _context.PacketSender.Send(player.Endpoint, payload);
+            _context.PacketSender.SendTo(player.Endpoint, payload);
         }
     }
 
@@ -113,7 +113,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
                 continue;
             }
 
-            _context.PacketSender.Send(player.Endpoint, payload);
+            _context.PacketSender.SendTo(player.Endpoint, payload);
         }
     }
 
@@ -135,11 +135,11 @@ internal class RoomBroadcaster : IRoomBroadcaster
         {
             if (player == ignoredPlayer)
             {
-                _context.PacketSender.Send(player.Endpoint, ignoredPlayerPayload);
+                _context.PacketSender.SendTo(player.Endpoint, ignoredPlayerPayload);
                 continue;
             }
 
-            _context.PacketSender.Send(player.Endpoint, roomPayload);
+            _context.PacketSender.SendTo(player.Endpoint, roomPayload);
         }
     }
 
@@ -147,6 +147,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
     {
         RefCounter roomCounter = new RefCounter();
         RefCounter playerCounter = new RefCounter();
+
         foreach (Player player in room.PlayerHolder.Players)
         {
             if (player == ignoredPlayer)
@@ -160,13 +161,24 @@ internal class RoomBroadcaster : IRoomBroadcaster
         }
     }
 
+    public void BroadcastFiltered(Room room, ReadOnlySpan<byte> payload, Predicate<Player> playerFilter)
+    {
+        foreach (Player player in room.PlayerHolder.Players)
+        {
+            if (playerFilter.Invoke(player))
+            {
+                _context.PacketSender.SendTo(player.Endpoint, payload);
+            }
+        }
+    }
+
     // TODO: Check success of upload, keep track of which packets have been successfully uploaded
     private void UploadAndSendAckPacket(RentedBuffer rentedBuffer, RefCounter refCounter, Player receiver, byte maxRetries)
     {
         Result<Error> uploadResult = _resendStore.UploadPacket(rentedBuffer, refCounter, receiver, maxRetries);
         if (uploadResult.IsSuccess)
         {
-            _context.PacketSender.Send(receiver.Endpoint, rentedBuffer.UsedSpan);
+            _context.PacketSender.SendTo(receiver.Endpoint, rentedBuffer.UsedSpan);
         }
     }
 

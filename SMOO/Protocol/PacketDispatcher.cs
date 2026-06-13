@@ -21,7 +21,7 @@ internal static class PacketDispatcher
         {
             packet.RentedBuffer.Return();
             context.Logger.LogTrace("Ping received from {Address}:{Port}", packet.Sender.Address, packet.Sender.Port);
-            return context.PacketSender.Send(packet.Sender, packet.RentedBuffer.UsedSpan);
+            return context.PacketSender.SendTo(packet.Sender, packet.RentedBuffer.UsedSpan);
         }
 
         Room? room = context.RoomHolder.GetRoom(header.RoomId);
