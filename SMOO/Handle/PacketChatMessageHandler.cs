@@ -44,6 +44,6 @@ internal class PacketChatMessageHandler : IPacketHandler
 
         packet.RentedBuffer.Return();
 
-        room.Broadcaster.BroadcastReliablyExcept(room, packet.SenderPlayer, chatBuffer);
+        room.Broadcaster.BroadcastReliablyExcept(room.PlayerHolder.Players, packet.SenderPlayer, chatBuffer);
     }
 }

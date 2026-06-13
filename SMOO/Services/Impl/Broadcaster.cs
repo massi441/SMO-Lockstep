@@ -2,12 +2,12 @@
 using SMOO.Protocol;
 using SMOO.Util;
 using Microsoft.Extensions.Logging;
-using SMOO.Server;
 using SMOO.Services.Interface;
+using SMOO.Server;
 
 namespace SMOO.Services.Impl;
 
-internal class RoomBroadcaster : IRoomBroadcaster
+internal class Broadcaster : IBroadcaster
 {
     private readonly ServerContext _context;
     private readonly IReliablePacketStore _resendStore;
@@ -16,7 +16,7 @@ internal class RoomBroadcaster : IRoomBroadcaster
 
     public IReliablePacketStore ReliablePacketStore => _resendStore;
 
-    public RoomBroadcaster(ServerContext context, IReliablePacketStore resendStore)
+    public Broadcaster(ServerContext context, IReliablePacketStore resendStore)
     {
         _context = context;
         _resendStore = resendStore;
@@ -87,40 +87,36 @@ internal class RoomBroadcaster : IRoomBroadcaster
         }
     }
 
-    public void Broadcast(Room room, ReadOnlySpan<byte> payload)
+    public void Broadcast(Player[] players, ReadOnlySpan<byte> payload)
     {
-        foreach (Player player in room.PlayerHolder.Players)
+        foreach (Player player in players)
         {
             _context.PacketSender.SendTo(player.Endpoint, payload);
         }
     }
 
-    public void BroadcastReliably(Room room, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries)
+    public void BroadcastReliably(Player[] players, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries)
     {
         RefCounter counter = new RefCounter();
-        foreach (Player player in room.PlayerHolder.Players)
+        foreach (Player player in players)
         {
             UploadAndSendAckPacket(roomPayload, counter, player, maxRetries);
         }
     }
 
-    public void BroadcastExcept(Room room, Player ignoredPlayer, ReadOnlySpan<byte> payload)
+    public void BroadcastExcept(Player[] players, Player ignoredPlayer, ReadOnlySpan<byte> payload)
     {
-        foreach (Player player in room.PlayerHolder.Players)
+        foreach (Player player in players)
         {
-            if (player == ignoredPlayer)
-            {
-                continue;
-            }
-
+            if (player == ignoredPlayer) continue;
             _context.PacketSender.SendTo(player.Endpoint, payload);
         }
     }
 
-    public void BroadcastReliablyExcept(Room room, Player ignoredPlayer, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries)
+    public void BroadcastReliablyExcept(Player[] players, Player ignoredPlayer, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries)
     {
         RefCounter counter = new RefCounter();
-        foreach (Player player in room.PlayerHolder.Players)
+        foreach (Player player in players)
         {
             if (player != ignoredPlayer)
             {
@@ -129,9 +125,9 @@ internal class RoomBroadcaster : IRoomBroadcaster
         }
     }
 
-    public void BroadcastExceptWith(Room room, ReadOnlySpan<byte> roomPayload, Player ignoredPlayer, ReadOnlySpan<byte> ignoredPlayerPayload)
+    public void BroadcastExceptWith(Player[] players, ReadOnlySpan<byte> roomPayload, Player ignoredPlayer, ReadOnlySpan<byte> ignoredPlayerPayload)
     {
-        foreach (Player player in room.PlayerHolder.Players)
+        foreach (Player player in players)
         {
             if (player == ignoredPlayer)
             {
@@ -143,12 +139,12 @@ internal class RoomBroadcaster : IRoomBroadcaster
         }
     }
 
-    public void BroadcastReliablyExceptWith(Room room, RentedBuffer roomPayload, Player ignoredPlayer, RentedBuffer ignoredPlayerPayload, byte maxRetries = Config.MaxRetries)
+    public void BroadcastReliablyExceptWith(Player[] players, RentedBuffer roomPayload, Player ignoredPlayer, RentedBuffer ignoredPlayerPayload, byte maxRetries = Config.MaxRetries)
     {
         RefCounter roomCounter = new RefCounter();
         RefCounter playerCounter = new RefCounter();
 
-        foreach (Player player in room.PlayerHolder.Players)
+        foreach (Player player in players)
         {
             if (player == ignoredPlayer)
             {
@@ -157,17 +153,6 @@ internal class RoomBroadcaster : IRoomBroadcaster
             else
             {
                 UploadAndSendAckPacket(roomPayload, roomCounter, player, maxRetries);
-            }
-        }
-    }
-
-    public void BroadcastFiltered(Room room, ReadOnlySpan<byte> payload, Predicate<Player> playerFilter)
-    {
-        foreach (Player player in room.PlayerHolder.Players)
-        {
-            if (playerFilter.Invoke(player))
-            {
-                _context.PacketSender.SendTo(player.Endpoint, payload);
             }
         }
     }

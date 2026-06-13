@@ -18,9 +18,9 @@ internal class Room
     public ushort Id { get; }
     public Channel<Packet> Packets { get; }
     public IPlayerHolder PlayerHolder { get; }
-    public IRoomBroadcaster Broadcaster { get; }
+    public IBroadcaster Broadcaster { get; }
 
-    public Room(ushort roomId, ServerContext conxtext, IPlayerHolder playerHolder, IRoomBroadcaster broadcaster)
+    public Room(ushort roomId, ServerContext conxtext, IPlayerHolder playerHolder, IBroadcaster broadcaster)
     {
         _context = conxtext;
 

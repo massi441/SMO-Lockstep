@@ -13,6 +13,8 @@ internal interface IPlayerHolder
     Result<Player, Error> RegisterPlayer(in PlayerInfo playerInfo);
     Result<Error> UnregisterPlayer(Player player);
 
+    Player[] InSameStageAs(Player targetPlayer);
+
     Player? FindPlayerByHost(IPEndPoint endpoint);
     Player? FindPlayerById(PlayerId id);
 }

@@ -65,6 +65,11 @@ internal class PlayerHolder : IPlayerHolder
         return Result<Error>.Failure(Error.OperationFailed);
     }
 
+    public Player[] InSameStageAs(Player targetPlayer)
+    {
+        return [.. _players.Where(p => p != targetPlayer && p.WorldInfo.CurrentStage == targetPlayer.WorldInfo.CurrentStage)];
+    }
+
     public Player? FindPlayerById(PlayerId id)
     {
         foreach (Player p in _players)
