@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace SMOO.Util;
 
-internal static class RequiredSize<T> where T : struct
+internal static class RequiredSize<T> where T : struct, allows ref struct
 {
     public static readonly ushort Size = Compute(typeof(T));
 
