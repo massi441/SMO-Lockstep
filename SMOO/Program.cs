@@ -8,13 +8,13 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        int port = 5001;
-
+        //int port = 5001;
         ILogger logger = LockstepLogger.Instance();
 
         try
         {
-            UdpServer server = new UdpServer(port);
+            var config = ServerConfig.Load("./Server/config.json"); 
+            UdpServer server = new UdpServer(config.Port);
             CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
             Console.CancelKeyPress += (_, e) =>
