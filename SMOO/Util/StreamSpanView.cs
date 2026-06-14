@@ -2,18 +2,21 @@
 
 namespace SMOO.Util;
 
-internal ref struct StreamSpanView<TLength, T> 
-    where TLength : unmanaged, IBinaryInteger<TLength>
+internal ref struct StreamSpanView<TLengthPrefix, T> 
+    where TLengthPrefix : unmanaged, IBinaryInteger<TLengthPrefix>
     where T : unmanaged
 {
     [RequiredField]
-    public TLength Length;
-    public ReadOnlySpan<T> Span;
+    private TLengthPrefix _length;
+    private ReadOnlySpan<T> _span;
 
-    public StreamSpanView(TLength length, Span<T> span)
+    public readonly TLengthPrefix Length => _length;
+    public readonly ReadOnlySpan<T> Span => _span;
+
+    public StreamSpanView(TLengthPrefix length, Span<T> span)
     {
-        Length = length;
-        Span = span;
+        _length = length;
+        _span = span;
     }
 
     public readonly void Serialize(Span<byte> destination)
@@ -30,9 +33,20 @@ internal ref struct StreamSpanView<TLength, T>
         writer.WriteSpan(Span);
     }
 
-    public void Deserialize(ref SpanReader reader)
+    public void Deserialize(ref SpanReader reader, TLengthPrefix maxReadLength)
     {
-        Length = reader.Read<TLength>();
-        Span = reader.ReadView<T>(int.CreateChecked(Length));
+        _length = reader.Read<TLengthPrefix>();
+        if (_length > maxReadLength)
+        {
+            throw new InvalidDataException($"The span length prefix ({_length}) was bigger than the maximum size allowed ({maxReadLength})");
+        }
+
+        int length = int.CreateChecked(_length);
+        if (length > reader.RemainingByteCount)
+        {
+            throw new InvalidDataException($"The span length prefix ({_length}) was bigger than the remaining bytes ({reader.RemainingByteCount}) in the reader");
+        }
+
+        _span = reader.ReadView<T>(int.CreateChecked(Length));
     }
 }

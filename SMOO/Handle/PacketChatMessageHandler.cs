@@ -20,7 +20,7 @@ internal class PacketChatMessageHandler : IPacketHandler
 
         public void Deserialize(ref SpanReader reader)
         {
-            Message.Deserialize(ref reader);
+            Message.Deserialize(ref reader, Config.MaxChatMessageLength);
         }
     }
 

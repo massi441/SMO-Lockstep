@@ -22,7 +22,7 @@ internal class PacketConnectHandler : IPacketHandler
 
         public void Deserialize(ref SpanReader reader)
         {
-            Name.Deserialize(ref reader);    
+            Name.Deserialize(ref reader, Config.MaxPlayerNameLength);    
         }
     }
 

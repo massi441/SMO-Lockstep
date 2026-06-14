@@ -13,7 +13,7 @@ internal class EventPlayerSyncHandler : IEventHandler
     public static ushort MaxDataSize => RequiredSize<PlayerSyncData>.MaxSize;  
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private ref struct PlayerSyncData
+    private ref struct PlayerSyncData : IDeserializableStruct
     {
         [RequiredField]
         public Vector3 Position;
@@ -35,10 +35,25 @@ internal class EventPlayerSyncHandler : IEventHandler
         
         [DynamicField(MaxSize = Config.MaxBlendWeights * sizeof(float))]
         public StreamSpanView<byte, float> BlendWeights;
+
+        public void Deserialize(ref SpanReader reader)
+        {
+            reader.ReadInto(ref Position);
+            reader.ReadInto(ref Quat);
+
+            AnimRate = reader.ReadSingleLittleEndian();
+
+            Anim.Deserialize(ref reader, Config.MaxAnimNameLength);
+            SubAnim.Deserialize(ref reader, Config.MaxAnimNameLength);
+            UpperAnim.Deserialize(ref reader, Config.MaxAnimNameLength);
+            BlendWeights.Deserialize(ref reader, Config.MaxBlendWeights);
+        }
     }
 
     public static void Handle(ParsedEventPacket eventPacket, Room room, ServerContext context)
     {
+        PlayerSyncData playerSyncData = PacketSerializer.Deserialize<PlayerSyncData>(eventPacket.EventData);
+
         Player[] playersInStage = room.PlayerHolder.InSameStageAs(eventPacket.BasePacket.SenderPlayer!);
 
         room.Broadcaster.Broadcast(playersInStage, eventPacket.BasePacket.RentedBuffer.UsedSpan);

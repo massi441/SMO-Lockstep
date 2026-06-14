@@ -6,8 +6,8 @@ namespace SMOO.Util;
 
 internal ref struct SpanWriter
 {
-    private readonly Span<byte> _span;
     private int _offset;
+    private readonly Span<byte> _span;
 
     public readonly int Offset => _offset;
 

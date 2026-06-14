@@ -22,10 +22,21 @@ internal struct StreamStringView<TLengthPrefix> where TLengthPrefix : unmanaged,
         _string = str;
     }
 
-    public void Deserialize(ref SpanReader reader)
+    public void Deserialize(ref SpanReader reader, TLengthPrefix maxReadLength)
     {
         _length = reader.Read<TLengthPrefix>();
-        _string = Encoding.UTF8.GetString(reader.ReadBytes(int.CreateChecked(_length)));
+        if (_length > maxReadLength)
+        {
+            throw new InvalidDataException($"The string length prefix ({_length}) was bigger than the maximum size allowed ({maxReadLength})");
+        }
+
+        int length = int.CreateChecked(_length);
+        if (length > reader.RemainingByteCount)
+        {
+            throw new InvalidDataException($"The string length prefix ({_length}) was bigger than the remaining bytes ({reader.RemainingByteCount}) in the reader");
+        }
+
+        _string = Encoding.UTF8.GetString(reader.ReadBytes(length));
     }
 
     public readonly void Serialize(ref SpanWriter writer)
