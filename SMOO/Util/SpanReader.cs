@@ -117,10 +117,20 @@ internal ref struct SpanReader
         return result;
     }
 
+    // TODO: Add bounds checking
+
     public ReadOnlySpan<byte> ReadBytes(int count)
     {
         ReadOnlySpan<byte> result = RemainingSpan[..count];
         _offset += count;
+        return result;
+    }
+
+    public ReadOnlySpan<T> ReadView<T>(int count) where T : unmanaged
+    {
+        int totalBytes = count * Unsafe.SizeOf<T>();
+        ReadOnlySpan<T> result = MemoryMarshal.Cast<byte, T>(RemainingSpan.Slice(0, totalBytes));
+        _offset += totalBytes;
         return result;
     }
 

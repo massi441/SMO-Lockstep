@@ -41,6 +41,7 @@ internal class PlayerHolder : IPlayerHolder
             Room = playerInfo.Room,
             WorldInfo = new PlayerWorldInfo()
             {
+                CurrentStage = string.Empty,
                 CostumeBody = Config.DefaultCostumeName,
                 CostumeCap = Config.DefaultCostumeName
             }
@@ -67,7 +68,7 @@ internal class PlayerHolder : IPlayerHolder
 
     public Player[] InSameStageAs(Player targetPlayer)
     {
-        return [.. _players.Where(p => p != targetPlayer && p.WorldInfo.CurrentStage == targetPlayer.WorldInfo.CurrentStage)];
+        return [.. _players.Where(p => p != null && p != targetPlayer && p.WorldInfo.CurrentStage == targetPlayer.WorldInfo.CurrentStage)];
     }
 
     public Player? FindPlayerById(PlayerId id)
@@ -104,23 +105,6 @@ internal class PlayerHolder : IPlayerHolder
         }
 
         return null;
-    }
-
-    public void RemovePlayer(Player player)
-    {
-        for (int i = 0; i < _players.Length; i++)
-        {
-            Player p = _players[i];
-            if (p == null)
-            {
-                continue;
-            }
-
-            if (p.Id == player.Id)
-            {
-                _players[i] = null!;
-            }
-        }
     }
 
     private bool TryFindSlot(out byte index)

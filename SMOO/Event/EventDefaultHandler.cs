@@ -11,5 +11,7 @@ internal class EventDefaultHandler : IEventHandler
     public static void Handle(ParsedEventPacket packet, Room room, ServerContext context)
     {
         context.Logger.LogTrace("Default Event Handler invoked for unhandled event in packet from {PlayerName}", packet.BasePacket.SenderPlayer?.Name);
+
+        packet.BasePacket.RentedBuffer.Return();
     }
 }

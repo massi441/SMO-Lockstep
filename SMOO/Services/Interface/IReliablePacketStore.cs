@@ -16,5 +16,5 @@ internal interface IReliablePacketStore
     /// </summary>
     /// <param name="sequenceNumber">The sequence number of the packet to remove</param>
     /// <returns>The removed packed</returns>
-    public ReliablePacket? RemovePacket(ushort sequenceNumber);
+    public ReliablePacket? RemovePacket(Player requester, ushort sequenceNumber);
 }

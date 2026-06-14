@@ -1,9 +1,9 @@
-﻿using SMOO.Client;
+﻿using Microsoft.Extensions.Logging;
+using SMOO.Client;
 using SMOO.Protocol;
-using SMOO.Util;
-using Microsoft.Extensions.Logging;
-using SMOO.Services.Interface;
 using SMOO.Server;
+using SMOO.Services.Interface;
+using SMOO.Util;
 
 namespace SMOO.Services.Impl;
 
@@ -65,7 +65,7 @@ internal class Broadcaster : IBroadcaster
         {
             PacketType packetType = reliablePacket.Header.Type; // need to capture here as packet store frees the rented buffer
 
-            ReliablePacket? expiredPacket = _resendStore.RemovePacket(reliablePacket.SequenceNumber);
+            ReliablePacket? expiredPacket = _resendStore.RemovePacket(reliablePacket.Receiver, reliablePacket.SequenceNumber);
             if (expiredPacket == null)
             {
                 _context.Logger.LogWarning("Expired packet already removed");
@@ -102,13 +102,22 @@ internal class Broadcaster : IBroadcaster
         {
             UploadAndSendAckPacket(roomPayload, counter, player, maxRetries);
         }
+
+        if (counter.Count == 0)
+        {
+            roomPayload.Return();
+        }
     }
 
     public void BroadcastExcept(Player[] players, Player ignoredPlayer, ReadOnlySpan<byte> payload)
     {
         foreach (Player player in players)
         {
-            if (player == ignoredPlayer) continue;
+            if (player == ignoredPlayer)
+            {
+                continue;
+            }
+
             _context.PacketSender.SendTo(player.Endpoint, payload);
         }
     }
@@ -122,6 +131,11 @@ internal class Broadcaster : IBroadcaster
             {
                 UploadAndSendAckPacket(roomPayload, counter, player, maxRetries);
             }
+        }
+
+        if (counter.Count == 0)
+        {
+            roomPayload.Return();
         }
     }
 
@@ -155,6 +169,16 @@ internal class Broadcaster : IBroadcaster
                 UploadAndSendAckPacket(roomPayload, roomCounter, player, maxRetries);
             }
         }
+
+        if (roomCounter.Count == 0)
+        {
+            roomPayload.Return();
+        }
+
+        if (playerCounter.Count == 0)
+        {
+            ignoredPlayerPayload.Return();
+        }
     }
 
     // TODO: Check success of upload, keep track of which packets have been successfully uploaded
@@ -170,6 +194,7 @@ internal class Broadcaster : IBroadcaster
     public Task Shutdown()
     {
         _resendToken.Cancel();
+        _resendToken.Dispose();
         return _resendTask;
     }
 }

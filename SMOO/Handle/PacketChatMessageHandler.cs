@@ -1,4 +1,3 @@
-using System.Text;
 using Microsoft.Extensions.Logging;
 using SMOO.Protocol;
 using SMOO.Server;
@@ -11,17 +10,16 @@ internal class PacketChatMessageHandler : IPacketHandler
     /// <summary>
     /// Requires one UInt16 for the length of the message
     /// </summary>
-    public static ushort MinPayloadSize => sizeof(ushort);
+    public static ushort MinPayloadSize => RequiredSize<PacketChatMessageRequest>.Size;
 
     private struct PacketChatMessageRequest : IDeserializableStruct
     {
-        public ushort MessageLength;
-        public string Message;
+        [RequiredField]
+        public StreamStringView<ushort> Message;
 
         public void Deserialize(ref SpanReader reader)
         {
-            MessageLength = reader.ReadUInt16LittleEndian();
-            Message = Encoding.UTF8.GetString(reader.ReadBytes(MessageLength));
+            Message.Deserialize(ref reader);
         }
     }
 
@@ -35,14 +33,16 @@ internal class PacketChatMessageHandler : IPacketHandler
         {
             Header = packet.Header.WithType(PacketType.ChatMessage),
             PlayerSlot = packet.SenderPlayer!.Slot,
-            MessageLength = request.MessageLength,
             Message = request.Message,
         };
 
-        RentedBuffer chatBuffer = new RentedBuffer(chatPacket.Size());
-        chatPacket.Serialize(chatBuffer.UsedSpan);
 
         packet.RentedBuffer.Return();
+
+        RentedBuffer chatBuffer = new RentedBuffer(Config.DynamicBufferSize1024);
+
+        int writtenBytes = PacketSerializer.Serialize(chatBuffer, ref chatPacket);
+        chatBuffer.Restrict(writtenBytes);
 
         room.Broadcaster.BroadcastReliablyExcept(room.PlayerHolder.Players, packet.SenderPlayer, chatBuffer);
     }

@@ -7,7 +7,6 @@ internal enum Error
     InvalidHeaderSize,
     InvalidPacketType,
     InvalidVersion,
-    InvalidPayloadSize,
 
     // Packet Handling
     EmptyPayload,

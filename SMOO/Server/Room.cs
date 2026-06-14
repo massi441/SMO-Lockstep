@@ -45,15 +45,17 @@ internal class Room
 
     private async Task ProcessAsync()
     {
-        try
+        await foreach (Packet packet in Packets.Reader.ReadAllAsync())
         {
-            await foreach (Packet packet in Packets.Reader.ReadAllAsync())
+            try
             {
+
                 ProcessCommands();
 
                 if (!IsAllowedInRoom(packet.Sender, packet.Header, out Player? player))
                 {
                     _context.Logger.LogWarning("{Address}:{Port} illegally tried to access room #{RoomId}", packet.Sender.Address, packet.Sender.Port, Id);
+                    packet.RentedBuffer.Return();
                     continue;
                 }
 
@@ -61,9 +63,10 @@ internal class Room
 
                 PacketHandler packetHandler = PacketHandlerTable.GetHandler(packet.Header.Type);
 
-                if (packet.Payload.Length < packetHandler.MinPayloadSize)
+                if (packet.PayloadSize < packetHandler.MinPayloadSize)
                 {
-                    _context.Logger.LogWarning("{PacketType} packet of invalid size ({PacketSize}) was requested. Minimum required: {Minimum}", packet.Header.Type, packet.Payload.Length, packetHandler.MinPayloadSize);
+                    _context.Logger.LogWarning("{PacketType} packet of invalid size ({PacketSize}) was requested. Minimum required: {Minimum}", packet.Header.Type, packet.PayloadSize, packetHandler.MinPayloadSize);
+                    packet.RentedBuffer.Return();
                     continue;
                 }
 
@@ -79,11 +82,11 @@ internal class Room
                     packetHandler.Handler(parsedPacket, this, _context);
                 }
             }
-        } 
-        catch (Exception ex)
-        {
-            _context.Logger.LogError(ex, "Error in Room #{RoomId}", Id);
-            return;
+            catch (Exception ex)
+            {
+                _context.Logger.LogError(ex, "Unexpected error in Room #{RoomId}", Id);
+                packet.RentedBuffer.Return();
+            }
         }
 
         _context.Logger.LogInformation("Room #{RoomId} was shutdown sucessfully", Id);

@@ -4,9 +4,20 @@ namespace SMOO.Protocol;
 
 internal static class PacketSerializer
 {
-    public static void Serialize<T>(Span<byte> destination, in T packet) where T : struct, ISerializableStruct, allows ref struct
+    /// <summary>
+    /// Serializes a packet into a specified buffer and returns the bytes written
+    /// </summary>
+    /// <typeparam name="T">The type of packet to serialize</typeparam>
+    /// <param name="destination">The destination buffer</param>
+    /// <param name="packet">The packet to serialize</param>
+    /// <returns></returns>
+    public static int Serialize<T>(Span<byte> destination, ref T packet) where T : struct, ISerializableStruct, allows ref struct
     {
-        packet.Serialize(destination);
+        SpanWriter writer = new SpanWriter(destination);
+
+        packet.Serialize(ref writer);
+
+        return writer.Offset;
     }
 
     public static void Deserialize<T>(ReadOnlySpan<byte> source, ref T packet) where T : struct, IDeserializableStruct, allows ref struct

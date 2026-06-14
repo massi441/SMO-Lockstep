@@ -17,10 +17,17 @@ internal class PacketSenderUdp : IPacketSender
 
     public Result<Error> SendTo(EndPoint destination, ReadOnlySpan<byte> data)
     {
-        int bytesSent = _socket.SendTo(data, destination);
-        if (bytesSent != data.Length)
+        try
         {
-            return Result<Error>.Failure(Error.NotSent);
+            int bytesSent = _socket.SendTo(data, destination);
+            if (bytesSent != data.Length)
+            {
+                return Result<Error>.Failure(Error.NotSent);
+            }
+        }
+        catch (Exception)
+        {
+            return Result<Error>.Failure(Error.OperationFailed);
         }
 
         return Result<Error>.Success();

@@ -15,7 +15,7 @@ class Program
         try
         {
             UdpServer server = new UdpServer(port);
-            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+            using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
             Console.CancelKeyPress += (_, e) =>
             {

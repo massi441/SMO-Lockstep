@@ -22,7 +22,6 @@ internal static class RequiredSize<T> where T : struct, allows ref struct
         foreach (FieldInfo field in fields)
         {
             bool isRequired = field.IsDefined(typeof(RequiredFieldAttribute), inherit: false);
-
             if (!isRequired)
             {
                 continue;

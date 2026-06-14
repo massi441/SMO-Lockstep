@@ -9,7 +9,6 @@ namespace SMOO.Event;
 
 internal class EventPlayerSyncHandler : IEventHandler
 {
-    // TODO: Add [Required] attribute on struct, to deduce minimum payload size
     public static ushort MinPayloadSize => RequiredSize<PlayerSyncData>.Size;  
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -28,7 +27,7 @@ internal class EventPlayerSyncHandler : IEventHandler
     {
         Player[] playersInStage = room.PlayerHolder.InSameStageAs(eventPacket.BasePacket.SenderPlayer!);
 
-        room.Broadcaster.BroadcastExcept(playersInStage, eventPacket.BasePacket.SenderPlayer!, eventPacket.BasePacket.RentedBuffer.UsedSpan);
+        room.Broadcaster.Broadcast(playersInStage, eventPacket.BasePacket.RentedBuffer.UsedSpan);
 
         eventPacket.BasePacket.RentedBuffer.Return();
     }

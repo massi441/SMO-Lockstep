@@ -1,5 +1,4 @@
 ﻿using System.Buffers;
-using System.Runtime.InteropServices;
 
 namespace SMOO.Util;
 
@@ -23,25 +22,25 @@ internal struct RentedBuffer
     /// </summary>
     public readonly Span<byte> UsedSpan => RentRef.AsSpan(0, UsedBytes);
 
-    /// <summary>
-    /// A memory view pointing at the start of the rented buffer, with the size of the used bytes in the rented buffer
-    /// </summary>
-    public readonly Memory<byte> UsedMemory => RentRef.AsMemory(0, UsedBytes);
-
-    public RentedBuffer(byte[] rentRef, int size)
+    public RentedBuffer(int size)
     {
-        RentRef = rentRef;
+        RentRef = ArrayPool<byte>.Shared.Rent(size);
         UsedBytes = size;
     }
 
-    public RentedBuffer(int size) : this(ArrayPool<byte>.Shared.Rent(size), size)
+    public void Restrict(int size)
     {
-
+        UsedBytes = Math.Min(size, UsedBytes);
     }
 
     public readonly Span<byte> SpanAt(int offset)
     {
         return RentRef.AsSpan(offset, UsedBytes - offset);
+    }
+
+    public static implicit operator Span<byte>(RentedBuffer buffer)
+    {
+        return buffer.UsedSpan;
     }
 
     public readonly void Return()
@@ -63,7 +62,7 @@ internal struct RentedBuffer
         };
 
         other.RentRef = null!;
-        other.UsedBytes = newBuffer.UsedBytes;
+        other.UsedBytes = 0;
 
         return newBuffer;
     }
