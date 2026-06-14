@@ -58,22 +58,6 @@ internal class PacketConnectHandler : IPacketHandler
 
         Player newPlayer = newPlayerResult.Data!;
 
-        if (AckConnect(newPlayer, ref packet, room, context))
-        {
-            context.Logger.LogTrace("Player {Name} joined Room #{RoomId} in slot {Slot}, waiting for a confirmation...", newPlayer.Name, packet.Header.RoomId, newPlayer.Slot);
-        }
-        else
-        {
-            context.Logger.LogError("Failed to upload connect ACK packet, new player will be ignored");
-            room.PlayerHolder.UnregisterPlayer(newPlayer);
-        }
-
-        cleanup:
-        packet.RentedBuffer.Return();
-    }
-
-    private static bool AckConnect(Player newPlayer, ref ParsedPacket packet, Room room, ServerContext context)
-    {
         PacketHeader header = packet.Header.WithType(PacketType.ConnectAck);
 
         PlayerInRoomInfo[] playerInfos = [.. room.PlayerHolder.Players.Where(p => p != newPlayer).Select(p => new PlayerInRoomInfo(p))];
@@ -89,16 +73,20 @@ internal class PacketConnectHandler : IPacketHandler
 
         RentedBuffer ackBuffer = PacketSerializer.Serialize(ref ackPacket, Config.MaxBufferSize);
 
-        Result<Error> uploadResult = room.Broadcaster.ReliablePacketStore.UploadPacket(ackBuffer, new RefCounter(), newPlayer);
-        if (uploadResult.IsFailed)
+        Result<Error> ackResult = context.PacketSender.SendReliably(newPlayer, ackBuffer, room.Broadcaster.ReliablePacketStore, Config.MaxRetries);
+        if (ackResult.IsSuccess)
         {
+            context.Logger.LogTrace("Player {Name} joined Room #{RoomId} in slot {Slot}, waiting for a confirmation...", newPlayer.Name, packet.Header.RoomId, newPlayer.Slot);
+        }
+        else
+        {
+            context.Logger.LogError("Failed to upload connect ACK packet, new player will be ignored");
+            room.PlayerHolder.UnregisterPlayer(newPlayer);
             ackBuffer.Return();
-            return false;
         }
 
-        context.PacketSender.SendTo(newPlayer.Endpoint, ackBuffer.UsedSpan);
-
-        return true;
+    cleanup:
+        packet.RentedBuffer.Return();
     }
 
     private static bool IsInOtherRoom(IPEndPoint sender, ServerContext context, out Player player, out Room takenRoom)

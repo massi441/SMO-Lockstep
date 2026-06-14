@@ -56,7 +56,7 @@ internal class EventPlayerSyncHandler : IEventHandler
 
         Player[] playersInStage = room.PlayerHolder.InSameStageAs(eventPacket.BasePacket.SenderPlayer!);
 
-        room.Broadcaster.Broadcast(playersInStage, eventPacket.BasePacket.RentedBuffer.UsedSpan);
+        room.Broadcaster.Broadcast(playersInStage, eventPacket.BasePacket.RentedBuffer);
 
         eventPacket.BasePacket.RentedBuffer.Return();
     }

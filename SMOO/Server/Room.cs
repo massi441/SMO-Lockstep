@@ -49,7 +49,11 @@ internal class Room
         {
             try
             {
-                ProcessCommands();
+                while (_commands.TryDequeue(out Action? command))
+                {
+                    _context.Logger.LogTrace("Processing command in room #{RoomId}", Id);
+                    command!.Invoke();
+                }
 
                 if (!IsAllowedInRoom(packet.Sender, packet.Header, out Player? player))
                 {
@@ -101,15 +105,6 @@ internal class Room
         }
 
         _context.Logger.LogInformation("Room #{RoomId} was shutdown sucessfully", Id);
-    }
-
-    private void ProcessCommands()
-    {
-        while (_commands.TryDequeue(out Action? command))
-        {
-            _context.Logger.LogTrace("Processing command in room #{RoomId}", Id);
-            command!.Invoke();
-        }
     }
 
     private bool IsAllowedInRoom(IPEndPoint sender, PacketHeader header, out Player? player)

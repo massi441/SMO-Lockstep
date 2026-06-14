@@ -43,7 +43,7 @@ internal struct RentedBuffer
         return buffer.UsedSpan;
     }
 
-    public readonly void Return()
+    public void Return()
     {
         if (RentRef == null)
         {
@@ -51,6 +51,9 @@ internal struct RentedBuffer
         } 
 
         ArrayPool<byte>.Shared.Return(RentRef);
+
+        RentRef = null!;
+        UsedBytes = 0;
     }
 
     public static RentedBuffer Move(ref RentedBuffer other)
@@ -69,11 +72,6 @@ internal struct RentedBuffer
 
     public void Dispose()
     {
-        if (RentRef != null)
-        {
-            ArrayPool<byte>.Shared.Return(RentRef);
-            RentRef = null!;
-            UsedBytes = 0;
-        }
+        Return();
     }
 }

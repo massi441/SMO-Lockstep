@@ -34,7 +34,7 @@ internal static class PacketDispatcher
         if (header.Type == PacketType.Ping)
         {
             context.Logger.LogTrace("Ping received from {Address}:{Port}", packet.Sender.Address, packet.Sender.Port);
-            Result<Error> result = context.PacketSender.SendTo(packet.Sender, packet.RentedBuffer.UsedSpan);
+            Result<Error> result = context.PacketSender.Send(packet.Sender, packet.RentedBuffer);
             packet.RentedBuffer.Return();
             return result;
         }

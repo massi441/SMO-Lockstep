@@ -71,6 +71,11 @@ internal class PlayerHolder : IPlayerHolder
         return [.. _players.Where(p => p != null && p != targetPlayer && p.WorldInfo.CurrentStage == targetPlayer.WorldInfo.CurrentStage)];
     }
 
+    public Player[] PlayersExcept(Player player)
+    {
+        return [.. _players.Where(p => p != null && p != player)];
+    }
+
     public Player? FindPlayerById(PlayerId id)
     {
         foreach (Player p in _players)

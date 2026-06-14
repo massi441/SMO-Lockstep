@@ -14,6 +14,7 @@ internal interface IPlayerHolder
     Result<Error> UnregisterPlayer(Player player);
 
     Player[] InSameStageAs(Player targetPlayer);
+    Player[] PlayersExcept(Player player);
 
     Player? FindPlayerByHost(IPEndPoint endpoint);
     Player? FindPlayerById(PlayerId id);
