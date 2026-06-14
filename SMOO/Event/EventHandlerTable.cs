@@ -21,9 +21,9 @@ internal readonly unsafe struct EventHandler
 internal static unsafe class EventHandlerTable
 {
     private static readonly EventHandler DefaultHandler         = new EventHandler(EventDefaultHandler.MinDataSize, EventDefaultHandler.MaxDataSize, &EventDefaultHandler.Handle);
-    private static readonly EventHandler JoinStage              = DefaultHandler;
-    private static readonly EventHandler LeaveStage             = DefaultHandler;
-    private static readonly EventHandler ChangeCostume          = DefaultHandler;
+    private static readonly EventHandler JoinStage              = new EventHandler(EventJoinStageHandler.MinDataSize, EventJoinStageHandler.MaxDataSize, &EventJoinStageHandler.Handle);
+    private static readonly EventHandler LeaveStage             = new EventHandler(EventLeaveStageHandler.MinDataSize, EventLeaveStageHandler.MaxDataSize, &EventLeaveStageHandler.Handle);
+    private static readonly EventHandler ChangeCostume          = new EventHandler(EventChangeCostumeHandler.MinDataSize, EventChangeCostumeHandler.MaxDataSize, &EventChangeCostumeHandler.Handle);
     private static readonly EventHandler PlayerSync             = new EventHandler(EventPlayerSyncHandler.MinDataSize, EventPlayerSyncHandler.MaxDataSize, &EventPlayerSyncHandler.Handle);
 
     private static readonly EventHandler[] Handlers =

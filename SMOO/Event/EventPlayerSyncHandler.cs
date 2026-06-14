@@ -1,6 +1,5 @@
 ﻿using System.Numerics;
 using System.Runtime.InteropServices;
-using SMOO.Client;
 using SMOO.Enumerator;
 using SMOO.Protocol;
 using SMOO.Server;
@@ -53,7 +52,7 @@ internal class EventPlayerSyncHandler : IEventHandler
 
     public static void Handle(ParsedEventPacket eventPacket, Room room, ServerContext context)
     {
-        PlayerSyncData playerSyncData = PacketSerializer.Deserialize<PlayerSyncData>(eventPacket.EventData);
+        PacketSerializer.Deserialize<PlayerSyncData>(eventPacket.EventData); // for validation only
 
         PlayerSameStageEnumerator enumerator = room.PlayerHolder.Players.SameStageAs(eventPacket.BasePacket.SenderPlayer!);
         room.Broadcaster.Broadcast(enumerator, eventPacket.BasePacket.RentedBuffer);
