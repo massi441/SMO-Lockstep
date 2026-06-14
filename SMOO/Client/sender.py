@@ -26,7 +26,7 @@ EVENT_HEADER_SIZE   = struct.calcsize(EVENT_HEADER_FORMAT)  # 3 bytes
 MAGIC   = 0x534D4F4F  # "SMOO"
 VERSION = 1
 FLAGS   = 0
-PORT    = 1027
+PORT    = 5001
 
 # PacketType enum order (matches server's PacketType enum)
 PTYPE_CONNECT          = 0
@@ -55,11 +55,16 @@ PTYPE_NAMES = {
     PTYPE_EVENT:                "Event",
 }
 
-HEADER_FORMAT = "<IBBBHHH"   # Magic(4) Type(1) Flags(1) Version(1) RoomId(2) PayloadSize(2) Seq(2)
+# Magic(4) Type(1) Flags(1) Version(1) RoomId(2) Seq(2) — PayloadSize is not in the header, it is derived from received byte count
+HEADER_FORMAT = "<IBBBHH"
 HEADER_SIZE   = struct.calcsize(HEADER_FORMAT)
 
 # Types the server sends reliably (server expects an Ack back)
 SERVER_RELIABLE_PTYPES = {PTYPE_CONNECT_ACK, PTYPE_PLAYER_JOIN_ROOM, PTYPE_DISCONNECT, PTYPE_CHAT_MESSAGE}
+
+# Max sizes matching server constants (for malformed packet construction)
+MAX_CHAT_MESSAGE_LENGTH = 512
+MAX_PLAYER_NAME_LENGTH  = 50
 
 _room_id = None  # None means not connected
 
@@ -70,19 +75,18 @@ def _require_room():
     return _room_id
 
 def build_packet(ptype, room_id, payload=b"", seq=0):
-    header = struct.pack(HEADER_FORMAT, MAGIC, ptype, FLAGS, VERSION, room_id, len(payload), seq)
+    header = struct.pack(HEADER_FORMAT, MAGIC, ptype, FLAGS, VERSION, room_id, seq)
     return header + payload
 
 def parse_header(data):
     if len(data) < HEADER_SIZE:
         return None
-    magic, ptype, flags, version, room_id, payload_size, seq = struct.unpack_from(HEADER_FORMAT, data)
+    magic, ptype, flags, version, room_id, seq = struct.unpack_from(HEADER_FORMAT, data)
     if magic != MAGIC:
         return None
-    return {"type": ptype, "flags": flags, "version": version, "room_id": room_id, "payload_size": payload_size, "seq": seq}
+    return {"type": ptype, "flags": flags, "version": version, "room_id": room_id, "seq": seq}
 
 def decode_payload(ptype, data, header):
-    # Read everything after the header; don't trust PayloadSize for variable-length packets
     raw = data[HEADER_SIZE:]
 
     seq_str = f"seq={header['seq']} " if ptype in SERVER_RELIABLE_PTYPES else ""
@@ -237,28 +241,56 @@ def packet_game_sync():
     quat_identity = struct.pack("<ffff", 0.0, 0.0, 0.0, 1.0)
     return build_packet(ptype=PTYPE_EVENT, room_id=room_id, payload=event_header + position + quat_identity)
 
-def spam_event(sock, server):
+def malformed_packet(sock, server):
     room_id = _require_room()
     if room_id is None:
         return
-    count = int(input("packet count: "))
-    packet = build_packet(ptype=PTYPE_EVENT, room_id=room_id)
-    print(f"  sending {count} Event packets at 60fps...")
-    for i in range(count):
-        send(sock, packet, server)
-        time.sleep(1 / 60)
-    print("  done.")
+    print("  1. oversized payload            — triggers MaxPayloadSize gate in Room.ProcessAsync")
+    print("  2. undersized payload           — triggers MinPayloadSize gate in Room.ProcessAsync")
+    print("  3. string length > max allowed  — triggers StreamStringView max check (InvalidDataException)")
+    print("  4. string length > actual bytes — triggers StreamStringView remaining check (InvalidDataException)")
+    choice = input("  > ").strip()
+
+    if choice == "1":
+        # Payload exceeds ChatMessageRequest MaxPayloadSize (ushort prefix 2 + MaxChatMessageLength 512 = 514)
+        junk = b"A" * (MAX_CHAT_MESSAGE_LENGTH + 10)
+        payload = struct.pack("<H", len(junk)) + junk
+        print(f"  sending ChatMessageRequest with {len(payload)}-byte payload (max allowed: {MAX_CHAT_MESSAGE_LENGTH + 2})")
+        send(sock, build_packet(PTYPE_CHAT_MESSAGE_REQUEST, room_id, payload), server)
+
+    elif choice == "2":
+        # Payload below ChatMessageRequest MinPayloadSize (2 bytes for the ushort length prefix)
+        print("  sending ChatMessageRequest with empty payload (min required: 2)")
+        send(sock, build_packet(PTYPE_CHAT_MESSAGE_REQUEST, room_id, b""), server)
+
+    elif choice == "3":
+        # String length prefix claims more than MaxChatMessageLength — hits the first check in StreamStringView.Deserialize
+        claimed = MAX_CHAT_MESSAGE_LENGTH + 1
+        payload = struct.pack("<H", claimed) + b"hello"
+        print(f"  sending ChatMessageRequest with length prefix={claimed} (max allowed: {MAX_CHAT_MESSAGE_LENGTH})")
+        send(sock, build_packet(PTYPE_CHAT_MESSAGE_REQUEST, room_id, payload), server)
+
+    elif choice == "4":
+        # String length prefix is valid but claims more bytes than are present — hits the remaining bytes check
+        claimed = 100
+        actual  = b"short"
+        payload = struct.pack("<H", claimed) + actual
+        print(f"  sending ChatMessageRequest with length prefix={claimed} but only {len(actual)} bytes of data")
+        send(sock, build_packet(PTYPE_CHAT_MESSAGE_REQUEST, room_id, payload), server)
+
+    else:
+        print("  invalid choice")
 
 # --- menu ---
 
 PACKETS = [
-    ("connect",        packet_connect),
-    ("disconnect",     packet_disconnect),
-    ("health check",   packet_health_check),
-    ("ping",           packet_ping),
-    ("chat message",   packet_chat_message),
-    ("send game sync", packet_game_sync),
-    ("spam event",     None),
+    ("connect",          packet_connect),
+    ("disconnect",       packet_disconnect),
+    ("health check",     packet_health_check),
+    ("ping",             packet_ping),
+    ("chat message",     packet_chat_message),
+    ("send game sync",   packet_game_sync),
+    ("malformed packet", None),
 ]
 
 def main():
@@ -286,8 +318,8 @@ def main():
             continue
         idx = int(choice) - 1
         name, builder = PACKETS[idx]
-        if builder is None:
-            spam_event(sock, server)
+        if name == "malformed packet":
+            malformed_packet(sock, server)
         else:
             packet = builder()
             if packet is not None:

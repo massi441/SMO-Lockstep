@@ -29,10 +29,7 @@ internal class PacketConnectSynAckHandler : IPacketHandler
             PlayerRoomInfo = new PlayerInRoomInfo(packet.SenderPlayer!)
         };
 
-        RentedBuffer joinRoomBuffer = new RentedBuffer(RequiredSize<PacketPlayerJoinRoom>.MaxSize);
-
-        int writtenBytes = PacketSerializer.Serialize(joinRoomBuffer, ref joinPacket);
-        joinRoomBuffer.Restrict(writtenBytes);
+        RentedBuffer joinRoomBuffer = PacketSerializer.Serialize(ref joinPacket, RequiredSize<PacketPlayerJoinRoom>.MaxSize);
 
         context.Logger.LogInformation("Player {PlayerName} has confirmed their connection in Room #{RoomId}, room will be notified", packet.SenderPlayer!.Name, room.Id);
 

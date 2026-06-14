@@ -90,7 +90,7 @@ internal class Room
             }
             catch (InvalidDataException ex)
             {
-                _context.Logger.LogError(ex, "Invalid data detected in payload");
+                _context.Logger.LogError("Invalid data detected in {PacketType} in Room #{RoomId}: {Message}", packet.Header.Type, Id, ex.Message);
                 packet.RentedBuffer.Return();
             }
             catch (Exception ex)

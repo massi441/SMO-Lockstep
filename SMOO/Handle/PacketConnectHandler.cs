@@ -87,10 +87,7 @@ internal class PacketConnectHandler : IPacketHandler
             PlayerInfos = playerInfos
         };
 
-        RentedBuffer ackBuffer = new RentedBuffer(Config.MaxBufferSize);
-
-        int writtenBytes = PacketSerializer.Serialize(ackBuffer, ref ackPacket);
-        ackBuffer.Restrict(writtenBytes);
+        RentedBuffer ackBuffer = PacketSerializer.Serialize(ref ackPacket, Config.MaxBufferSize);
 
         Result<Error> uploadResult = room.Broadcaster.ReliablePacketStore.UploadPacket(ackBuffer, new RefCounter(), newPlayer);
         if (uploadResult.IsFailed)
