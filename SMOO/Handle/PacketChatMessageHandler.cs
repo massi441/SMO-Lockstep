@@ -11,6 +11,7 @@ internal class PacketChatMessageHandler : IPacketHandler
     /// Requires one UInt16 for the length of the message
     /// </summary>
     public static ushort MinPayloadSize => RequiredSize<PacketChatMessageRequest>.MinSize;
+    public static ushort MaxPayloadSize => RequiredSize<PacketChatMessageRequest>.MaxSize;
 
     private struct PacketChatMessageRequest : IDeserializableStruct
     {

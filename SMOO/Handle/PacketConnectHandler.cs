@@ -13,6 +13,7 @@ internal class PacketConnectHandler : IPacketHandler
     /// Requires at least one UInt16 for the length of the Player's name
     /// </summary>
     public static ushort MinPayloadSize => RequiredSize<PacketConnectPayload>.MinSize;
+    public static ushort MaxPayloadSize => RequiredSize<PacketConnectPayload>.MaxSize;
 
     private struct PacketConnectPayload : IDeserializableStruct
     {

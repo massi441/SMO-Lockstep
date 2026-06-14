@@ -70,6 +70,13 @@ internal class Room
                     continue;
                 }
 
+                if (packet.PayloadSize > packetHandler.MaxPayloadSize)
+                {
+                    _context.Logger.LogWarning("{PacketType} packet payload too large ({PacketSize}), maximum allowed: {Maximum}. Error: {Error}", packet.Header.Type, packet.PayloadSize, packetHandler.MaxPayloadSize, Error.PayloadTooLarge);
+                    packet.RentedBuffer.Return();
+                    continue;
+                }
+
                 ParsedPacket parsedPacket = new ParsedPacket()
                 {
                     SenderPlayer = player,

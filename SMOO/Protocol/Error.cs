@@ -12,6 +12,7 @@ internal enum Error
     EmptyPayload,
     NoPacketHandler,
     InvalidNameLength,
+    PayloadTooLarge,
 
     // Packet Sending
     NotSent,

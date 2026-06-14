@@ -9,7 +9,8 @@ namespace SMOO.Event;
 
 internal class EventPlayerSyncHandler : IEventHandler
 {
-    public static ushort MinPayloadSize => RequiredSize<PlayerSyncData>.MinSize;  
+    public static ushort MinDataSize => RequiredSize<PlayerSyncData>.MinSize;
+    public static ushort MaxDataSize => RequiredSize<PlayerSyncData>.MaxSize;  
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private ref struct PlayerSyncData

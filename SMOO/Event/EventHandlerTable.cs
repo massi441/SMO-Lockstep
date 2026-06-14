@@ -6,23 +6,25 @@ namespace SMOO.Event;
 
 internal readonly unsafe struct EventHandler
 {
-    public readonly ushort MinPayloadSize;
+    public readonly ushort MinDataSize;
+    public readonly ushort MaxDataSize;
     public readonly delegate*<ParsedEventPacket, Room, ServerContext, void> Handle;
 
-    public EventHandler(ushort minPayloadSize, delegate*<ParsedEventPacket, Room, ServerContext, void> handle)
+    public EventHandler(ushort minPayloadSize, ushort maxPayloadSize, delegate*<ParsedEventPacket, Room, ServerContext, void> handle)
     {
-        MinPayloadSize = minPayloadSize;
+        MinDataSize = minPayloadSize;
+        MaxDataSize = maxPayloadSize;
         Handle = handle;
     }
 }
 
 internal static unsafe class EventHandlerTable
 {
-    private static readonly EventHandler DefaultHandler         = new EventHandler(EventDefaultHandler.MinPayloadSize, &EventDefaultHandler.Handle);
+    private static readonly EventHandler DefaultHandler         = new EventHandler(EventDefaultHandler.MinDataSize, EventDefaultHandler.MaxDataSize, &EventDefaultHandler.Handle);
     private static readonly EventHandler JoinStage              = DefaultHandler;
     private static readonly EventHandler LeaveStage             = DefaultHandler;
     private static readonly EventHandler ChangeCostume          = DefaultHandler;
-    private static readonly EventHandler PlayerSync             = new EventHandler(EventPlayerSyncHandler.MinPayloadSize, &EventPlayerSyncHandler.Handle);
+    private static readonly EventHandler PlayerSync             = new EventHandler(EventPlayerSyncHandler.MinDataSize, EventPlayerSyncHandler.MaxDataSize, &EventPlayerSyncHandler.Handle);
 
     private static readonly EventHandler[] Handlers =
     [
