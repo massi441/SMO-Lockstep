@@ -41,6 +41,6 @@ internal class PacketChatMessageHandler : IPacketHandler
 
         RentedBuffer chatBuffer = PacketSerializer.Serialize(ref chatPacket, RequiredSize<PacketChatMessage>.MaxSize);
 
-        room.Broadcaster.BroadcastReliably(room.PlayerHolder.PlayersExcept(packet.SenderPlayer), chatBuffer);
+        room.Broadcaster.BroadcastReliably(room.PlayerHolder.Players.Except(packet.SenderPlayer), chatBuffer);
     }
 }

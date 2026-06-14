@@ -6,15 +6,13 @@ namespace SMOO.Client;
 
 internal class PlayerHolder : IPlayerHolder
 {
-    private readonly Player[] _players;
-
+    private readonly PlayerList _players;
+    public PlayerList Players => _players;
     public byte MaxSize => (byte)_players.Length;
-    public Player[] Players => [.. _players.Where(p => p != null)];
-    public byte ActivePlayerCount => (byte)Players.Count();
 
     public PlayerHolder(byte size = Config.DefaultRoomSize)
     {
-        _players = new Player[Math.Min(size, Config.MaxRoomSize)];
+        _players = new PlayerList(Math.Min(size, Config.MaxRoomSize));
     }
 
     public Result<Player, Error> RegisterPlayer(in PlayerInfo playerInfo)
@@ -64,16 +62,6 @@ internal class PlayerHolder : IPlayerHolder
         }
 
         return Result<Error>.Failure(Error.OperationFailed);
-    }
-
-    public Player[] InSameStageAs(Player targetPlayer)
-    {
-        return [.. _players.Where(p => p != null && p != targetPlayer && p.WorldInfo.CurrentStage == targetPlayer.WorldInfo.CurrentStage)];
-    }
-
-    public Player[] PlayersExcept(Player player)
-    {
-        return [.. _players.Where(p => p != null && p != player)];
     }
 
     public Player? FindPlayerById(PlayerId id)

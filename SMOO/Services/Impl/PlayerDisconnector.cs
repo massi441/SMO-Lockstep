@@ -43,7 +43,7 @@ internal class PlayerDisconnector : IPlayerDisconnector
 
         RentedBuffer broadcastBuffer = PacketSerializer.Serialize(ref disconnectPacket, Unsafe.SizeOf<PacketDisconnect>());
 
-        player.Room.Broadcaster.BroadcastReliably(player.Room.PlayerHolder.Players, broadcastBuffer);
+        player.Room.Broadcaster.BroadcastReliably(player.Room.PlayerHolder.Players.Active, broadcastBuffer);
 
         return Result<Error>.Success();
     }

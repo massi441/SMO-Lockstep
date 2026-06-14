@@ -1,4 +1,5 @@
 ﻿using SMOO.Client;
+using SMOO.Enumerator;
 using SMOO.Util;
 
 namespace SMOO.Protocol;
@@ -12,7 +13,7 @@ internal ref struct PacketConnectAck : ISerializableStruct
     public required Guid SessionId;
     public required byte RoomSize;
     public required byte OtherPlayersCount;
-    public required ReadOnlySpan<PlayerInRoomInfo> PlayerInfos;
+    public required PlayerInRoomInfoEnumerator PlayerInfos;
 
     public readonly void Serialize(ref SpanWriter writer)
     {

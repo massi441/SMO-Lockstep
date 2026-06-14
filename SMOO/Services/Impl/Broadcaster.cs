@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using SMOO.Client;
+using SMOO.Enumerator;
 using SMOO.Protocol;
 using SMOO.Server;
 using SMOO.Services.Interface;
@@ -24,7 +25,7 @@ internal class Broadcaster : IBroadcaster
         _resendTask = Task.Run(ResendLoop);
     }
 
-    public void Broadcast(Player[] players, RentedBuffer buffer)
+    public void Broadcast<TEnumerator>(TEnumerator players, RentedBuffer buffer) where TEnumerator : IPlayerEnumerator<TEnumerator>, allows ref struct
     {
         foreach (Player player in players)
         {
@@ -32,7 +33,7 @@ internal class Broadcaster : IBroadcaster
         }
     }
 
-    public void BroadcastReliably(Player[] players, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries)
+    public void BroadcastReliably<TEnumerator>(TEnumerator players, RentedBuffer roomPayload, byte maxRetries = Config.MaxRetries) where TEnumerator : IPlayerEnumerator<TEnumerator>, allows ref struct
     {
         RefCounter counter = new RefCounter();
         foreach (Player player in players)
