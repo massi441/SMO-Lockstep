@@ -28,7 +28,7 @@ internal class PacketConnectSynAckHandler : IPacketHandler
             PlayerRoomInfo = new PlayerInRoomInfo(packet.SenderPlayer!)
         };
 
-        RentedBuffer joinRoomBuffer = new RentedBuffer(Config.DynamicBufferSize128);
+        RentedBuffer joinRoomBuffer = new RentedBuffer(RequiredSize<PacketPlayerJoinRoom>.MaxSize);
 
         int writtenBytes = PacketSerializer.Serialize(joinRoomBuffer, ref joinPacket);
         joinRoomBuffer.Restrict(writtenBytes);

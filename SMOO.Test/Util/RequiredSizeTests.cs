@@ -39,7 +39,7 @@ public class RequiredSizeTests
         ushort expected = 10;
 
         // Act
-        ushort actual = RequiredSize<StructSize10>.Size;
+        ushort actual = RequiredSize<StructSize10>.MinSize;
 
         // Assert
         Assert.AreEqual(expected, actual);
@@ -52,7 +52,7 @@ public class RequiredSizeTests
         ushort expected = 18;
 
         // Act
-        ushort actual = RequiredSize<StructSize18>.Size;
+        ushort actual = RequiredSize<StructSize18>.MinSize;
 
         // Assert
         Assert.AreEqual(expected, actual);

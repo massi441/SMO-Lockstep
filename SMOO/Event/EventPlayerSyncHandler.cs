@@ -9,18 +9,31 @@ namespace SMOO.Event;
 
 internal class EventPlayerSyncHandler : IEventHandler
 {
-    public static ushort MinPayloadSize => RequiredSize<PlayerSyncData>.Size;  
+    public static ushort MinPayloadSize => RequiredSize<PlayerSyncData>.MinSize;  
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private ref struct PlayerSyncData
     {
-        [RequiredField] public Vector3 Position;
-        [RequiredField] public Quaternion Quat;
-        [RequiredField] public float AnimRate;
-        [RequiredField] public StreamStringView<byte> Anim;
-        [RequiredField] public StreamStringView<byte> SubAnim;
-        [RequiredField] public StreamStringView<byte> UpperAnim;
-        [RequiredField] public StreamSpanView<byte, float> BlendWeights;
+        [RequiredField]
+        public Vector3 Position;
+
+        [RequiredField]
+        public Quaternion Quat;
+
+        [RequiredField]
+        public float AnimRate;
+
+        [DynamicField(MaxSize = Config.MaxAnimNameLength)]
+        public StreamStringView<byte> Anim;
+        
+        [DynamicField(MaxSize = Config.MaxAnimNameLength)]
+        public StreamStringView<byte> SubAnim;
+        
+        [DynamicField(MaxSize = Config.MaxAnimNameLength)]
+        public StreamStringView<byte> UpperAnim;
+        
+        [DynamicField(MaxSize = Config.MaxBlendWeights * sizeof(float))]
+        public StreamSpanView<byte, float> BlendWeights;
     }
 
     public static void Handle(ParsedEventPacket eventPacket, Room room, ServerContext context)

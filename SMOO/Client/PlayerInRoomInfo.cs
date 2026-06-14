@@ -4,9 +4,16 @@ namespace SMOO.Client;
 
 internal readonly struct PlayerInRoomInfo
 {
+    [RequiredField]
     public readonly byte PlayerIndex;
+
+    [DynamicField(MaxSize = Config.MaxPlayerNameLength)]
     public readonly StreamStringView<byte> PlayerName;
+
+    [DynamicField(MaxSize = Config.MaxCostumeNameLength)]
     public readonly StreamStringView<byte> CostumeBody;
+
+    [DynamicField(MaxSize = Config.MaxCostumeNameLength)]
     public readonly StreamStringView<byte> CostumeCap;
 
     public PlayerInRoomInfo(Player player)

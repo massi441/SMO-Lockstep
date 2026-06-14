@@ -10,11 +10,11 @@ internal class PacketChatMessageHandler : IPacketHandler
     /// <summary>
     /// Requires one UInt16 for the length of the message
     /// </summary>
-    public static ushort MinPayloadSize => RequiredSize<PacketChatMessageRequest>.Size;
+    public static ushort MinPayloadSize => RequiredSize<PacketChatMessageRequest>.MinSize;
 
     private struct PacketChatMessageRequest : IDeserializableStruct
     {
-        [RequiredField]
+        [DynamicField(MaxSize = Config.MaxChatMessageLength)]
         public StreamStringView<ushort> Message;
 
         public void Deserialize(ref SpanReader reader)
@@ -36,10 +36,9 @@ internal class PacketChatMessageHandler : IPacketHandler
             Message = request.Message,
         };
 
-
         packet.RentedBuffer.Return();
 
-        RentedBuffer chatBuffer = new RentedBuffer(Config.DynamicBufferSize1024);
+        RentedBuffer chatBuffer = new RentedBuffer(RequiredSize<PacketChatMessage>.MaxSize);
 
         int writtenBytes = PacketSerializer.Serialize(chatBuffer, ref chatPacket);
         chatBuffer.Restrict(writtenBytes);

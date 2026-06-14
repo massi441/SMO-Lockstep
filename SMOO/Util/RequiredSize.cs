@@ -5,32 +5,47 @@ namespace SMOO.Util;
 
 internal static class RequiredSize<T> where T : struct, allows ref struct
 {
-    public static readonly ushort Size = Compute(typeof(T));
+    public static readonly ushort MinSize;
+    public static readonly ushort MaxSize;
 
-    public static ushort Compute(Type type)
+    static RequiredSize()
     {
-        ushort requiredSize = 0;
+        (MinSize, MaxSize) = Compute(typeof(T));
+    }
+
+    private static (ushort Min, ushort Max) Compute(Type type)
+    {
+        ushort minSize = 0;
+        ushort maxSize = 0;
 
         FieldInfo[] fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
-        bool hasRequiredFields = fields.Any(f => f.IsDefined(typeof(RequiredFieldAttribute)));
-        if (!hasRequiredFields)
+        bool hasSizeFields = fields.Any(f => f.IsDefined(typeof(RequiredFieldAttribute)) || f.IsDefined(typeof(DynamicFieldAttribute)));
+        if (!hasSizeFields)
         {
-            return (ushort)Marshal.SizeOf(type);
+            minSize += (ushort)Marshal.SizeOf(type);
+            return (minSize, minSize);
         }
 
         foreach (FieldInfo field in fields)
         {
-            bool isRequired = field.IsDefined(typeof(RequiredFieldAttribute), inherit: false);
-            if (!isRequired)
+            if (field.IsDefined(typeof(RequiredFieldAttribute)))
             {
-                continue;
+                (ushort Min, ushort Max) = Compute(field.FieldType);
+                minSize += Min;
+                maxSize += Max;
             }
+            else if (field.IsDefined(typeof(DynamicFieldAttribute)))
+            {
+                DynamicFieldAttribute attribute = field.GetCustomAttribute<DynamicFieldAttribute>()!;
 
-            requiredSize += Compute(field.FieldType);
+                (ushort Min, ushort _) = Compute(field.FieldType);
 
+                minSize += Min;
+                maxSize += (ushort)(Min + attribute.MaxSize);
+            }
         }
 
-        return requiredSize;
+        return (minSize, maxSize);
     }
 }

@@ -7,7 +7,7 @@ namespace SMOO.Util;
 /// Represents a length prefixed string in a byte stream
 /// </summary>
 /// <typeparam name="TLengthPrefix">The type of the length prefix</typeparam>
-internal struct StreamStringView<TLengthPrefix> where TLengthPrefix : unmanaged, IBinaryInteger<TLengthPrefix>
+internal struct StreamStringView<TLengthPrefix> where TLengthPrefix : unmanaged, IBinaryInteger<TLengthPrefix>, IMinMaxValue<TLengthPrefix>
 {
     [RequiredField]
     private TLengthPrefix _length;

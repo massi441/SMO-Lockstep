@@ -1,6 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using SMOO.Client;
-using SMOO.Server;
+﻿using SMOO.Client;
 using SMOO.Util;
 
 namespace SMOO.Protocol;
@@ -35,7 +33,10 @@ internal ref struct PacketConnectAck : ISerializableStruct
 /// </summary>
 internal struct PacketPlayerJoinRoom : ISerializableStruct
 {
+    [RequiredField]
     public required PacketHeader Header;
+
+    [RequiredField]
     public required PlayerInRoomInfo PlayerRoomInfo;
 
     public PacketPlayerJoinRoom()
@@ -56,8 +57,13 @@ internal struct PacketPlayerJoinRoom : ISerializableStruct
 /// </summary>
 internal struct PacketChatMessage : ISerializableStruct
 {
+    [RequiredField]
     public required PacketHeader Header;
+
+    [RequiredField]
     public required byte PlayerSlot;
+
+    [DynamicField(MaxSize = Config.MaxChatMessageLength)]
     public required StreamStringView<ushort> Message;
 
     public readonly void Serialize(ref SpanWriter writer)

@@ -12,11 +12,11 @@ internal class PacketConnectHandler : IPacketHandler
     /// <summary>
     /// Requires at least one UInt16 for the length of the Player's name
     /// </summary>
-    public static ushort MinPayloadSize => RequiredSize<PacketConnectPayload>.Size;
+    public static ushort MinPayloadSize => RequiredSize<PacketConnectPayload>.MinSize;
 
     private struct PacketConnectPayload : IDeserializableStruct
     {
-        [RequiredField]
+        [DynamicField(MaxSize = Config.MaxPlayerNameLength)]
         public StreamStringView<byte> Name;
 
         public void Deserialize(ref SpanReader reader)
@@ -86,7 +86,7 @@ internal class PacketConnectHandler : IPacketHandler
             PlayerInfos = playerInfos
         };
 
-        RentedBuffer ackBuffer = new RentedBuffer(Config.DynamicBufferSize1024);
+        RentedBuffer ackBuffer = new RentedBuffer(Config.MaxSendBufferSize);
 
         int writtenBytes = PacketSerializer.Serialize(ackBuffer, ref ackPacket);
         ackBuffer.Restrict(writtenBytes);
