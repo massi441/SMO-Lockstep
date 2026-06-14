@@ -49,7 +49,6 @@ internal class Room
         {
             try
             {
-
                 ProcessCommands();
 
                 if (!IsAllowedInRoom(packet.Sender, packet.Header, out Player? player))
@@ -88,6 +87,12 @@ internal class Room
                 {
                     packetHandler.Handler(parsedPacket, this, _context);
                 }
+            }
+            catch (InvalidDataException ex)
+            {
+                // TODO: Add proper data error format
+                _context.Logger.LogError(ex, "Invalid data detected in payload");
+                packet.RentedBuffer.Return();
             }
             catch (Exception ex)
             {

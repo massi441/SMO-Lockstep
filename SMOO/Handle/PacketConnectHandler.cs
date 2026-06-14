@@ -87,7 +87,7 @@ internal class PacketConnectHandler : IPacketHandler
             PlayerInfos = playerInfos
         };
 
-        RentedBuffer ackBuffer = new RentedBuffer(Config.MaxSendBufferSize);
+        RentedBuffer ackBuffer = new RentedBuffer(Config.MaxBufferSize);
 
         int writtenBytes = PacketSerializer.Serialize(ackBuffer, ref ackPacket);
         ackBuffer.Restrict(writtenBytes);

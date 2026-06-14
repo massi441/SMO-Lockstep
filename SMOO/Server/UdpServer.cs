@@ -55,7 +55,7 @@ internal class UdpServer
     {
         while (!cancellationTokenSource.IsCancellationRequested)
         {
-            RentedBuffer buffer = new RentedBuffer(Config.ServerReceiveBufferSize);
+            RentedBuffer buffer = new RentedBuffer(Config.MaxBufferSize);
             try
             {
                 IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
