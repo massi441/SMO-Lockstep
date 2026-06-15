@@ -2,5 +2,5 @@
 
 internal interface ISerializableStruct
 {
-    void Serialize(Span<byte> destination);
+    void Serialize(ref SpanWriter writer);
 }

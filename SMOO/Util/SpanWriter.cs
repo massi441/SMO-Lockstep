@@ -6,10 +6,12 @@ namespace SMOO.Util;
 
 internal ref struct SpanWriter
 {
-    private readonly Span<byte> _span;
     private int _offset;
+    private readonly Span<byte> _span;
 
     public readonly int Offset => _offset;
+
+    public readonly Span<byte> SourceSpan => _span;
 
     /// <summary>
     /// Returns a span starting at the current offset of the writer
@@ -35,6 +37,13 @@ internal ref struct SpanWriter
     {
         MemoryMarshal.Write(RemainingSpan, value);
         _offset += Unsafe.SizeOf<T>();
+    }
+
+    public void WriteSpan<T>(ReadOnlySpan<T> span) where T : unmanaged
+    {
+        ReadOnlySpan<byte> bytes = MemoryMarshal.AsBytes(span);
+        bytes.CopyTo(RemainingSpan);
+        _offset += bytes.Length;
     }
 
     public void WriteString(string str)

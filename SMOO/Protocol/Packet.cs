@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using SMOO.Util;
 
@@ -25,12 +26,9 @@ internal readonly struct Packet
     public ref PacketHeader Header => ref MemoryMarshal.AsRef<PacketHeader>(RentedBuffer.RentRef.AsSpan());
 
     /// <summary>
-    /// Returns a span of the payload of the packet
-    /// </summary>
-    public ReadOnlySpan<byte> Payload => RentedBuffer.RentRef.AsSpan(PacketHeader.SizeOf(), Header.PayloadSize);
-
-    /// <summary>
     /// The full size of the packet
     /// </summary>
     public int FullSize => RentedBuffer.UsedBytes;
+
+    public int PayloadSize => RentedBuffer.UsedBytes - Unsafe.SizeOf<PacketHeader>();
 }

@@ -1,6 +1,8 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using SMOO.Client;
 using SMOO.Protocol;
+using SMOO.Server;
 using SMOO.Services.Interface;
 using SMOO.Util;
 
@@ -15,14 +17,33 @@ internal class PacketSenderUdp : IPacketSender
         _socket = socket;
     }
 
-    public Result<Error> Send(EndPoint destination, ReadOnlySpan<byte> data)
+    public Result<Error> Send(EndPoint destination, RentedBuffer buffer)
     {
-        int bytesSent = _socket.SendTo(data, destination);
-        if (bytesSent != data.Length)
+        try
         {
-            return Result<Error>.Failure(Error.NotSent);
+            int bytesSent = _socket.SendTo(buffer, destination);
+            if (bytesSent != buffer.UsedBytes)
+            {
+                return Result<Error>.Failure(Error.NotSent);
+            }
+        }
+        catch (Exception)
+        {
+            return Result<Error>.Failure(Error.OperationFailed);
         }
 
         return Result<Error>.Success();
+    }
+
+    public void SendReliably(Player receiver, RentedBuffer buffer, Room room, RefCounter refCounter, byte maxRetries = 5)
+    {
+        room.Broadcaster.ReliablePacketStore.UploadPacket(buffer, refCounter, receiver, maxRetries);
+
+        Send(receiver.Endpoint, buffer);
+    }
+
+    public void SendReliably(Player receiver, RentedBuffer buffer, Room room, byte maxRetries = 5)
+    {
+        SendReliably(receiver, buffer, room, new RefCounter(), maxRetries);
     }
 }

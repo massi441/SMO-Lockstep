@@ -6,15 +6,13 @@ namespace SMOO.Client;
 
 internal class PlayerHolder : IPlayerHolder
 {
-    private readonly Player[] _players;
-
+    private readonly PlayerList _players;
+    public PlayerList Players => _players;
     public byte MaxSize => (byte)_players.Length;
-    public Player[] Players => [.. _players.Where(p => p != null)];
-    public byte ActivePlayerCount => (byte)Players.Count();
 
     public PlayerHolder(byte size = Config.DefaultRoomSize)
     {
-        _players = new Player[Math.Min(size, Config.MaxRoomSize)];
+        _players = new PlayerList(Math.Min(size, Config.MaxRoomSize));
     }
 
     public Result<Player, Error> RegisterPlayer(in PlayerInfo playerInfo)
@@ -41,6 +39,7 @@ internal class PlayerHolder : IPlayerHolder
             Room = playerInfo.Room,
             WorldInfo = new PlayerWorldInfo()
             {
+                CurrentStage = string.Empty,
                 CostumeBody = Config.DefaultCostumeName,
                 CostumeCap = Config.DefaultCostumeName
             }
@@ -99,23 +98,6 @@ internal class PlayerHolder : IPlayerHolder
         }
 
         return null;
-    }
-
-    public void RemovePlayer(Player player)
-    {
-        for (int i = 0; i < _players.Length; i++)
-        {
-            Player p = _players[i];
-            if (p == null)
-            {
-                continue;
-            }
-
-            if (p.Id == player.Id)
-            {
-                _players[i] = null!;
-            }
-        }
     }
 
     private bool TryFindSlot(out byte index)

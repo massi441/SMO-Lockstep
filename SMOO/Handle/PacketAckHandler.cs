@@ -1,24 +1,23 @@
-﻿using System.Buffers.Binary;
-using SMOO.Protocol;
+﻿using SMOO.Protocol;
 using SMOO.Server;
 using Microsoft.Extensions.Logging;
-using SMOO.Util;
 
 namespace SMOO.Handle;
 
 internal class PacketAckHandler : IPacketHandler
 {
     public static ushort MinPayloadSize => 0;
+    public static ushort MaxPayloadSize => 0;
 
     public static void Handle(ParsedPacket packet, Room room, ServerContext context)
     {
         ushort sequenceNumber = packet.Header.SequenceNumber;
 
-        ReliablePacket? pendingPacket = room.Broadcaster.ReliablePacketStore.RemovePacket(sequenceNumber);
+        ReliablePacket? pendingPacket = room.Broadcaster.ReliablePacketStore.RemovePacket(packet.SenderPlayer!, sequenceNumber);
         if (pendingPacket == null)
         {
             packet.RentedBuffer.Return();
-            context.Logger.LogError("The packet #{SequenceNumber} was not found in room #{RoomId}", sequenceNumber, room.Id);
+            context.Logger.LogWarning("The packet #{SequenceNumber} was not found in room #{RoomId}", sequenceNumber, room.Id);
             return;
         }
 

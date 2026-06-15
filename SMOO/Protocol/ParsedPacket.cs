@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using SMOO.Client;
 using SMOO.Util;
@@ -22,7 +23,7 @@ internal readonly struct ParsedPacket
     /// <summary>
     /// Returns a span of the payload of the packet
     /// </summary>
-    public Span<byte> Payload => RentedBuffer.RentRef.AsSpan(PacketHeader.SizeOf(), Header.PayloadSize);
+    public Span<byte> Payload => RentedBuffer.UsedSpan[Unsafe.SizeOf<PacketHeader>()..];
 
     public int FullSize => RentedBuffer.UsedBytes;
 }

@@ -8,16 +8,11 @@ internal class RefCounter
 
     public int Increment()
     {
-        return ++_count;
+        return Interlocked.Increment(ref _count);
     }
 
     public int Decrement()
     {
-        if (_count == 0)
-        {
-            return _count;
-        }
-
-        return --_count;
+        return Interlocked.Decrement(ref _count);
     }
 }

@@ -14,8 +14,7 @@ internal class UdpServer
     private readonly int _port;
     private readonly Channel<Packet> _packets;
 
-    private ILogger Logger => Context.Logger;
-    public ServerContext Context { get; private set; } = null!;
+    public ServerContext _context { get; private set; } = null!;
 
     public UdpServer(int port)
     {
@@ -33,7 +32,7 @@ internal class UdpServer
 
         InitContext(socket, cancellationToken);
 
-        Logger.LogInformation("Server listening on port {Port}...", _port);
+        _context.Logger.LogInformation("Server listening on port {Port}...", _port);
 
         try
         {
@@ -44,53 +43,60 @@ internal class UdpServer
         }
         catch (OperationCanceledException)
         {
-            Logger.LogWarning("Operations canceled.");
+            _context.Logger.LogWarning("Operations canceled.");
         }
 
-        Logger.LogInformation("Shutting down server...");
+        _context.Logger.LogInformation("Shutting down server...");
 
-        await Context.RoomHolder.ShutdownRooms();
+        await _context.RoomHolder.ShutdownRooms();
     }
 
     private async Task ReceiveLoop(Socket socket, CancellationToken cancellationTokenSource)
     {
         while (!cancellationTokenSource.IsCancellationRequested)
         {
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(Config.ServerBufferSize);
+            RentedBuffer buffer = new RentedBuffer(Config.MaxBufferSize);
             try
             {
                 IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
 
-                SocketReceiveFromResult receiveResult = await socket.ReceiveFromAsync(buffer, SocketFlags.None, sender, cancellationTokenSource);
+                SocketReceiveFromResult receiveResult = await socket.ReceiveFromAsync(buffer.RentRef, SocketFlags.None, sender, cancellationTokenSource);
                 if (receiveResult.ReceivedBytes > 0)
                 {
+                    buffer.Restrict(receiveResult.ReceivedBytes);
                     _packets.Writer.TryWrite(new Packet
                     {
                         Sender = (IPEndPoint)receiveResult.RemoteEndPoint,
-                        RentedBuffer = new RentedBuffer(buffer, receiveResult.ReceivedBytes)
+                        RentedBuffer = buffer
                     });
+                    // ownership transferred to RentedBuffer
                 }
                 else
                 {
-                    Logger.LogInformation("Empty packet received from {Address}:{Port}", sender.Address.ToString(), sender.Port);
+                    buffer.Return();
+                    _context.Logger.LogInformation("Empty packet received from {Address}:{Port}", sender.Address.ToString(), sender.Port);
                 }
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
             {
-                Logger.LogWarning("Operation aborted");
+                buffer.Return();
+                _context.Logger.LogWarning("Operation aborted");
                 break;
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.MessageSize)
             {
-                Logger.LogError("The received packet was too big to fit inside the receive buffer");
+                buffer.Return();
+                _context.Logger.LogError("The received packet was too big to fit inside the receive buffer");
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionReset)
             {
-                Logger.LogWarning("An error occured while trying to send a packet, host unreachable");
+                buffer.Return();
+                _context.Logger.LogWarning("An error occured while trying to send a packet, host unreachable");
             }
-            catch (SocketException ex)
+            catch (Exception ex)
             {
-                Logger.LogError(ex, "An Unexpected exception occured while receiving packets");
+                buffer.Return();
+                _context.Logger.LogError(ex, "An Unexpected exception occured while receiving packets");
             }
         }
     }
@@ -98,17 +104,18 @@ internal class UdpServer
     {
         await foreach (Packet packet in _packets.Reader.ReadAllAsync(cancellationTokenSource))
         {
-            Result<Error> dispatchResult = PacketDispatcher.Dispatch(packet, Context);
+            Result<Error> dispatchResult = PacketDispatcher.Dispatch(packet, _context);
             if (dispatchResult.IsFailed)
             {
-                Logger.LogWarning("Dispatch failed. Error: {Error}, Sender: {Address}:{Port}", dispatchResult.Error, packet.Sender.Address, packet.Sender.Port);
+                _context.Logger.LogWarning("Dispatch failed. Error: {Error}, Sender: {Address}:{Port}", dispatchResult.Error, packet.Sender.Address, packet.Sender.Port);
+                packet.RentedBuffer.Return();
             }
         }
     }
 
     private void InitContext(Socket socket, CancellationToken cancellationToken)
     {
-        Context = new ServerContext()
+        _context = new ServerContext()
         {
             Logger = LockstepLogger.Instance(),
             RoomHolder = new RoomHolder(),
@@ -117,6 +124,6 @@ internal class UdpServer
             CancellationToken = cancellationToken
         };
 
-        Context.RoomHolder.AddRoom(Context);
+        _context.RoomHolder.AddRoom(_context);
     }
 }

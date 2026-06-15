@@ -10,7 +10,7 @@ internal ref struct SpanReader
     private int _offset;
     private readonly ReadOnlySpan<byte> _span;
 
-    public readonly int Remaining => _span.Length - _offset;
+    public readonly int RemainingByteCount => _span.Length - _offset;
     public readonly ReadOnlySpan<byte> RemainingSpan => _span[_offset..];
 
     public SpanReader(ReadOnlySpan<byte> span)
@@ -121,6 +121,14 @@ internal ref struct SpanReader
     {
         ReadOnlySpan<byte> result = RemainingSpan[..count];
         _offset += count;
+        return result;
+    }
+
+    public ReadOnlySpan<T> ReadView<T>(int count) where T : unmanaged
+    {
+        int totalBytes = count * Unsafe.SizeOf<T>();
+        ReadOnlySpan<T> result = MemoryMarshal.Cast<byte, T>(RemainingSpan[..totalBytes]);
+        _offset += totalBytes;
         return result;
     }
 

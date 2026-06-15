@@ -1,19 +1,16 @@
-using Microsoft.Extensions.Logging;
 using SMOO.Protocol;
 using SMOO.Server;
 using SMOO.Util;
 
 namespace SMOO.Event;
 
-internal class EventDefaultHandler : IEventHandler
+internal class EventChangeCostumeHandler : IEventHandler
 {
     public static ushort MinDataSize => 0;
     public static ushort MaxDataSize => Config.MaxBufferSize;
 
     public static void Handle(ParsedEventPacket packet, Room room, ServerContext context)
     {
-        context.Logger.LogTrace("Default Event Handler invoked for unhandled event in packet from {PlayerName}", packet.BasePacket.SenderPlayer?.Name);
-
         packet.BasePacket.RentedBuffer.Return();
     }
 }

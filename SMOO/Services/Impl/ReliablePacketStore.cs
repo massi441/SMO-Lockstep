@@ -21,13 +21,8 @@ internal class ReliablePacketStore : IReliablePacketStore
         _context = context;
     }
 
-    public Result<Error> UploadPacket(RentedBuffer rentedBuffer, RefCounter refCounter, Player receiver, byte maxRetries)
+    public ReliablePacket UploadPacket(RentedBuffer rentedBuffer, RefCounter refCounter, Player receiver, byte maxRetries)
     {
-        if (IsFull())
-        {
-            return Result<Error>.Failure(Error.PendingPacketStoreFull);
-        }
-
         ReliablePacket reliablePacket = new ReliablePacket()
         {
             RentedBuffer = rentedBuffer,
@@ -45,14 +40,21 @@ internal class ReliablePacketStore : IReliablePacketStore
 
         _context.Logger.LogTrace("Uploaded reliable {PacketType} packet with sequence number #{SequenceNumber}, and {Tries} tries", reliablePacket.Header.Type, reliablePacket.SequenceNumber, reliablePacket.Tries);
 
-        return Result<Error>.Success();
+        return reliablePacket;
     }
 
-    public ReliablePacket? RemovePacket(ushort sequenceNumber)
+    public ReliablePacket? RemovePacket(Player requester, ushort sequenceNumber)
     {
         if (_pendingPackets.TryRemove(sequenceNumber, out ReliablePacket? pendingPacket))
         {
-            if (pendingPacket.RefCounter.Decrement() == 0)
+            if (pendingPacket.Receiver != requester)
+            {
+                _pendingPackets[sequenceNumber] = pendingPacket;
+                _context.Logger.LogCritical("Attack detected: {RequesterName} tried to ack {ReceiverName}'s packet (#{SequenceNumber}) in Room #{RoomId}", requester.Name, pendingPacket.Receiver.Name, sequenceNumber, requester.Room.Id);
+                return null;
+            }
+
+            if (pendingPacket.RefCounter.Decrement() <= 0)
             {
                 pendingPacket.RentedBuffer.Return();
                 _context.Logger.LogTrace("Removed and free'd buffer used by reliable packet #{SequenceNumber}", sequenceNumber);
@@ -66,10 +68,5 @@ internal class ReliablePacketStore : IReliablePacketStore
         }
 
         return null;
-    }
-
-    private bool IsFull()
-    {
-        return _pendingPackets.Count > ushort.MaxValue;
     }
 }

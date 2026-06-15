@@ -1,5 +1,5 @@
-﻿using System.Runtime.CompilerServices;
-using SMOO.Client;
+﻿using SMOO.Client;
+using SMOO.Enumerator;
 using SMOO.Util;
 
 namespace SMOO.Protocol;
@@ -13,33 +13,10 @@ internal ref struct PacketConnectAck : ISerializableStruct
     public required Guid SessionId;
     public required byte RoomSize;
     public required byte OtherPlayersCount;
-    public required ReadOnlySpan<PlayerInRoomInfo> PlayerInfos;
+    public required PlayerInRoomInfoEnumerator PlayerInfos;
 
-    public ushort FinalizeSize()
+    public readonly void Serialize(ref SpanWriter writer)
     {
-        SizeStream stream = new SizeStream();
-
-        stream.Write<PacketHeader>();
-        stream.Write<Guid>(); // session id
-        stream.Write<byte>(); // room size
-        stream.Write<byte>(); // other player count
-
-        foreach (PlayerInRoomInfo playerInfo in PlayerInfos)
-        {
-            stream.WriteBytes(playerInfo.Size());
-        }
-
-        ushort fullsize = stream.Size;
-
-        Header.PayloadSize = (ushort)(fullsize - Unsafe.SizeOf<PacketHeader>());
-
-        return fullsize;
-    }
-
-    public readonly void Serialize(Span<byte> destination)
-    {
-        SpanWriter writer = new SpanWriter(destination);
-
         writer.Write(Header);
         writer.Write(SessionId);
         writer.Write(RoomSize);
@@ -55,9 +32,12 @@ internal ref struct PacketConnectAck : ISerializableStruct
 /// <summary>
 /// The packet sent to a room, to notify that a new player has joined
 /// </summary>
-internal struct PacketPlayerJoinRoom : ISerializableStruct
+internal ref struct PacketPlayerJoinRoom : ISerializableStruct
 {
+    [RequiredField]
     public required PacketHeader Header;
+
+    [RequiredField]
     public required PlayerInRoomInfo PlayerRoomInfo;
 
     public PacketPlayerJoinRoom()
@@ -65,24 +45,8 @@ internal struct PacketPlayerJoinRoom : ISerializableStruct
         PlayerRoomInfo = new PlayerInRoomInfo();
     }
 
-    public int FinalizeSize()
+    public readonly void Serialize(ref SpanWriter writer)
     {
-        SizeStream stream = new SizeStream();
-
-        stream.Write<PacketHeader>();
-        stream.WriteBytes(PlayerRoomInfo.Size());
-
-        ushort fullsize = stream.Size;
-
-        Header.PayloadSize = (ushort)(fullsize - Unsafe.SizeOf<PacketHeader>());
-
-        return stream.Size;
-    }
-
-    public readonly void Serialize(Span<byte> destination)
-    {
-        SpanWriter writer = new SpanWriter(destination);
-
         writer.Write(Header);
 
         PlayerRoomInfo.Serialize(ref writer);
@@ -92,32 +56,45 @@ internal struct PacketPlayerJoinRoom : ISerializableStruct
 /// <summary>
 /// The packet broadcasted to a room when a player sends a chat message
 /// </summary>
-internal struct PacketChatMessage : ISerializableStruct
+internal ref struct PacketChatMessage : ISerializableStruct
 {
+    [RequiredField]
     public required PacketHeader Header;
+
+    [RequiredField]
     public required byte PlayerSlot;
-    public required ushort MessageLength;
-    public required string Message;
 
-    public readonly int Size()
+    [DynamicField(MaxSize = Config.MaxChatMessageLength)]
+    public required StreamStringView<ushort> Message;
+
+    public readonly void Serialize(ref SpanWriter writer)
     {
-        SizeStream stream = new SizeStream();
-
-        stream.Write<PacketHeader>();
-        stream.Write<byte>(); // player slot
-        stream.Write<ushort>(); // message length
-        stream.WriteString(Message); // message
-
-        return stream.Size;
-    }
-
-    public readonly void Serialize(Span<byte> destination)
-    {
-        SpanWriter writer = new SpanWriter(destination);
-
         writer.Write(Header);
         writer.Write(PlayerSlot);
-        writer.Write(MessageLength);
-        writer.WriteString(Message);
+
+        Message.Serialize(ref writer);
+    }
+}
+
+internal ref struct PacketPlayersInStage : ISerializableStruct
+{
+    [RequiredField]
+    public required PacketHeader Header;
+
+    [RequiredField]
+    public required byte PlayerCount;
+
+    [DynamicField(MaxSize = sizeof(byte) * Config.MaxRoomSize)]
+    public required PlayerSameStageEnumerator PlayersInStage;
+
+    public readonly void Serialize(ref SpanWriter writer)
+    {
+        writer.Write(Header);
+        writer.Write(PlayerCount);
+
+        foreach (Player player in PlayersInStage)
+        {
+            writer.Write(player.Slot);
+        }
     }
 }

@@ -18,7 +18,7 @@ internal class RoomHolder : IRoomHolder
         }
 
         IPlayerHolder playerHolder = new PlayerHolder();
-        IRoomBroadcaster roomBroadcaster = new RoomBroadcaster(context, new ReliablePacketStore(context));
+        IBroadcaster roomBroadcaster = new Broadcaster(context, new ReliablePacketStore(context));
 
         _rooms.Add(nextId, new Room(nextId, context, playerHolder, roomBroadcaster));
 

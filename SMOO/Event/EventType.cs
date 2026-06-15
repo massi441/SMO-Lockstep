@@ -2,8 +2,7 @@
 
 internal enum EventType : ushort
 {
-    JoinStage,
-    LeaveStage,
+    ChangeStage,
     ChangeCostume,
     PlayerSync,
 

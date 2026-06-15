@@ -15,19 +15,9 @@ internal class PlayerDisconnector : IPlayerDisconnector
         public required PacketHeader Header;
         public required byte PlayerSlot;
 
-        public static int SizeOf()
+        public readonly void Serialize(ref SpanWriter writer)
         {
-            return Unsafe.SizeOf<PacketDisconnect>();
-        }
-
-        public static ushort SizeOfPayload()
-        {
-            return sizeof(byte);
-        }
-
-        public readonly void Serialize(Span<byte> destination)
-        {
-            MemoryMarshal.Write(destination, this);
+            writer.Write(this);
         }
     }
 
@@ -39,7 +29,6 @@ internal class PlayerDisconnector : IPlayerDisconnector
             return unregisterResult;
         }
 
-        RentedBuffer broadcastBuffer = MemoryUtil.Rent<PacketDisconnect>();
         PacketDisconnect disconnectPacket = new PacketDisconnect()
         {
             Header = new PacketHeader()
@@ -48,14 +37,13 @@ internal class PlayerDisconnector : IPlayerDisconnector
                 Flags = (byte)PacketFlags.None,
                 Version = Config.Version,
                 RoomId = player.Room.Id,
-                PayloadSize = PacketDisconnect.SizeOfPayload()
             },
             PlayerSlot = player.Slot
         };
 
-        PacketSerializer.Serialize(broadcastBuffer.UsedSpan, disconnectPacket);
+        RentedBuffer broadcastBuffer = PacketSerializer.Serialize(ref disconnectPacket, Unsafe.SizeOf<PacketDisconnect>());
 
-        player.Room.Broadcaster.BroadcastReliably(player.Room, broadcastBuffer);
+        player.Room.Broadcaster.BroadcastReliably(player.Room.Players.Active, broadcastBuffer);
 
         return Result<Error>.Success();
     }

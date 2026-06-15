@@ -1,7 +1,7 @@
 using System.Net;
-using System.Text;
 using Microsoft.Extensions.Logging;
 using SMOO.Client;
+using SMOO.Enumerator;
 using SMOO.Protocol;
 using SMOO.Server;
 using SMOO.Util;
@@ -13,17 +13,17 @@ internal class PacketConnectHandler : IPacketHandler
     /// <summary>
     /// Requires at least one UInt16 for the length of the Player's name
     /// </summary>
-    public static ushort MinPayloadSize => 2;
+    public static ushort MinPayloadSize => RequiredSize<PacketConnectPayload>.MinSize;
+    public static ushort MaxPayloadSize => RequiredSize<PacketConnectPayload>.MaxSize;
 
     private struct PacketConnectPayload : IDeserializableStruct
     {
-        public byte NameLength { get; private set; }
-        public string Name { get; private set; }
+        [DynamicField(MaxSize = Config.MaxPlayerNameLength)]
+        public StreamStringView<byte> Name;
 
         public void Deserialize(ref SpanReader reader)
         {
-            NameLength = reader.ReadByte();
-            Name = Encoding.UTF8.GetString(reader.RemainingSpan);
+            Name.Deserialize(ref reader, Config.MaxPlayerNameLength);    
         }
     }
 
@@ -37,16 +37,16 @@ internal class PacketConnectHandler : IPacketHandler
 
         PacketConnectPayload connectPayload = PacketSerializer.Deserialize<PacketConnectPayload>(packet.Payload);
 
-        if (!IsValidNameLength(connectPayload.NameLength))
+        if (!IsValidNameLength(connectPayload.Name.Length))
         {
-            context.Logger.LogWarning("Invalid player name length {Length}", connectPayload.NameLength);
+            context.Logger.LogWarning("Invalid player name length {Length}", connectPayload.Name.Length);
             goto cleanup;
         }
 
         PlayerInfo playerInfo = new PlayerInfo()
         {
             Endpoint = packet.SenderIp,
-            Name = connectPayload.Name,
+            Name = connectPayload.Name.String,
             Room = room,
         };
 
@@ -59,46 +59,25 @@ internal class PacketConnectHandler : IPacketHandler
 
         Player newPlayer = newPlayerResult.Data!;
 
-        if (AckConnect(newPlayer, ref packet, room, context)) // ownership of buffer gets transferred to reliable store
-        {
-            context.Logger.LogTrace("Player {Name} joined Room #{RoomId}, waiting for a confirmation...", newPlayer.Name, packet.Header.RoomId);
-            return;
-        }
-
-        context.Logger.LogError("Failed to upload connect ACK packet, new player will be ignored");
-
-        cleanup:
-        packet.RentedBuffer.Return();
-    }
-
-    private static bool AckConnect(Player newPlayer, ref ParsedPacket packet, Room room, ServerContext context)
-    {
-        PacketHeader header = packet.Header.WithType(PacketType.ConnectAck);
-
-        PlayerInRoomInfo[] playerInfos = [.. room.PlayerHolder.Players.Select(p => new PlayerInRoomInfo(p))];
+        var playerInfos = room.Players.PlayerInfosExcept(newPlayer);
 
         PacketConnectAck ackPacket = new PacketConnectAck()
         {
-            Header = header,
+            Header = packet.Header.WithType(PacketType.ConnectAck),
             RoomSize = room.PlayerHolder.MaxSize,
             SessionId = newPlayer.Id.SessionId,
-            OtherPlayersCount = (byte)(room.PlayerHolder.ActivePlayerCount - 1),
+            OtherPlayersCount = (byte)(room.Players.ActiveCount() - 1),
             PlayerInfos = playerInfos
         };
 
-        RentedBuffer ackBuffer = new RentedBuffer(ackPacket.FinalizeSize());
+        RentedBuffer ackBuffer = PacketSerializer.Serialize(ref ackPacket, Config.MaxBufferSize);
 
-        ackPacket.Serialize(ackBuffer.UsedSpan);
+        context.PacketSender.SendReliably(newPlayer, ackBuffer, room, Config.MaxRetries);
 
-        Result<Error> uploadResult = room.Broadcaster.ReliablePacketStore.UploadPacket(ackBuffer, new RefCounter(), newPlayer);
-        if (uploadResult.IsFailed)
-        {
-            return false;
-        }
+        context.Logger.LogTrace("Player {Name} joined Room #{RoomId} in slot {Slot}, waiting for a confirmation...", newPlayer.Name, packet.Header.RoomId, newPlayer.Slot);
 
-        context.PacketSender.Send(newPlayer.Endpoint, ackBuffer.UsedSpan);
-
-        return true;
+        cleanup:
+        packet.RentedBuffer.Return();
     }
 
     private static bool IsInOtherRoom(IPEndPoint sender, ServerContext context, out Player player, out Room takenRoom)

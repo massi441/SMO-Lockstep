@@ -4,61 +4,33 @@ namespace SMOO.Client;
 
 internal readonly struct PlayerInRoomInfo
 {
+    [RequiredField]
     public readonly byte PlayerIndex;
 
-    public readonly byte PlayerNameLength;
-    public readonly string Name;
+    [DynamicField(MaxSize = Config.MaxPlayerNameLength)]
+    public readonly StreamStringView<byte> PlayerName;
 
-    public readonly byte CostumeBodyLength;
-    public readonly string CostumeBody;
+    [DynamicField(MaxSize = Config.MaxCostumeNameLength)]
+    public readonly StreamStringView<byte> CostumeBody;
 
-    public readonly byte CostumeCapLength;
-    public readonly string CostumeCap;
+    [DynamicField(MaxSize = Config.MaxCostumeNameLength)]
+    public readonly StreamStringView<byte> CostumeCap;
 
     public PlayerInRoomInfo(Player player)
     {
         PlayerIndex = player.Slot;
 
-        PlayerNameLength = (byte)player.Name.Length;
-        Name = player.Name;
-
-        CostumeBodyLength = (byte)player.WorldInfo.CostumeBody.Length;
-        CostumeBody = player.WorldInfo.CostumeBody;
-
-        CostumeCapLength = (byte)player.WorldInfo.CostumeCap.Length;
-        CostumeCap = player.WorldInfo.CostumeCap;
+        PlayerName = new StreamStringView<byte>(player.Name);
+        CostumeBody = new StreamStringView<byte>(player.WorldInfo.CostumeBody);
+        CostumeCap = new StreamStringView<byte>(player.WorldInfo.CostumeCap);
     }
 
-    public ushort Size()
-    {
-        SizeStream stream = new SizeStream();
-
-        stream.Write<byte>(); // index
-
-        stream.Write<byte>(); // name length
-        stream.WriteString(Name);
-
-        stream.Write<byte>(); // body length
-        stream.WriteString(CostumeBody);
-
-        stream.Write<byte>(); // cap length
-        stream.WriteString(CostumeCap);
-
-        return stream.Size;
-    }
-
-    // will clean up later, need prototype for now
     public void Serialize(ref SpanWriter writer)
     {
         writer.Write(PlayerIndex);
 
-        writer.Write(PlayerNameLength);
-        writer.WriteString(Name);
-
-        writer.Write(CostumeBodyLength);
-        writer.WriteString(CostumeBody);
-
-        writer.Write(CostumeCapLength); 
-        writer.WriteString(CostumeCap);
+        PlayerName.Serialize(ref writer);
+        CostumeBody.Serialize(ref writer);
+        CostumeCap.Serialize(ref writer);
     }
 }
