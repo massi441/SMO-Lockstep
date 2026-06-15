@@ -10,6 +10,7 @@ internal class Config
     public const byte MaxRoomSize = 10;
     public const byte MaxCostumeNameLength = 64;
     public const byte MaxAnimNameLength = 64;
+    public const byte MaxStageNameLength = 255;
     public const byte MaxBlendWeights = 6;
     public const ushort MaxChatMessageLength = 512;
     public const ushort MaxBufferSize = 2048;

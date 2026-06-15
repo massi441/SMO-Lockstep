@@ -47,14 +47,9 @@ internal class Broadcaster : IBroadcaster
         }
     }
 
-    // TODO: Check success of upload, keep track of which packets have been successfully uploaded
     private void UploadAndSendAckPacket(RentedBuffer buffer, RefCounter refCounter, Player receiver, byte maxRetries)
     {
-        Result<ReliablePacket, Error> uploadResult = _resendStore.UploadPacket(buffer, refCounter, receiver, maxRetries);
-        if (uploadResult.IsFailed)
-        {
-            return;
-        }
+        _resendStore.UploadPacket(buffer, refCounter, receiver, maxRetries);
 
         _context.PacketSender.Send(receiver.Endpoint, buffer);
     }

@@ -54,7 +54,7 @@ internal class EventPlayerSyncHandler : IEventHandler
     {
         PacketSerializer.Deserialize<PlayerSyncData>(eventPacket.EventData); // for validation only
 
-        PlayerSameStageEnumerator enumerator = room.PlayerHolder.Players.SameStageAs(eventPacket.BasePacket.SenderPlayer!);
+        PlayerSameStageEnumerator enumerator = room.Players.SameStageAs(eventPacket.BasePacket.SenderPlayer!);
         room.Broadcaster.Broadcast(enumerator, eventPacket.BasePacket.RentedBuffer);
 
         eventPacket.BasePacket.RentedBuffer.Return();

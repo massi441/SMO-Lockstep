@@ -21,13 +21,8 @@ internal class ReliablePacketStore : IReliablePacketStore
         _context = context;
     }
 
-    public Result<ReliablePacket, Error> UploadPacket(RentedBuffer rentedBuffer, RefCounter refCounter, Player receiver, byte maxRetries)
+    public ReliablePacket UploadPacket(RentedBuffer rentedBuffer, RefCounter refCounter, Player receiver, byte maxRetries)
     {
-        if (IsFull())
-        {
-            return Result<ReliablePacket, Error>.Failure(Error.PendingPacketStoreFull);
-        }
-
         ReliablePacket reliablePacket = new ReliablePacket()
         {
             RentedBuffer = rentedBuffer,
@@ -45,7 +40,7 @@ internal class ReliablePacketStore : IReliablePacketStore
 
         _context.Logger.LogTrace("Uploaded reliable {PacketType} packet with sequence number #{SequenceNumber}, and {Tries} tries", reliablePacket.Header.Type, reliablePacket.SequenceNumber, reliablePacket.Tries);
 
-        return Result<ReliablePacket, Error>.Success(reliablePacket);
+        return reliablePacket;
     }
 
     public ReliablePacket? RemovePacket(Player requester, ushort sequenceNumber)
@@ -73,10 +68,5 @@ internal class ReliablePacketStore : IReliablePacketStore
         }
 
         return null;
-    }
-
-    private bool IsFull()
-    {
-        return _pendingPackets.Count > ushort.MaxValue;
     }
 }

@@ -33,7 +33,7 @@ internal class PacketConnectSynAckHandler : IPacketHandler
 
         context.Logger.LogInformation("Player {PlayerName} has confirmed their connection in Room #{RoomId}, room will be notified", packet.SenderPlayer!.Name, room.Id);
 
-        room.Broadcaster.BroadcastReliably(room.PlayerHolder.Players.Except(packet.SenderPlayer), joinRoomBuffer); // transfers ownership of the rented buffer to the reliable store
+        room.Broadcaster.BroadcastReliably(room.Players.Except(packet.SenderPlayer), joinRoomBuffer); // transfers ownership of the rented buffer to the reliable store
 
         packet.RentedBuffer.Return();
     }

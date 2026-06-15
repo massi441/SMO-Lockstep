@@ -59,32 +59,24 @@ internal class PacketConnectHandler : IPacketHandler
 
         Player newPlayer = newPlayerResult.Data!;
 
-        var playerInfos = room.PlayerHolder.Players.PlayerInfosExcept(newPlayer);
+        var playerInfos = room.Players.PlayerInfosExcept(newPlayer);
 
         PacketConnectAck ackPacket = new PacketConnectAck()
         {
             Header = packet.Header.WithType(PacketType.ConnectAck),
             RoomSize = room.PlayerHolder.MaxSize,
             SessionId = newPlayer.Id.SessionId,
-            OtherPlayersCount = (byte)(room.PlayerHolder.Players.ActiveCount() - 1),
+            OtherPlayersCount = (byte)(room.Players.ActiveCount() - 1),
             PlayerInfos = playerInfos
         };
 
         RentedBuffer ackBuffer = PacketSerializer.Serialize(ref ackPacket, Config.MaxBufferSize);
 
-        Result<Error> ackResult = context.PacketSender.SendReliably(newPlayer, ackBuffer, room.Broadcaster.ReliablePacketStore, Config.MaxRetries);
-        if (ackResult.IsSuccess)
-        {
-            context.Logger.LogTrace("Player {Name} joined Room #{RoomId} in slot {Slot}, waiting for a confirmation...", newPlayer.Name, packet.Header.RoomId, newPlayer.Slot);
-        }
-        else
-        {
-            context.Logger.LogError("Failed to upload connect ACK packet, new player will be ignored");
-            room.PlayerHolder.UnregisterPlayer(newPlayer);
-            ackBuffer.Return();
-        }
+        context.PacketSender.SendReliably(newPlayer, ackBuffer, room, Config.MaxRetries);
 
-    cleanup:
+        context.Logger.LogTrace("Player {Name} joined Room #{RoomId} in slot {Slot}, waiting for a confirmation...", newPlayer.Name, packet.Header.RoomId, newPlayer.Slot);
+
+        cleanup:
         packet.RentedBuffer.Return();
     }
 

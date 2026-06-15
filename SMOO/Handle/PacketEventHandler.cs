@@ -18,7 +18,7 @@ internal class PacketEventHandler : IPacketHandler
 
         EventType eventType = eventPacket.EventHeader.Type;
 
-        context.Logger.LogTrace("Dispatching event {EventType} from {PlayerName}", eventType, packet.SenderPlayer?.Name);
+        //context.Logger.LogTrace("Dispatching event {EventType} from {PlayerName}", eventType, packet.SenderPlayer?.Name); // TODO: add verbose level
 
         Event.EventHandler handler = EventHandlerTable.GetHandler(eventType);
 

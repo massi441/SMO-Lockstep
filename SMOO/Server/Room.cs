@@ -19,6 +19,7 @@ internal class Room
     public Channel<Packet> Packets { get; }
     public IPlayerHolder PlayerHolder { get; }
     public IBroadcaster Broadcaster { get; }
+    public PlayerList Players => PlayerHolder.Players;
 
     public Room(ushort roomId, ServerContext conxtext, IPlayerHolder playerHolder, IBroadcaster broadcaster)
     {

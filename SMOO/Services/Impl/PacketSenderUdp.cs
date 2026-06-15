@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using SMOO.Client;
 using SMOO.Protocol;
+using SMOO.Server;
 using SMOO.Services.Interface;
 using SMOO.Util;
 
@@ -34,18 +35,15 @@ internal class PacketSenderUdp : IPacketSender
         return Result<Error>.Success();
     }
 
-    public Result<Error> SendReliably(Player receiver, RentedBuffer buffer, IReliablePacketStore reliableStore, byte maxRetries = 5)
+    public void SendReliably(Player receiver, RentedBuffer buffer, Room room, RefCounter refCounter, byte maxRetries = 5)
     {
-        RefCounter refCounter = new RefCounter();
-
-        Result<ReliablePacket, Error> uploadResult = reliableStore.UploadPacket(buffer, refCounter, receiver, maxRetries);
-        if (uploadResult.IsFailed)
-        {
-            return Result<Error>.Failure(uploadResult.Error!.Value);
-        }
+        room.Broadcaster.ReliablePacketStore.UploadPacket(buffer, refCounter, receiver, maxRetries);
 
         Send(receiver.Endpoint, buffer);
+    }
 
-        return Result<Error>.Success();
+    public void SendReliably(Player receiver, RentedBuffer buffer, Room room, byte maxRetries = 5)
+    {
+        SendReliably(receiver, buffer, room, new RefCounter(), maxRetries);
     }
 }
