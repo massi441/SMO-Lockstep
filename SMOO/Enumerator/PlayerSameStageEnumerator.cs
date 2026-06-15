@@ -2,6 +2,10 @@
 
 namespace SMOO.Enumerator;
 
+/// <summary>
+/// An enumerator of players in the same stage as a target player. The enumerator does not include
+/// the target player in the iteration
+/// </summary>
 internal ref struct PlayerSameStageEnumerator : IPlayerEnumerator<PlayerSameStageEnumerator>
 {
     private PlayerActiveEnumerator _activeEnumerator;

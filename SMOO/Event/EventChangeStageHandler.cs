@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using SMOO.Client;
+using SMOO.Enumerator;
 using SMOO.Protocol;
 using SMOO.Server;
 using SMOO.Util;
@@ -40,6 +41,26 @@ internal class EventChangeStageHandler : IEventHandler
         if (data.NewStage.String.Length > 0)
         {
             context.Logger.LogInformation("Player {PlayerName} changed to stage {StageName} (Scenario {ScenarioId}) in Room #{RoomId}", player.Name, data.NewStage, data.ScenarioId, player.Room.Id);
+
+            PlayerSameStageEnumerator playersInStage = room.Players.SameStageAs(player);
+
+            byte inStageCount = (byte)playersInStage.Count<Player, PlayerSameStageEnumerator>();
+
+            if (inStageCount > 0)
+            {
+                PacketPlayersInStage playersInStagePacket = new PacketPlayersInStage()
+                {
+                    Header = packet.BasePacket.Header.WithType(PacketType.PlayersInStage),
+                    PlayerCount = inStageCount,
+                    PlayersInStage = playersInStage
+                };
+
+                RentedBuffer buffer = PacketSerializer.Serialize(ref playersInStagePacket, RequiredSize<PacketPlayersInStage>.MaxSize);
+
+                context.Logger.LogInformation("{PlayerCount} were already in stage {StageName}, {PlayerName} will be notified", inStageCount, data.NewStage, player.Name);
+
+                context.PacketSender.SendReliably(player, buffer, room);
+            }
         }
         else
         {

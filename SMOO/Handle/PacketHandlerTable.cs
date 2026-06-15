@@ -31,7 +31,8 @@ internal static unsafe class PacketHandlerTable
     private static readonly PacketHandler Ack                   = new PacketHandler(PacketAckHandler.MinPayloadSize,             PacketAckHandler.MaxPayloadSize,             &PacketAckHandler.Handle);
     private static readonly PacketHandler ChatMessage           = DefaultHandler;
     private static readonly PacketHandler ChatMessageRequest    = new PacketHandler(PacketChatMessageHandler.MinPayloadSize,     PacketChatMessageHandler.MaxPayloadSize,     &PacketChatMessageHandler.Handle);
-    private static readonly PacketHandler Event                 = new PacketHandler(PacketEventHandler.MinPayloadSize,           PacketEventHandler.MaxPayloadSize,           &PacketEventHandler.Handle);
+    private static readonly PacketHandler Event                 = new PacketHandler(PacketEventHandler.MinPayloadSize, PacketEventHandler.MaxPayloadSize, &PacketEventHandler.Handle);
+    private static readonly PacketHandler PlayersInStage        = DefaultHandler;
 
     private static readonly PacketHandler[] Handlers =
     [
@@ -46,6 +47,7 @@ internal static unsafe class PacketHandlerTable
         ChatMessage,
         ChatMessageRequest,
         Event,
+        PlayersInStage
     ];
 
     static PacketHandlerTable()

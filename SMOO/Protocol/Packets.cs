@@ -32,7 +32,7 @@ internal ref struct PacketConnectAck : ISerializableStruct
 /// <summary>
 /// The packet sent to a room, to notify that a new player has joined
 /// </summary>
-internal struct PacketPlayerJoinRoom : ISerializableStruct
+internal ref struct PacketPlayerJoinRoom : ISerializableStruct
 {
     [RequiredField]
     public required PacketHeader Header;
@@ -56,7 +56,7 @@ internal struct PacketPlayerJoinRoom : ISerializableStruct
 /// <summary>
 /// The packet broadcasted to a room when a player sends a chat message
 /// </summary>
-internal struct PacketChatMessage : ISerializableStruct
+internal ref struct PacketChatMessage : ISerializableStruct
 {
     [RequiredField]
     public required PacketHeader Header;
@@ -73,5 +73,28 @@ internal struct PacketChatMessage : ISerializableStruct
         writer.Write(PlayerSlot);
 
         Message.Serialize(ref writer);
+    }
+}
+
+internal ref struct PacketPlayersInStage : ISerializableStruct
+{
+    [RequiredField]
+    public required PacketHeader Header;
+
+    [RequiredField]
+    public required byte PlayerCount;
+
+    [DynamicField(MaxSize = sizeof(byte) * Config.MaxRoomSize)]
+    public required PlayerSameStageEnumerator PlayersInStage;
+
+    public readonly void Serialize(ref SpanWriter writer)
+    {
+        writer.Write(Header);
+        writer.Write(PlayerCount);
+
+        foreach (Player player in PlayersInStage)
+        {
+            writer.Write(player.Slot);
+        }
     }
 }
